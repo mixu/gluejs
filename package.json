@@ -7,7 +7,7 @@
     "email": "mikito.takada@gmail.com",
     "url": "http://blog.mixu.net/"
     },
-  "main": "lib/glue.js",
+  "main": "lib/renderer.js",
   "devDependencies": {
     "mocha": "1.0.x"
   }
