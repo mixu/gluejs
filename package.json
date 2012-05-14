@@ -1,0 +1,15 @@
+{
+  "name": "glue",
+  "description": "Scriptable Javascript packaging library, build CommonJS modules for the browser",
+  "version": "0.0.1",
+  "author": {
+    "name": "Mikito Takada",
+    "email": "mikito.takada@gmail.com",
+    "url": "http://blog.mixu.net/"
+    },
+  "main": "lib/glue.js",
+  "devDependencies": {
+    "mocha": "1.0.x"
+  }
+}
+

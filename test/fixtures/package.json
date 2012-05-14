@@ -1,0 +1,10 @@
+{
+  "name":"example-project",
+  "main":"./lib/a",
+  "directories":{ "lib":"./lib" },
+  "dependencies":{
+    "dependency":"*",
+    "sibling":"*",
+    "one":"*"
+  }
+}

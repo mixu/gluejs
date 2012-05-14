@@ -1,0 +1,2 @@
+exports.simple = true;
+
