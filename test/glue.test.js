@@ -1,6 +1,6 @@
 var path = require('path'),
     assert = require('assert'),
-    Glue = require('../lib/renderer.js');
+    Glue = require('../lib/glue.js');
 
 exports['glue'] = {
 
