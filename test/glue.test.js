@@ -1,4 +1,5 @@
-var assert = require('assert'),
+var path = require('path'),
+    assert = require('assert'),
     Glue = require('../lib/renderer.js');
 
 exports['glue'] = {
@@ -15,24 +16,24 @@ exports['glue'] = {
     this.g.include('./fixtures/lib/simple.js')
       .main('./lib/simple.js')
       .render(function(err, text) {
-        assert.equal('./fixtures/lib/simple.js', g.paths[0]);
-        require('fs').writeFileSync('./tmp/out1.js', text);
-        assert.deepEqual({ simple: true}, require('./tmp/out1.js'));
+        assert.equal(g.paths[0], __dirname + '/fixtures/lib/simple.js');
+        require('fs').writeFileSync(__dirname + '/tmp/out1.js', text);
+        assert.deepEqual(require('./tmp/out1.js'), { simple: true});
         done();
       });
   },
 
   'can include a directory': function(done) {
     this.g.include('./fixtures/lib/');
-    assert.equal(3, this.g.paths.length);
-    assert.ok(this.g.paths.some(function(v) { return v == './fixtures/lib/simple.js' }));
-    assert.ok(this.g.paths.some(function(v) { return v == './fixtures/lib/has_dependency.js' }));
+    assert.equal(this.g.paths.length, 3);
+    assert.ok(this.g.paths.some(function(v) { return v == __dirname + '/fixtures/lib/simple.js' }));
+    assert.ok(this.g.paths.some(function(v) { return v == __dirname + '/fixtures/lib/has_dependency.js' }));
     done();
   },
 
   'can exclude a path by regexp': function(done) {
     this.g.exclude('module');
-    assert.equal('module', this.g.excluded[0]);
+    assert.equal(this.g.excluded[0], 'module');
     done();
   },
 
@@ -44,7 +45,7 @@ exports['glue'] = {
       .render(function(err, text) {
         assert.ok(g.replaced.dependency);
         assert.equal('1234', g.replaced.dependency);
-        require('fs').writeFileSync('./tmp/out2.js', text);
+        require('fs').writeFileSync(__dirname + '/tmp/out2.js', text);
         assert.deepEqual({ has_dependency: true, dependency: 1234 }, require('./tmp/out2.js'));
         done();
       });
