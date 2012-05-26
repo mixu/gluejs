@@ -46,6 +46,20 @@ Example: .replace('debug', function debug() { return debug() });
 
 .render(function(err, text){ ...}): renders the result
 
+.watch(function(err, text){ ...})
+
+Renders the result and adds file watchers on the dependent files.
+
+When the file changes, the callback will be called again, with the newly rendered version.
+
+Note that this API is a bit clunky:
+
+- there is no way to unwatch a file other than terminate the program
+- on each watched file change, a console.log() message is shown
+- the API uses fs.watchFile(), so you do not get notification of newly added files in directories; watches are registered on the files that were used on the first render
+
+But it works fine for automatically rebuilding e.g. in dev.
+
 .defaults({
   reqpath: '/path/to/first/module/to/require/glue', // all relative paths are relative to this
   basepath: '', // strip this string from each path (e.g. /foo/bar/baz.js with '/foo' becomes 'bar/baz.js')
