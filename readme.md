@@ -1,6 +1,7 @@
 # Examples
 
-    Glue
+    new Glue()
+      .basepath('./lib')
       .include('./lib')
       .replace({
         'jquery': 'window.$',
@@ -12,14 +13,14 @@
         res.end(txt);
       });
 
-    Glue
+    new Glue()
       .include('./core')
       .exclude('mocha')
       .replace('debug', function(name) {
         console.log('name', arguments);
       })
       .export('Core')
-      .render(function (err, txt) {
+      .watch(function (err, txt) {
         fs.writeFile('./core.js', txt);
       });
 
@@ -60,13 +61,13 @@ Note that this API is a bit clunky:
 
 But it works fine for automatically rebuilding e.g. in dev.
 
-.defaults({
-  reqpath: '/path/to/first/module/to/require/glue', // all relative paths are relative to this
-  basepath: '', // strip this string from each path (e.g. /foo/bar/baz.js with '/foo' becomes 'bar/baz.js')
-  main: 'index.js', // main file, preset default is index.js
-  export: '', // name for the variable under window to which the package is exported
-  replace: { 'jquery': 'window.$' } // require('jquery') should return window.$
-})
+    .defaults({
+      reqpath: '/path/to/first/module/to/require/glue', // all relative paths are relative to this
+      basepath: '', // strip this string from each path (e.g. /foo/bar/baz.js with '/foo' becomes 'bar/baz.js')
+      main: 'index.js', // main file, preset default is index.js
+      export: '', // name for the variable under window to which the package is exported
+      replace: { 'jquery': 'window.$' } // require('jquery') should return window.$
+    })
 
 Set default values.
 
