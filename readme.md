@@ -6,7 +6,7 @@
 - include() any files or directories and blacklist by regexp using exclude()
 - replace() any library with one that gets looked up from under window.* (e.g. require('jquery') => window.$)
 - watch() the build and get notified when files in it change
-- TODO define() custom files (e.g. for creating builds that export a subset of functionality)
+- define() any dependency as a block of code that you generate (e.g. for creating builds that export a subset of functionality)
 - TODO combine() multiple packages into one build
 - TODO npm() build from a package.json and apply .npmignore
 
