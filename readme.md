@@ -7,7 +7,7 @@
 - replace() any library with one that gets looked up from under window.* (e.g. require('jquery') => window.$)
 - watch() the build and get notified when files in it change
 - define() any dependency as a block of code that you generate (e.g. for creating builds that export a subset of functionality)
-- TODO combine() multiple packages into one build
+- concat() multiple packages into one build (e.g. where your final build consists of multiple files)
 - TODO npm() build from a package.json and apply .npmignore
 
 # Examples
