@@ -27,11 +27,11 @@
         res.end(txt);
       });
 
-## Usage (http server)
+## Usage (file)
 
     new Glue()
       .include('./core')
-      .exclude('mocha')
+      .exclude(new RegExp('.+\.test\.js'))
       .replace('debug', function(name) {
         console.log('name', arguments);
       })
@@ -59,7 +59,7 @@ exclude(regexp): excludes all files matching the regexp from the build. Evaluate
 
 ## Outputting
 
-.export(name): sets the export name
+.export(name): sets the export name (e.g. export('Foo') => window.Foo = require('index.js'); )
 
 .render(function(err, text){ ...}): renders the result
 
