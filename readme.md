@@ -41,27 +41,63 @@
       });
 
 
-## API
+## Including files / directories, excluding by regexp
 
-.include(directory): recursively includes files in the directory
+include(path): If the path is a file, include it. If the path is a directory, include all files in it recursively.
 
-.include(file): includes a single file
+exclude(regexp): excludes all files matching the regexp from the build. Evaluated just before rendering the build so it applies to all files.
 
-.replace(module, code):
+## Setting default values
 
-Replaces a module or global with a piece of code
+    .defaults({
+      reqpath: '/path/to/first/module/to/require/glue', // all relative paths are relative to this
+      basepath: '', // strip this string from each path (e.g. /foo/bar/baz.js with '/foo' becomes 'bar/baz.js')
+      main: 'index.js', // main file, preset default is index.js
+      export: '', // name for the variable under window to which the package is exported
+      replace: { 'jquery': 'window.$' } // require('jquery') should return window.$
+    })
 
-Example: .replace('jquery', 'window.$') require('jquery') should return window.$
-
-Note that you can also pass a function or object rather than a string. In that case, the function is converted to a string and JSON.stringify is applied to a object.
-
-Example: .replace('debug', function debug() { return debug() });
-
-.exclude(regexp): excludes a path from the build completely
+## Outputting
 
 .export(name): sets the export name
 
 .render(function(err, text){ ...}): renders the result
+
+## Replacing and defining code
+
+replace(module, code): Meant for replacing a module with a single variable or expression. Examples:
+
+    .replace('jquery', 'window.$'); // require('jquery') will return the value of window.$
+    .replace('debug', function debug() { return debug() }); // code is converted to string
+
+define(module, code): Meant for writing a full module. The difference here is that while replace() code is not wrapped in a closure while define() code is.
+
+    .define('index.js', [ 'module.exports = {',
+      [ (hasBrowser ? "  browser: require('./backends/browser_console.js')" : undefined ),
+        (hasLocalStorage ? "  localstorage: require('./backends/browser_localstorage.js')" : undefined )
+      ].filter(function(v) { return !!v; }).join(',\n'),
+    '};'].join('\n'));
+
+The example above generates a index.js file depending on hasBrowser and hasLocalStorage.
+
+## Concatenating multiple builds
+
+Glue.concat([ package, package ], function(err, txt)). For example:
+
+    var packageA = new Glue()
+          .basepath('./fixtures/')
+          .export('Foo')
+          .include('./fixtures/lib/foo.js');
+    var packageB = new Glue()
+          .basepath('./fixtures/')
+          .export('Bar')
+          .include('./fixtures/lib/bar.js');
+
+    Glue.concat([packageA, packageB], function(err, txt) {
+      console.log(txt);
+    });
+
+## Watching a single build
 
 .watch(function(err, text){ ...})
 
@@ -76,17 +112,6 @@ Note that this API is a bit clunky:
 - the API uses fs.watchFile(), so you do not get notification of newly added files in directories; watches are registered on the files that were used on the first render
 
 But it works fine for automatically rebuilding e.g. in dev.
-
-    .defaults({
-      reqpath: '/path/to/first/module/to/require/glue', // all relative paths are relative to this
-      basepath: '', // strip this string from each path (e.g. /foo/bar/baz.js with '/foo' becomes 'bar/baz.js')
-      main: 'index.js', // main file, preset default is index.js
-      export: '', // name for the variable under window to which the package is exported
-      replace: { 'jquery': 'window.$' } // require('jquery') should return window.$
-    })
-
-Set default values.
-
 
 ## TODO
 
