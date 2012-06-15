@@ -1,4 +1,18 @@
+# gluejs - features
+
+- Build scripts are written directly in Node, allowing for more optimized builds
+- lightweight, uses same require() implementation as browserbuild
+- render() to console, or directly to a HTTP request
+- include() any files or directories and blacklist by regexp using exclude()
+- replace() any library with one that gets looked up from under window.* (e.g. require('jquery') => window.$)
+- watch() the build and get notified when files in it change
+- TODO define() custom files (e.g. for creating builds that export a subset of functionality)
+- TODO combine() multiple packages into one build
+- TODO npm() build from a package.json and apply .npmignore
+
 # Examples
+
+## Usage (http server)
 
     new Glue()
       .basepath('./lib')
@@ -12,6 +26,8 @@
         res.setHeader('content-type', 'application/javascript');
         res.end(txt);
       });
+
+## Usage (http server)
 
     new Glue()
       .include('./core')
