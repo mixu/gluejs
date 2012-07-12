@@ -1,4 +1,5 @@
-var path = require('path'),
+var fs = require('fs'),
+    path = require('path'),
     assert = require('assert'),
     Glue = require('../lib/glue.js');
 
@@ -11,30 +12,15 @@ exports['glue'] = {
     done();
   },
 
-  'can include a single file': function (done) {
+  'can render a single file and require the result': function (done) {
     var g = this.g;
     this.g.include('./fixtures/lib/simple.js')
       .main('./lib/simple.js')
       .render(function(err, text) {
-        assert.equal(g.paths[0], __dirname + '/fixtures/lib/simple.js');
         require('fs').writeFileSync(__dirname + '/tmp/out1.js', text);
         assert.deepEqual(require('./tmp/out1.js'), { simple: true});
         done();
       });
-  },
-
-  'can include a directory': function(done) {
-    this.g.include('./fixtures/lib/');
-    assert.equal(this.g.paths.length, 3);
-    assert.ok(this.g.paths.some(function(v) { return v == __dirname + '/fixtures/lib/simple.js' }));
-    assert.ok(this.g.paths.some(function(v) { return v == __dirname + '/fixtures/lib/has_dependency.js' }));
-    done();
-  },
-
-  'can exclude a path by regexp': function(done) {
-    this.g.exclude('module');
-    assert.equal(this.g.excluded[0], 'module');
-    done();
   },
 
   'can replace a module by name': function(done) {
@@ -51,6 +37,36 @@ exports['glue'] = {
       });
   },
 
+  'concat calls render() on arguments and returns the full result': function(done) {
+    var assertions = 0;
+    this.g.concat([
+        { render: function(done) { assertions++; done(undefined, 'a'); } },
+        { render: function(done) { assertions++; done(undefined, 'b'); } },
+      ], function(err, txt) {
+        assert.equal(txt, 'ab');
+        assert.equal(assertions, 2);
+        done();
+    });
+  },
+
+  'can define custom handlers': function(done) {
+    var Handlebars = require('handlebars');
+    var g = this.g,
+        extensionRe = new RegExp('(.+)\.handlebars$');
+    g.include('./fixtures/mixed_content/')
+      .handler(extensionRe, function(filepath, done) {
+
+        var template = Handlebars.precompile(fs.readFileSync(filepath).toString());
+        done(g.wrap(filepath.replace(extensionRe, '$1.js'), template));
+
+      })
+      .render(function(err, txt) {
+        console.log(txt);
+        done();
+      });
+  }
+
+
 /*
   'can include a package.json file': function(done) {
     this.g.npm('./fixtures/package.json');
@@ -62,7 +78,7 @@ exports['glue'] = {
 
 // if this module is the script being run, then run the tests:
 if (module == require.main) {
-  var mocha = require('child_process').spawn('mocha', [ '--colors', '--ui', 'exports', '--reporter', 'spec', __filename ]);
+  var mocha = require('child_process').spawn('../node_modules/.bin/mocha', [ '--colors', '--ui', 'exports', '--reporter', 'spec', __filename ]);
   mocha.stdout.pipe(process.stdout);
   mocha.stderr.pipe(process.stderr);
 }
