@@ -6,44 +6,44 @@ exports['given a group'] = {
 
   beforeEach: function(done) {
     var paths = this.paths = [];
-    this.group = new Group().operation(new RegExp('.*'), function(filename, cb) {
-      paths.push(filename);
-      return cb(filename);
+    this.group = new Group().handler(new RegExp('.*'), function(opts, cb) {
+      paths.push(opts.filename);
+      return cb(opts.filename);
     });
     done();
   },
 
   'can include a single file': function (done) {
     var g = this.group, paths = this.paths;
-    g.include('./fixtures/lib/simple.js')
+    g.include(__dirname+'/fixtures/lib/simple.js')
       .exec(function(result) {
         assert.equal(paths.length, 1);
-        assert.equal(paths[0], './fixtures/lib/simple.js');
+        assert.equal(paths[0], __dirname+'/fixtures/lib/simple.js');
         done();
       });
   },
   'can include a directory': function(done) {
     var g = this.group, paths = this.paths;
-    g.include('./fixtures/lib/')
+    g.include(__dirname+'/fixtures/lib/')
       .exec(function(result) {
         paths.sort();
         assert.equal(paths.length, 3);
-        assert.equal(paths[0], './fixtures/lib/has_dependency.js');
-        assert.equal(paths[1], './fixtures/lib/simple.js');
-        assert.equal(paths[2], './fixtures/lib/web.js');
+        assert.equal(paths[0], __dirname+'/fixtures/lib/has_dependency.js');
+        assert.equal(paths[1], __dirname+'/fixtures/lib/simple.js');
+        assert.equal(paths[2], __dirname+'/fixtures/lib/web.js');
         done();
       });
   },
 
   'can exclude a path by regexp': function(done) {
     var g = this.group, paths = this.paths;
-    g.include('./fixtures/lib/')
+    g.include(__dirname+'/fixtures/lib/')
       .exclude(new RegExp('.*simple\.js$'))
       .exec(function(result) {
         paths.sort();
         assert.equal(paths.length, 2);
-        assert.equal(paths[0], './fixtures/lib/has_dependency.js');
-        assert.equal(paths[1], './fixtures/lib/web.js');
+        assert.equal(paths[0], __dirname+'/fixtures/lib/has_dependency.js');
+        assert.equal(paths[1], __dirname+'/fixtures/lib/web.js');
         done();
       });
   },
@@ -51,7 +51,7 @@ exports['given a group'] = {
   'can watch a file': function(done) {
     var g = this.group, paths = this.paths,
         calls = 0;
-    g.include('./tmp/placeholder.txt')
+    g.include(__dirname+'/tmp/placeholder.txt')
       .watch(function(err, txt) {
         calls++;
         console.log(err, txt);
@@ -59,7 +59,7 @@ exports['given a group'] = {
           done();
         }
       });
-    fs.writeFileSync('./tmp/placeholder.txt', 'This is a placeholder, so that git creates this temp directory.\n\n');
+    fs.writeFileSync(__dirname+'/tmp/placeholder.txt', 'This is a placeholder, so that git creates this temp directory.\n\n');
   }
 
 };

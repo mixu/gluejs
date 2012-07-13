@@ -50,15 +50,13 @@ exports['glue'] = {
   },
 
   'can define custom handlers': function(done) {
-    var Handlebars = require('handlebars');
     var g = this.g,
         extensionRe = new RegExp('(.+)\.handlebars$');
     g.include('./fixtures/mixed_content/')
-      .handler(extensionRe, function(filepath, done) {
-
-        var template = Handlebars.precompile(fs.readFileSync(filepath).toString());
-        done(g.wrap(filepath.replace(extensionRe, '$1.js'), template));
-
+      .handler(extensionRe, function(opts, done) {
+        var filename = opts.filename;
+        var template = fs.readFileSync(filename).toString();
+        done(g.wrap(filename.replace(extensionRe, '$1.js'), template));
       })
       .render(function(err, txt) {
         console.log(txt);

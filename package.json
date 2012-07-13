@@ -9,7 +9,6 @@
   },
   "main": "lib/glue.js",
   "devDependencies": {
-    "mocha": "1.0.x",
-    "handlebars": "~1.0.5beta"
+    "mocha": "1.0.x"
   }
 }

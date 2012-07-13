@@ -1,6 +1,10 @@
-# gluejs - features
+# gluejs
 
-- Build scripts are written directly in Node, allowing for more optimized builds
+A CommonJS-based build system with a chainable API
+
+### Features
+
+- Build scripts are written directly in Node - easy to customize and add your own processing
 - lightweight, uses same require() implementation as browserbuild
 - render() to console, or directly to a HTTP request
 - include() any files or directories and blacklist by regexp using exclude()
@@ -39,7 +43,6 @@
       .watch(function (err, txt) {
         fs.writeFile('./core.js', txt);
       });
-
 
 ## Including files / directories, excluding by regexp
 

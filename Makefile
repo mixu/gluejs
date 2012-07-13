@@ -1,4 +1,5 @@
 TESTS += test/glue.test.js
+TESTS += test/group.test.js
 
 test:
 	@mocha \
