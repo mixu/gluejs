@@ -5,14 +5,13 @@ A CommonJS-based build system with a chainable API
 ### Features
 
 - Build scripts are written directly in Node - easy to customize and add your own processing
-- lightweight, uses same require() implementation as browserbuild
+- Lightweight, uses same require() implementation as browserbuild
 - render() to console, or directly to a HTTP request
-- include() any files or directories and blacklist by regexp using exclude()
-- replace() any library with one that gets looked up from under window.* (e.g. require('jquery') => window.$)
-- watch() the build and get notified when files in it change
-- define() any dependency as a block of code that you generate (e.g. for creating builds that export a subset of functionality)
-- concat() multiple packages into one build (e.g. where your final build consists of multiple files)
-- TODO npm() build from a package.json and apply .npmignore
+- include() files or full directories, blacklist using exclude(regexp)
+- watch() the build and rebuild automatically when files change
+- Bind variables under window.* to require() statements using replace()
+- Compile templating language files to JS via a custom handler
+- Concatenate multiple packages into one file
 
 ## Usage example
 
@@ -42,8 +41,8 @@ A CommonJS-based build system with a chainable API
 ## Setting default values
 
     .defaults({
-      // all relative paths are resolved relative to this path
-      reqpath: '/path/to/first/module/to/require/glue',
+      // all relative include() paths are resolved relative to this path
+      reqpath: '',
 
       // strip this string from each path
       // (e.g. /foo/bar/baz.js with '/foo' becomes 'bar/baz.js')
