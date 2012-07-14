@@ -115,7 +115,7 @@ Here is an example:
         var out = Template.precompile(
           fs.readFileSync(filename).toString()
         );
-        done(filename.replace(extensionRe, '$1.js'), wrap(out));
+        done(wrap(filename.replace(extensionRe, '$1.js'), out));
       })
       .render(function(err, txt) {
         console.log(txt);
