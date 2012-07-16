@@ -11,6 +11,8 @@ A CommonJS-based build system with a chainable API
 - watch() the build and rebuild automatically when files change
 - Bind variables under window.* to require() statements using replace()
 - Compile templating language files to JS via a custom handler
+- Source url support
+- Virtual packages
 - Concatenate multiple packages into one file
 
 ## Usage example
@@ -155,6 +157,16 @@ The callback params:
   - wrap: a function(filename, content) which wraps the content string inside a anonymous function, just like normal JS files.
 - second param (done): a callback(string) which should be called with the return value - this allows for async calls inside the handler.
 
+## Virtual packages
+
+Let's assume that your app consists of several internal packages. For example, within your app code you want to refer to the Foo model as require('model').Foo rather than require('../../model/foo.js').
+
+One way to do this would be to simply have multiple packages, App and Models - where models exports window.model. If you prefer to avoid that extra global variable, do this instead:
+
+    .define('model', 'require("./model")');
+
+Don't use require('model') in files inside the ./model directory, since that may introduce a circular dependency (e.g. model/a -> model/index -> model/a).
+
 ## Generating modules from JS
 
 ```define(module, code)```: Meant for writing a full module. The difference here is that while replace() code is not wrapped in a closure while define() code is.
@@ -167,7 +179,7 @@ The callback params:
 
 The example above generates a index.js file depending on hasBrowser and hasLocalStorage.
 
-## Concatenating multiple builds
+## Concatenating multiple packages into one file
 
 Glue.concat([ package, package ], function(err, txt)). For example:
 
@@ -185,7 +197,5 @@ Glue.concat([ package, package ], function(err, txt)). For example:
     });
 
 ## TODO
-
-Virtual packages
 
 .npm(file.json): includes a package.json

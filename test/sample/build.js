@@ -5,6 +5,7 @@ new Glue()
   .include('./input')
   .basepath('./input')
   .export('myApp')
+  .define('model', 'module.exports = require("./models");')
   .set('debug', true)
   .render(function (err, txt) {
     fs.writeFileSync('./generated.js', txt);
