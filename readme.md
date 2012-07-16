@@ -101,7 +101,7 @@ Once you get past your first CommonJS-based build, you'll probably want to explo
 
 Source URLs are additional annotations that make it possible to show the directory tree when looking at scripts (instead of just the one compiled file):
 
-![screenshot](https://github.com/mixu/gluejs/raw/master/test/sample/input/sourceurl.png)
+![screenshot](https://github.com/mixu/gluejs/raw/master/test/sample/sourceurl.png)
 
 To enable source URLs, set the following option:
 
