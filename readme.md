@@ -83,6 +83,7 @@ But it works fine for automatically rebuilding e.g. when doing development local
 Once you get past your first CommonJS-based build, you'll probably want to explore these features:
 
 - Binding variables under window.* to require() statements
+- Source URLs
 - Handling template files and compile-to-JS files
 - Generating modules from JS
 - Concatenating multiple packages into one file
@@ -95,6 +96,18 @@ Once you get past your first CommonJS-based build, you'll probably want to explo
     .replace('jquery', 'window.$');
     // define require('debug') as the function below
     .replace('debug', function debug() { return debug() });
+
+## Source URLs
+
+Source URLs are additional annotations that make it possible to show the directory tree when looking at scripts (instead of just the one compiled file):
+
+![screenshot](https://github.com/mixu/gluejs/raw/master/test/sample/input/sourceurl.png)
+
+To enable source URLs, set the following option:
+
+    .set('debug', true)
+
+Note that source URLs require that scripts are wrapped in a eval block, which is a bit ugly, so you probably don't want that in production mode.
 
 ## Handling template files and compile-to-JS files
 
