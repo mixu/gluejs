@@ -4,14 +4,30 @@ var fs = require('fs'),
 
 // Since require.js does not export directly:
 var Req = new Function(
-    fs.readFileSync('../lib/require.js').toString() +'return require;'
+    fs.readFileSync(__dirname + '/../lib/require.js').toString() +'return require;'
   ).call();
 
-Req.modules['foo'] = new Function('module', 'exports', 'require', 'global',
+Req.modules[0]['foo'] = new Function('module', 'exports', 'require', 'global',
   'console.log(require.toString()); module.exports = "foobar";');
 
-Req.modules['foo/abc.js'] = new Function('module', 'exports', 'require', 'global',
+Req.modules[0]['foo/abc.js'] = new Function('module', 'exports', 'require', 'global',
   'module.exports = "abc";');
+
+Req.modules[0]['bar'] = { context: 1, main: 'bar/bar.js' };
+Req.modules[0]['baz'] = { context: 2, main: 'baz/nested.js' };
+
+Req.modules[1] = {};
+
+Req.modules[1]['bar/bar.js'] = new Function('module', 'exports', 'require', 'global',
+  'module.exports = "bar/bar.js";');
+
+Req.modules[2] = {};
+
+Req.modules[2]['baz/nested.js'] = new Function('module', 'exports', 'require', 'global',
+  'module.exports = require("../foo/abc.js");');
+
+Req.modules[2]['foo/abc.js'] = new Function('module', 'exports', 'require', 'global',
+  'module.exports = "baz:./foo/abc.js";');
 
 exports['can call the first require without passing a parent path'] = function(done) {
   assert.equal(Req('foo'), 'foobar');
@@ -25,6 +41,16 @@ exports['can require a path relative to the base'] = function(done) {
 
 exports['can require a path relative to a subdirectory'] = function(done) {
   assert.equal(Req.relative('bar/baz/abc').call({}, '../../../foo/abc.js'), 'abc');
+  done();
+};
+
+exports['can require a different module'] = function(done) {
+  assert.equal(Req.relative('foo', 0).call({}, 'bar'), 'bar/bar.js');
+  done();
+};
+
+exports['require in a different module returns local version of file'] = function(done) {
+  assert.equal(Req.relative('foo', 0).call({}, 'baz'), 'baz:./foo/abc.js');
   done();
 };
 
