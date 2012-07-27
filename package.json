@@ -9,6 +9,6 @@
   },
   "main": "lib/glue.js",
   "devDependencies": {
-    "mocha": "1.0.x"
+    "mocha": "1.x"
   }
 }
