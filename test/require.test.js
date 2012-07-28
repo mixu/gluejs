@@ -8,7 +8,7 @@ var Req = new Function(
   ).call();
 
 Req.modules[0]['foo'] = new Function('module', 'exports', 'require', 'global',
-  'console.log(require.toString()); module.exports = "foobar";');
+  'module.exports = "foobar";');
 
 Req.modules[0]['foo/abc.js'] = new Function('module', 'exports', 'require', 'global',
   'module.exports = "abc";');

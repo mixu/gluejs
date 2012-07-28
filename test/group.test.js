@@ -5,62 +5,70 @@ var fs = require('fs'),
 exports['given a group'] = {
 
   beforeEach: function(done) {
-    var paths = this.paths = [];
-    this.group = new Group().handler(new RegExp('.*'), function(opts, cb) {
-      paths.push(opts.filename);
-      return cb(opts.filename);
-    });
+    this.group = new Group();
     done();
   },
 
   'can include a single file': function (done) {
-    var g = this.group, paths = this.paths;
-    g.include(__dirname+'/fixtures/lib/simple.js')
-      .exec(function(result) {
-        assert.equal(paths.length, 1);
-        assert.equal(paths[0], __dirname+'/fixtures/lib/simple.js');
-        done();
-      });
+    var g = this.group;
+    var result = g.include(__dirname+'/fixtures/lib/simple.js').resolve();
+    assert.equal(result.length, 1);
+    assert.equal(result[0], __dirname+'/fixtures/lib/simple.js');
+    done();
+
   },
   'can include a directory': function(done) {
-    var g = this.group, paths = this.paths;
-    g.include(__dirname+'/fixtures/lib/')
-      .exec(function(result) {
-        paths.sort();
-        assert.equal(paths.length, 3);
-        assert.equal(paths[0], __dirname+'/fixtures/lib/has_dependency.js');
-        assert.equal(paths[1], __dirname+'/fixtures/lib/simple.js');
-        assert.equal(paths[2], __dirname+'/fixtures/lib/web.js');
-        done();
-      });
+    var g = this.group;
+    var result = g.include(__dirname+'/fixtures/lib/').resolve();
+    assert.equal(result.length, 3);
+    assert.equal(result[0], __dirname+'/fixtures/lib/has_dependency.js');
+    assert.equal(result[1], __dirname+'/fixtures/lib/simple.js');
+    assert.equal(result[2], __dirname+'/fixtures/lib/web.js');
+    done();
   },
 
   'can exclude a path by regexp': function(done) {
-    var g = this.group, paths = this.paths;
-    g.include(__dirname+'/fixtures/lib/')
+    var g = this.group;
+    var result = g.include(__dirname+'/fixtures/lib/')
       .exclude(new RegExp('.*simple\.js$'))
-      .exec(function(result) {
-        paths.sort();
-        assert.equal(paths.length, 2);
-        assert.equal(paths[0], __dirname+'/fixtures/lib/has_dependency.js');
-        assert.equal(paths[1], __dirname+'/fixtures/lib/web.js');
-        done();
-      });
+      .resolve();
+    assert.equal(result.length, 2);
+    assert.equal(result[0], __dirname+'/fixtures/lib/has_dependency.js');
+    assert.equal(result[1], __dirname+'/fixtures/lib/web.js');
+    done();
   },
 
-  'can watch a file': function(done) {
-    var g = this.group, paths = this.paths,
-        calls = 0;
-    g.include(__dirname+'/tmp/placeholder.txt')
-      .watch(function(err, txt) {
-        calls++;
-        console.log(err, txt);
-        if(calls == 2) {
-          done();
-        }
-      });
-    fs.writeFileSync(__dirname+'/tmp/placeholder.txt', 'This is a placeholder, so that git creates this temp directory.\n\n');
-  }
+  // exec and watch should actually emit
+  // a series of package objects:
+  // e.g.
+  //  {
+  //    './index.js': ... full path to file
+  //    'other': { main: 'foo.js', context: 1 }
+  //  },
+  //  {
+  //    './foo.js'
+  //  }
+  // The first package is the result of calling exec on the current group
+  // The next package is the result of calling exec on the first dependency
+  // ( and it will recursively call and return its own dependencies)
+  // In fact, groups should not even do any handlers.
+  // The handlers are a detail that only really matters to the
+  // system that outputs the build. Groups should only deal with files.
+
+  'can add a dependency on a single file package': function(done) {
+    done();
+  },
+
+  'can add a dependency on a package that is a directory (index.js)': function(done) {
+    done();
+  },
+
+  'can add a dependency on a package that is a directory (package.json)': function(done) {
+    done();
+  },
+
+
+
 
 };
 

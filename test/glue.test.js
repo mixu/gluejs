@@ -62,8 +62,21 @@ exports['glue'] = {
         console.log(txt);
         done();
       });
-  }
+  },
 
+  'can watch a file': function(done) {
+    var g = this.g,
+        calls = 0;
+    g.include(__dirname+'/tmp/placeholder.txt')
+      .watch(function(err, txt) {
+        calls++;
+        console.log(err, txt);
+        if(calls == 2) {
+          done();
+        }
+      });
+    fs.writeFileSync(__dirname+'/tmp/placeholder.txt', 'This is a placeholder, so that git creates this temp directory.\n\n');
+  },
 
 /*
   'can include a package.json file': function(done) {
