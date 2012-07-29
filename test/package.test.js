@@ -40,7 +40,7 @@ exports['given a group'] = {
 
     done();
   },
-*/
+
   'can add a dependency on a package that is a directory (index.js)': function(done) {
     var p = this.p;
     p.dependency('foo', __dirname+'/fixtures/expandindex/');
@@ -54,6 +54,22 @@ exports['given a group'] = {
 
     done();
   },
+*/
+  'when a dependency has a (sub)dependency, it gets resolved as well': function(done) {
+    var p = this.p;
+    p.dependency('foo', __dirname+'/fixtures/hassubdependency/');
+    console.log('pacakge', util.inspect(p, null, 5, true));
+
+    var result = [];
+    p.render(result, function(selfId) {
+      console.log('result', util.inspect(result, null, 5, true));
+
+    });
+
+    done();
+  },
+
+
 /*
   'can add a dependency on a package that is a directory (package.json)': function(done) {
     var g = this.group;
