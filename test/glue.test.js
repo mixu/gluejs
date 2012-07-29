@@ -49,6 +49,8 @@ exports['glue'] = {
     });
   },
 
+
+/*
   'can define custom handlers': function(done) {
     var g = this.g,
         extensionRe = new RegExp('(.+)\.handlebars$');
@@ -77,7 +79,7 @@ exports['glue'] = {
       });
     fs.writeFileSync(__dirname+'/tmp/placeholder.txt', 'This is a placeholder, so that git creates this temp directory.\n\n');
   },
-
+*/
 /*
   'can include a package.json file': function(done) {
     this.g.npm('./fixtures/package.json');
