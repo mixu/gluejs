@@ -11,30 +11,28 @@ exports['given a group'] = {
 
   'can include a single file': function (done) {
     var g = this.group;
-    var result = g.include(__dirname+'/fixtures/lib/simple.js').resolve();
+    var result = g.include(__dirname+'/fixtures/rendertest/simple.js').resolve();
     assert.equal(result.length, 1);
-    assert.equal(result[0], __dirname+'/fixtures/lib/simple.js');
+    assert.equal(result[0], __dirname+'/fixtures/rendertest/simple.js');
     done();
 
   },
   'can include a directory': function(done) {
     var g = this.group;
-    var result = g.include(__dirname+'/fixtures/lib/').resolve();
-    assert.equal(result.length, 3);
-    assert.equal(result[0], __dirname+'/fixtures/lib/has_dependency.js');
-    assert.equal(result[1], __dirname+'/fixtures/lib/simple.js');
-    assert.equal(result[2], __dirname+'/fixtures/lib/web.js');
+    var result = g.include(__dirname+'/fixtures/rendertest/').resolve();
+    assert.equal(result.length, 2);
+    assert.equal(result[0], __dirname+'/fixtures/rendertest/has_dependency.js');
+    assert.equal(result[1], __dirname+'/fixtures/rendertest/simple.js');
     done();
   },
 
   'can exclude a path by regexp': function(done) {
     var g = this.group;
-    var result = g.include(__dirname+'/fixtures/lib/')
+    var result = g.include(__dirname+'/fixtures/rendertest/')
       .exclude(new RegExp('.*simple\.js$'))
       .resolve();
-    assert.equal(result.length, 2);
-    assert.equal(result[0], __dirname+'/fixtures/lib/has_dependency.js');
-    assert.equal(result[1], __dirname+'/fixtures/lib/web.js');
+    assert.equal(result.length, 1);
+    assert.equal(result[0], __dirname+'/fixtures/rendertest/has_dependency.js');
     done();
   }
 };

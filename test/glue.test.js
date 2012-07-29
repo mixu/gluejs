@@ -14,8 +14,8 @@ exports['glue'] = {
 
   'can render a single file and require the result': function (done) {
     var g = this.g;
-    this.g.include('./fixtures/lib/simple.js')
-      .main('./lib/simple.js')
+    this.g.include('./fixtures/rendertest/simple.js')
+      .main('./rendertest/simple.js')
       .render(function(err, text) {
         require('fs').writeFileSync(__dirname + '/tmp/out1.js', text);
         assert.deepEqual(require('./tmp/out1.js'), { simple: true});
@@ -25,8 +25,8 @@ exports['glue'] = {
 
   'can replace a module by name': function(done) {
     var g = this.g;
-    this.g.include('./fixtures/lib/has_dependency.js')
-      .main('./lib/has_dependency.js')
+    this.g.include('./fixtures/rendertest/has_dependency.js')
+      .main('./rendertest/has_dependency.js')
       .replace('dependency', '1234')
       .render(function(err, text) {
         assert.ok(g.replaced.dependency);

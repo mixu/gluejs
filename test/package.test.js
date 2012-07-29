@@ -132,6 +132,30 @@ exports['given a group'] = {
     });
   },
 
+  'blacklisting a module affects all dependencies': function(done) {
+    done();
+  },
+
+  'replacing a module affects all dependencies': function(done) {
+    done();
+  },
+
+  'can include a package.json which causes all dependencies to be included': function(done) {
+    done();
+  },
+
+  'when including a package.json, node_modules should be searched recursively upwards': function(done) {
+    // example:
+    // app/agent/package.json => dependencies: { "foo" : ... }
+    // app/node_modules/foo <= Node will traverse one directory down since this is not found
+    done();
+  },
+
+  'can add filters for dependencies to exclude ./test, ./examples, test.js etc': function(done) {
+    done();
+  }
+
+
 };
 
 // if this module is the script being run, then run the tests:
