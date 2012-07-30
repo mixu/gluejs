@@ -28,6 +28,7 @@ exports['glue'] = {
     this.g.include('./fixtures/rendertest/has_dependency.js')
       .main('./rendertest/has_dependency.js')
       .replace('dependency', '1234')
+      ._render(function(out) { console.log(out); })
       .render(function(err, text) {
         assert.ok(g.replaced.dependency);
         assert.equal('1234', g.replaced.dependency);
@@ -65,21 +66,34 @@ exports['glue'] = {
       });
   },
 
-/*
   'can watch a file': function(done) {
     var g = this.g,
         calls = 0;
     g.include(__dirname+'/tmp/placeholder.txt')
       .watch(function(err, txt) {
         calls++;
-        console.log(err, txt);
+        console.log(txt);
         if(calls == 2) {
           done();
         }
       });
     fs.writeFileSync(__dirname+'/tmp/placeholder.txt', 'This is a placeholder, so that git creates this temp directory.\n\n');
   },
-*/
+
+  'can include a single npm package': function(done) {
+    this.g
+      .npm('foo', __dirname+'/fixtures/expandsingle/')
+      ._render(function(out) {
+        console.log(out);
+      })
+      .render(function(err, text) {
+        require('fs').writeFileSync(__dirname + '/tmp/out3.js', text);
+        assert.deepEqual(require('./tmp/out3.js'), { simple: true});
+      });
+
+
+  },
+
 /*
   'can include a package.json file': function(done) {
     this.g.npm('./fixtures/package.json');
