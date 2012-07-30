@@ -50,7 +50,6 @@ exports['glue'] = {
   },
 
 
-/*
   'can define custom handlers': function(done) {
     var g = this.g,
         extensionRe = new RegExp('(.+)\.handlebars$');
@@ -58,7 +57,7 @@ exports['glue'] = {
       .handler(extensionRe, function(opts, done) {
         var filename = opts.filename;
         var template = fs.readFileSync(filename).toString();
-        done(g.wrap(filename.replace(extensionRe, '$1.js'), template));
+        done(filename.replace(extensionRe, '$1.js'), template);
       })
       .render(function(err, txt) {
         console.log(txt);
@@ -66,6 +65,7 @@ exports['glue'] = {
       });
   },
 
+/*
   'can watch a file': function(done) {
     var g = this.g,
         calls = 0;
