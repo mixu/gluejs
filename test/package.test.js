@@ -3,7 +3,7 @@ var fs = require('fs'),
     assert = require('assert'),
     Package = require('../lib/package');
 
-exports['given a group'] = {
+exports['package'] = {
 
   beforeEach: function(done) {
     this.p = new Package();

@@ -6,7 +6,7 @@ TESTS += test/package.test.js
 test:
 	@mocha \
 		--ui exports \
-		--reporter list \
+		--reporter spec \
 		--slow 2000ms \
 		--bail \
 		$(TESTS)
