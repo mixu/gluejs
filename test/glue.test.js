@@ -82,16 +82,32 @@ exports['glue'] = {
 
   'can include a single npm package': function(done) {
     this.g
+      .basepath('./fixtures/expandsingle/')
+      .include(__dirname+'/fixtures/expandsingle/')
       .npm('foo', __dirname+'/fixtures/expandsingle/')
       ._render(function(out) {
         console.log(out);
       })
       .render(function(err, text) {
         require('fs').writeFileSync(__dirname + '/tmp/out3.js', text);
-        assert.deepEqual(require('./tmp/out3.js'), { simple: true});
+        assert.deepEqual(require('./tmp/out3.js'), 'foo.js');
+        done();
       });
+  },
 
-
+  'can include a package.json': function(done) {
+    this.g
+      .basepath('./fixtures/expandsingle/')
+      .include(__dirname+'/fixtures/expandsingle/')
+      .npm('foo', __dirname+'/fixtures/expandsingle/')
+      ._render(function(out) {
+        console.log(out);
+      })
+      .render(function(err, text) {
+        require('fs').writeFileSync(__dirname + '/tmp/out3.js', text);
+        assert.deepEqual(require('./tmp/out3.js'), 'foo.js');
+        done();
+      });
   },
 
 /*
