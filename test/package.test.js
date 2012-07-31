@@ -141,6 +141,21 @@ exports['package'] = {
   },
 
   'can include a package.json which causes all dependencies to be included': function(done) {
+    var result = [];
+    this.p
+      .dependency(__dirname+'/fixtures/includepackage/package.json')
+      .render(result, function(selfId) {
+        // first file group has a reference to the subpackages
+        assert.ok(result[0].aaa);
+        assert.ok(result[0].bbb);
+        // second group
+        assert.ok(result[1]['/index.js']);
+        assert.ok(result[1].ccc);
+        // third group
+        assert.ok(result[2]['/index.js']);
+        // fourth group
+        assert.ok(result[3]['/bbb.js']);
+      });
     done();
   },
 
