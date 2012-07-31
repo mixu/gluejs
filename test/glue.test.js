@@ -97,25 +97,18 @@ exports['glue'] = {
 
   'can include a package.json': function(done) {
     this.g
-      .basepath('./fixtures/expandsingle/')
-      .include(__dirname+'/fixtures/expandsingle/')
-      .npm('foo', __dirname+'/fixtures/expandsingle/')
+      .basepath('./fixtures/includepackage/')
+      .include(__dirname+'/fixtures/includepackage/')
+      .npm(__dirname+'/fixtures/includepackage/package.json')
       ._render(function(out) {
         console.log(out);
       })
       .render(function(err, text) {
-        require('fs').writeFileSync(__dirname + '/tmp/out3.js', text);
-        assert.deepEqual(require('./tmp/out3.js'), 'foo.js');
+        require('fs').writeFileSync(__dirname + '/tmp/out4.js', text);
+        assert.deepEqual(require('./tmp/out4.js'),  {"aaa":{"aaa":"aaa","ccc":"ccc"},"bbb":"bbb"});
         done();
       });
-  },
-
-/*
-  'can include a package.json file': function(done) {
-    this.g.npm('./fixtures/package.json');
-
-  },
-*/
+  }
 
 };
 
