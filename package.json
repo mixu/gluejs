@@ -17,8 +17,10 @@
     "package"
   ],
   "main": "lib/glue.js",
-  "devDependencies": {
-    "mocha": "1.x",
+  "dependencies": {
     "package-json-resolver": "git://github.com/mixu/package-json-resolver.git#master"
+  },
+  "devDependencies": {
+    "mocha": "1.x"
   }
 }
