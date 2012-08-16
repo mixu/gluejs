@@ -7,7 +7,7 @@
     "email": "mikito.takada@gmail.com",
     "url": "http://blog.mixu.net/"
   },
-  "keywords" : [
+  "keywords": [
     "browser",
     "require",
     "bundle",
@@ -18,7 +18,8 @@
   ],
   "main": "lib/glue.js",
   "dependencies": {
-    "package-json-resolver": "git://github.com/mixu/package-json-resolver.git#master"
+    "package-json-resolver": "git://github.com/mixu/package-json-resolver.git#master",
+    "minilog": "0.0.4"
   },
   "devDependencies": {
     "mocha": "1.x"
