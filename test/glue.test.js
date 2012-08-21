@@ -14,8 +14,8 @@ exports['glue'] = {
 
   'can render a single file and require the result': function (done) {
     var g = this.g;
-    this.g.include('./fixtures/lib/simple.js')
-      .main('./lib/simple.js')
+    this.g.include('./fixtures/rendertest/simple.js')
+      .main('./rendertest/simple.js')
       .render(function(err, text) {
         require('fs').writeFileSync(__dirname + '/tmp/out1.js', text);
         assert.deepEqual(require('./tmp/out1.js'), { simple: true});
@@ -25,9 +25,10 @@ exports['glue'] = {
 
   'can replace a module by name': function(done) {
     var g = this.g;
-    this.g.include('./fixtures/lib/has_dependency.js')
-      .main('./lib/has_dependency.js')
+    this.g.include('./fixtures/rendertest/has_dependency.js')
+      .main('./rendertest/has_dependency.js')
       .replace('dependency', '1234')
+      ._render(function(out) { console.log(out); })
       .render(function(err, text) {
         assert.ok(g.replaced.dependency);
         assert.equal('1234', g.replaced.dependency);
@@ -49,6 +50,7 @@ exports['glue'] = {
     });
   },
 
+
   'can define custom handlers': function(done) {
     var g = this.g,
         extensionRe = new RegExp('(.+)\.handlebars$');
@@ -56,7 +58,7 @@ exports['glue'] = {
       .handler(extensionRe, function(opts, done) {
         var filename = opts.filename;
         var template = fs.readFileSync(filename).toString();
-        done(g.wrap(filename.replace(extensionRe, '$1.js'), template));
+        done(filename.replace(extensionRe, '$1.js'), template);
       })
       .render(function(err, txt) {
         console.log(txt);
@@ -70,7 +72,7 @@ exports['glue'] = {
     g.include(__dirname+'/tmp/placeholder.txt')
       .watch(function(err, txt) {
         calls++;
-        console.log(err, txt);
+        console.log(txt);
         if(calls == 2) {
           done();
         }
@@ -78,12 +80,35 @@ exports['glue'] = {
     fs.writeFileSync(__dirname+'/tmp/placeholder.txt', 'This is a placeholder, so that git creates this temp directory.\n\n');
   },
 
-/*
-  'can include a package.json file': function(done) {
-    this.g.npm('./fixtures/package.json');
-
+  'can include a single npm package': function(done) {
+    this.g
+      .basepath('./fixtures/expandsingle/')
+      .include(__dirname+'/fixtures/expandsingle/')
+      .npm('foo', __dirname+'/fixtures/expandsingle/')
+      ._render(function(out) {
+        console.log(out);
+      })
+      .render(function(err, text) {
+        require('fs').writeFileSync(__dirname + '/tmp/out3.js', text);
+        assert.deepEqual(require('./tmp/out3.js'), 'foo.js');
+        done();
+      });
   },
-*/
+
+  'can include a package.json': function(done) {
+    this.g
+      .basepath('./fixtures/includepackage/')
+      .include(__dirname+'/fixtures/includepackage/')
+      .npm(__dirname+'/fixtures/includepackage/package.json')
+      ._render(function(out) {
+        console.log(out);
+      })
+      .render(function(err, text) {
+        require('fs').writeFileSync(__dirname + '/tmp/out4.js', text);
+        assert.deepEqual(require('./tmp/out4.js'),  {"aaa":{"aaa":"aaa","ccc":"ccc"},"bbb":"bbb"});
+        done();
+      });
+  }
 
 };
 

@@ -1,5 +1,2 @@
 test/tmp
-node_modules/
-!test/fixtures/node_modules
-!test/fixtures/node_modules/dependency/node_modules
-
+/node_modules/
