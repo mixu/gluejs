@@ -17,60 +17,64 @@ A CommonJS-based build system with a chainable API
 
 ## Usage example
 
-    new Glue()
-      .basepath('./lib') // output paths are relative to this
-      .include('./lib')  // includes all files in the dir
-      .exclude(new RegExp('.+\.test\.js')) // excludes .test.js
-      .replace({
-        'jquery': 'window.$', // binds require('jquery') to window.$
-        'Chat': 'window.Chat'
-      })
-      .export('App') // the package is output as window.App
-      .render(function (err, txt) {
-        // send the package as a response to a HTTP request
-        res.setHeader('content-type', 'application/javascript');
-        res.end(txt);
-        // or write the result to a file
-        fs.writeFile('./app.js', txt);
-      });
+```javascript
+new Glue()
+  .basepath('./lib') // output paths are relative to this
+  .include('./lib')  // includes all files in the dir
+  .exclude(new RegExp('.+\\.test\\.js')) // excludes .test.js
+  .replace({
+    'jquery': 'window.$', // binds require('jquery') to window.$
+    'Chat': 'window.Chat'
+  })
+  .export('App') // the package is output as window.App
+  .render(function (err, txt) {
+    // send the package as a response to a HTTP request
+    res.setHeader('content-type', 'application/javascript');
+    res.end(txt);
+    // or write the result to a file
+    fs.writeFile('./app.js', txt);
+  });
+```
 
 ## Including files / directories, excluding by regexp
 
-```include(path)```: If the path is a file, include it. If the path is a directory, include all files in it recursively.
+`.include(path)`: If the path is a file, include it. If the path is a directory, include all files in it recursively.
 
-```exclude(regexp)```: excludes all files matching the regexp from the build. Evaluated just before rendering the build so it applies to all files.
+`.exclude(regexp)`: excludes all files matching the regexp from the build. Evaluated just before rendering the build so it applies to all files.
 
 ## Setting default values
 
-    .defaults({
-      // all relative include() paths are resolved relative to this path
-      reqpath: '',
+```javascript
+.defaults({
+  // all relative include() paths are resolved relative to this path
+  reqpath: '',
 
-      // strip this string from each path
-      // (e.g. /foo/bar/baz.js with '/foo' becomes 'bar/baz.js')
-      basepath: '',
+  // strip this string from each path
+  // (e.g. /foo/bar/baz.js with '/foo' becomes 'bar/baz.js')
+  basepath: '',
 
-      // main file, preset default is index.js
-      main: 'index.js',
+  // main file, preset default is index.js
+  main: 'index.js',
 
-      // name for the variable under window to which the package is exported
-      export: '',
+  // name for the variable under window to which the package is exported
+  export: '',
 
-      // binds require('jquery') to window.$
-      replace: { 'jquery': 'window.$' }
-    })
+  // binds require('jquery') to window.$
+  replace: { 'jquery': 'window.$' }
+})
+```
 
 ## Outputting
 
-```.export(name)```: sets the export name (e.g. export('Foo') => window.Foo = require('index.js'); )
+`.export(name)`: sets the export name (e.g. export('Foo') => window.Foo = require('index.js'); )
 
-```.render(function(err, text){ ...})```: renders the result
+`.render(function(err, text){ ...})`: renders the result
 
 ## Watching files for changes
 
-```.watch(function(err, text){ ...})```: renders and adds file watchers on the files.
+`.watch(function(err, text){ ...})`: renders and adds file watchers on the files.
 
-When a file in the build changes, the ```watch()``` callback will be called again with the new build result.
+When a file in the build changes, the `watch()` callback will be called again with the new build result.
 
 Note that this API is a bit clunky:
 
@@ -92,12 +96,14 @@ Once you get past your first CommonJS-based build, you'll probably want to explo
 
 ## Binding variables under window.* to require() statements
 
-```replace(module, code)```: Meant for replacing a module with a single variable or expression. Examples:
+`.replace(module, code)`: Meant for replacing a module with a single variable or expression. Examples:
 
-    // define require('jquery') as window.$
-    .replace('jquery', 'window.$');
-    // define require('debug') as the function below
-    .replace('debug', function debug() { return debug() });
+```javascript
+// define require('jquery') as window.$
+.replace('jquery', 'window.$');
+// define require('debug') as the function below
+.replace('debug', function debug() { return debug() });
+```
 
 ## Source URLs
 
@@ -107,7 +113,9 @@ Source URLs are additional annotations that make it possible to show the directo
 
 To enable source URLs, set the following option:
 
-    .set('debug', true)
+```javascript
+.set('debug', true)
+```
 
 Note that source URLs require that scripts are wrapped in a eval block, which is a bit ugly, so you probably don't want that in production mode.
 
@@ -117,32 +125,36 @@ By default, gluejs only handles files that end with ".js".
 
 You can create custom handlers that handle other types of files, such as templates for your favorite templating language.
 
-To specify a handler, call ```handler(regexp, function(opts, done) { ... })```
+To specify a handler, call `handler(regexp, function(opts, done) { ... })`
 
 Here is an example:
 
-    var Template = require('templating-library');
-    var extensionRe = new RegExp('(.+)\.tpl$');
-    new Glue()
-      .include('./fixtures/mixed_content/')
-      .handler(extensionRe, function(opts, done) {
-        var wrap = opts.wrap, filename = opts.filename;
-        var out = Template.precompile(
-          fs.readFileSync(filename).toString()
-        );
-        done(wrap(filename.replace(extensionRe, '$1.js'), out));
-      })
-      .render(function(err, txt) {
-        console.log(txt);
-        done();
-      });
+```javascript
+var Template = require('templating-library');
+var extensionRe = new RegExp('(.+)\\.tpl$');
+new Glue()
+  .include('./fixtures/mixed_content/')
+  .handler(extensionRe, function(opts, done) {
+    var wrap = opts.wrap, filename = opts.filename;
+    var out = Template.precompile(
+      fs.readFileSync(filename).toString()
+    );
+    done(wrap(filename.replace(extensionRe, '$1.js'), out));
+  })
+  .render(function(err, txt) {
+    console.log(txt);
+    done();
+  });
+```
 
 In fact, internally, the ".js" extension handler is just:
 
-    .handler(new RegExp('.*\.js$'), function(opts, done) {
-      return done(opts.wrap(opts.filename,
-          fs.readFileSync(opts.filename, 'utf8')));
-    });
+```javascript
+.handler(new RegExp('.*\\.js$'), function(opts, done) {
+  return done(opts.wrap(opts.filename,
+    fs.readFileSync(opts.filename, 'utf8')));
+});
+```
 
 Handler params:
 
@@ -163,19 +175,23 @@ Let's assume that your app consists of several internal packages. For example, w
 
 One way to do this would be to simply have multiple packages, App and Models - where models exports window.model. If you prefer to avoid that extra global variable, do this instead:
 
-    .define('model', 'require("./model")');
+```javascript
+.define('model', 'require("./model")');
+```
 
 Don't use require('model') in files inside the ./model directory, since that may introduce a circular dependency (e.g. model/a -> model/index -> model/a).
 
 ## Generating modules from JS
 
-```define(module, code)```: Meant for writing a full module. The difference here is that while replace() code is not wrapped in a closure while define() code is.
+`.define(module, code)`: Meant for writing a full module. The difference here is that while replace() code is not wrapped in a closure while define() code is.
 
-    .define('index.js', [ 'module.exports = {',
-      [ (hasBrowser ? "  browser: require('./backends/browser_console.js')" : undefined ),
-        (hasLocalStorage ? "  localstorage: require('./backends/browser_localstorage.js')" : undefined )
-      ].filter(function(v) { return !!v; }).join(',\n'),
-    '};'].join('\n'));
+```javascript
+.define('index.js', [ 'module.exports = {',
+  [ (hasBrowser ? "  browser: require('./backends/browser_console.js')" : undefined ),
+    (hasLocalStorage ? "  localstorage: require('./backends/browser_localstorage.js')" : undefined )
+  ].filter(function(v) { return !!v; }).join(',\n'),
+'};'].join('\n'));
+```
 
 The example above generates a index.js file depending on hasBrowser and hasLocalStorage.
 
@@ -183,18 +199,20 @@ The example above generates a index.js file depending on hasBrowser and hasLocal
 
 Glue.concat([ package, package ], function(err, txt)). For example:
 
-    var packageA = new Glue()
-          .basepath('./fixtures/')
-          .export('Foo')
-          .include('./fixtures/lib/foo.js');
-    var packageB = new Glue()
-          .basepath('./fixtures/')
-          .export('Bar')
-          .include('./fixtures/lib/bar.js');
+```javascript
+var packageA = new Glue()
+  .basepath('./fixtures/')
+  .export('Foo')
+  .include('./fixtures/lib/foo.js');
+var packageB = new Glue()
+  .basepath('./fixtures/')
+  .export('Bar')
+  .include('./fixtures/lib/bar.js');
 
-    Glue.concat([packageA, packageB], function(err, txt) {
-      console.log(txt);
-    });
+Glue.concat([packageA, packageB], function(err, txt) {
+  console.log(txt);
+});
+```
 
 ## TODO
 
