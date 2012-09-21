@@ -29,7 +29,7 @@ exports['given a group'] = {
   'can exclude a path by regexp': function(done) {
     var g = this.group;
     var result = g.include(__dirname+'/fixtures/rendertest/')
-      .exclude(new RegExp('.*simple\.js$'))
+      .exclude(new RegExp('.*simple\\.js$'))
       .resolve();
     assert.equal(result.length, 1);
     assert.equal(result[0], __dirname+'/fixtures/rendertest/has_dependency.js');
