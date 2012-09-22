@@ -53,7 +53,7 @@ exports['glue'] = {
 
   'can define custom handlers': function(done) {
     var g = this.g,
-        extensionRe = new RegExp('(.+)\.handlebars$');
+        extensionRe = new RegExp('(.+)\\.handlebars$');
     g.include('./fixtures/mixed_content/')
       .handler(extensionRe, function(opts, done) {
         var filename = opts.filename;
