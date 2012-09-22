@@ -139,7 +139,7 @@ new Glue()
     var out = Template.precompile(
       fs.readFileSync(filename).toString()
     );
-    done(wrap(filename.replace(extensionRe, '$1.js'), out));
+    done(filename.replace(extensionRe, '$1.js'), out);
   })
   .render(function(err, txt) {
     console.log(txt);
