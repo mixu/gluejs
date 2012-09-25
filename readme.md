@@ -1,6 +1,6 @@
 # gluejs
 
-A CommonJS-based build system with a chainable API
+Build CommonJS modules for the browser via a chainable API
 
 ### Features
 
@@ -36,11 +36,36 @@ new Glue()
   });
 ```
 
+## Using the resulting file
+
+To use the resulting file, just include the build result:
+
+    <script src="app.js"></script>
+    <script>
+      console.log(window.App); // single external interface to the package
+    </script>
+
+The require() statements inside the package work just like under Node, yet none of the internals are leaked into the the global namespace.
+
+gluejs does not export a global "require()" function in the browser; this means that it is compatible with other code since all details are hidden and only a single interface is exported (main file's ```module.exports```). The reasons behind this are documented in much more detail in my book, "[Single page applications in depth](http://singlepageappbook.com/maintainability1.html)".
+
+An additional benefit is that you only need one HTTP request to load a package, and that the resulting files can be redistributed (e.g. to a non-Node web application) without worry.
+
 ## Including files / directories, excluding by regexp
 
 `.include(path)`: If the path is a file, include it. If the path is a directory, include all files in it recursively.
 
 `.exclude(regexp)`: excludes all files matching the regexp from the build. Evaluated just before rendering the build so it applies to all files.
+
+## Including npm packages
+
+gluejs can also include dependencies from npm. You have to first ```npm install``` the packages, then gluejs reads, wraps and includes them in your build. This is done recursively, so the dependencies of dependencies are also packaged.
+
+`npm(name, [searchFrom])`: includes a single package from a directory. The package is searched from `searchFrom+"/node_modules/"` - the default value for searchFrom is the basepath for the build. The dependency is then available via require(name).
+
+`npm(pathToPackageJson)`: includes all dependencies from the package.json file. Note that things under "devDependencies" are not included. The dependencies are searched starting from pathToPackageJson. Each dependency is accessible via its name.
+
+Sub-dependencies are also automatically bundled, as long as they've been installed by npm. Since the require() semantics are the same as in Node, subdependencies can depend on different versions of the same module without conflicting with each other.
 
 ## Setting default values
 
@@ -150,9 +175,8 @@ new Glue()
 In fact, internally, the ".js" extension handler is just:
 
 ```javascript
-.handler(new RegExp('.*\\.js$'), function(opts, done) {
-  return done(opts.wrap(opts.filename,
-    fs.readFileSync(opts.filename, 'utf8')));
+.handler(new RegExp('.*\.js$'), function(opts, done) {
+  return done(opts.filename, fs.readFileSync(opts.filename, 'utf8'));
 });
 ```
 
@@ -166,7 +190,6 @@ The callback params:
 - first param (options): has the following elements
   - filename: the full path to the file
   - relativeFilename: the file name relative to the gluejs basepath
-  - wrap: a function(filename, content) which wraps the content string inside a anonymous function, just like normal JS files.
 - second param (done): a callback(string) which should be called with the return value - this allows for async calls inside the handler.
 
 ## Virtual packages
@@ -214,6 +237,10 @@ Glue.concat([packageA, packageB], function(err, txt) {
 });
 ```
 
-## TODO
+## A few notes about npm dependencies
 
-.npm(file.json): includes a package.json
+The main file is determined by looking at the "main" key in package.json and resolution follows the require() rules as documented in the Node API docs.
+
+Only files ending with .js are included in the builds, since require() only works with .js, .json and .node files (the last one being for compiled native modules).
+
+The .npmignore file is honored. It works like a .gitignore file. This is the preferred way of excluding files and directories from npm dependencies according to ```man npm developers```.
