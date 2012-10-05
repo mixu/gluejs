@@ -1,0 +1,114 @@
+#!/usr/bin/env node
+
+var fs = require('fs'),
+    path = require('path'),
+    Glue = require('../lib/glue.js'),
+    log = require('minilog')('cmd'),
+    args = require('argsparser').parse();
+
+var build = new Glue(),
+    paths = (Array.isArray(args['--include']) ? args['--include'] : [args['--include']]).filter(function(v) { return !!v; }),
+    basepath = args['--basepath'] || process.cwd(),
+    // --out
+    outfile = ( args['--out'] ? relpath(args['--out']) : false),
+    npmLookups = (args['--npm'] ? args['--npm'].split(',') : []),
+    replaces = (args['--replace'] ? args['--replace'].split(',') : []),
+    global = (args['--global'] ? args['--global'].split(',') : 'Foo');
+
+function relpath(p) {
+  if(p[0] == '/') {
+    return p;
+  }
+  return path.join(basepath, p);
+}
+
+if(paths.length == 0) {
+  console.log('');
+  console.log('Usage: gluejs --include <file/dir ...> --out filename.js');
+  console.log('  --include [path]   Paths to import.');
+  console.log('  --out [path]       File to write. Default: stdout');
+  console.log('  --global [name]    Name of the global to export. Default: "Foo"');
+  console.log('  --basepath [path]  Base path for the list of files. Default: process.cwd().');
+  console.log('  --main [name]      Name of the main file/module to export. Default: index.js')
+  console.log('  --exclude [regexp] Exclude files matching given regular expression.');
+  console.log('  --replace [name=expr,...]   Bind require("name") to the expression, e.g. jQuery to window.$.');
+  console.log('  --npm [name1,name2,fromdir] Include a single package from a directory in the package.');
+  console.log('  --npm [package.json]        Include all normal dependencies from a package.json in the package.')
+  console.log('  --silent           Disable verbose output.');
+  process.exit();
+}
+
+// --silent
+if(!args['--silent'] && args['--out']) {
+  require('../lib/index.js');
+}
+
+// --basepath
+build.basepath(basepath);
+
+// --include
+paths.forEach(function(p) {
+  build.include(relpath(p));
+});
+
+// --global
+build.export(global);
+
+// --main
+if(args['--main']) {
+  build.main(args['--main']);
+}
+
+// --exclude
+if(args['--exclude']) {
+  if(!Array.isArray(args['--exclude'])) {
+    args['--exclude'] = [args['--exclude']];
+  }
+  args['--exclude'].forEach(function(re) {
+    build.exclude(new RegExp(re));
+  });
+}
+
+// --replace
+if(args['--replace']) {
+  var replaces = args['--replace'].split(',');
+  replaces.forEach(function(item) {
+    var parts = item.split('=', 2);
+    build.replace(parts[0], parts[1]);
+  });
+}
+
+// --npm
+var stack = [];
+npmLookups.forEach(function(part) {
+  var packagePath = relpath(part);
+  if(part.match(/package.json$/) || fs.existsSync(path.join(part, './package.json'))) {
+    if(stack.length > 0) {
+      stack.forEach(function(name) {
+        build.npm(name, packagePath);
+      });
+      stack = [];
+    } else {
+      build.npm(packagePath);
+    }
+  } else {
+    stack.push(part);
+  }
+});
+// if no package.json file is specified, assume npm names are looked up relative to the basepath
+if(stack.length > 0) {
+  stack.forEach(function(name) {
+    build.npm(name, basepath);
+  });
+}
+
+build.render(function(err, txt) {
+  if(err) throw err;
+
+  if(outfile) {
+    fs.writeFileSync(outfile, txt);
+    log.info('Wrote '+outfile);
+  } else {
+    console.log(txt);
+  }
+});
