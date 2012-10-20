@@ -21,7 +21,7 @@
     "gluejs": "./bin/gluejs"
   },
   "dependencies": {
-    "package-json-resolver": "git://github.com/mixu/package-json-resolver.git#master",
+    "package-json-resolver": "0.0.0",
     "minilog": "0.0.4",
     "argsparser": "0.0.6"
   },
