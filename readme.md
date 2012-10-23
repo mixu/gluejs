@@ -142,7 +142,7 @@ To enable source URLs, set the following option:
 .set('debug', true)
 ```
 
-Note that source URLs require that scripts are wrapped in a eval block, which is a bit ugly, so you probably don't want that in production mode.
+Note that source URLs require that scripts are wrapped in a eval block with a special comment, which is not supported by IE, so don't use source URLs for production builds.
 
 ## Handling template files and compile-to-JS files
 
