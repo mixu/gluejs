@@ -4,7 +4,7 @@ var fs = require('fs'),
 
 // Since require.js does not export directly:
 var Req = new Function(
-    fs.readFileSync(__dirname + '/../lib/require.js').toString() +'return require;'
+    fs.readFileSync(__dirname + '/../lib/require/require.old.js').toString() +'return require;'
   ).call();
 
 Req.modules[0]['foo'] = new Function('module', 'exports', 'require', 'global',
