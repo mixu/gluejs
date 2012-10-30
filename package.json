@@ -21,7 +21,7 @@
     "gluejs": "./bin/gluejs"
   },
   "dependencies": {
-    "package-json-resolver": "0.0.0",
+    "package-json-resolver": "0.0.1",
     "minilog": "0.0.4",
     "argsparser": "0.0.6"
   },
