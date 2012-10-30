@@ -40,7 +40,7 @@ exports['glue'] = {
 
   'concat calls render() on arguments and returns the full result': function(done) {
     var assertions = 0;
-    this.g.concat([
+    Glue.concat([
         { render: function(done) { assertions++; done(undefined, 'a'); } },
         { render: function(done) { assertions++; done(undefined, 'b'); } },
       ], function(err, txt) {

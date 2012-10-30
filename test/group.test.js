@@ -1,4 +1,5 @@
 var fs = require('fs'),
+    path = require('path'),
     assert = require('assert'),
     Group = require('../lib/group');
 
@@ -13,7 +14,7 @@ exports['given a group'] = {
     var g = this.group;
     var result = g.include(__dirname+'/fixtures/rendertest/simple.js').resolve();
     assert.equal(result.length, 1);
-    assert.equal(result[0], __dirname+'/fixtures/rendertest/simple.js');
+    assert.equal(result[0], path.normalize(__dirname+'/fixtures/rendertest/simple.js'));
     done();
 
   },
@@ -21,8 +22,8 @@ exports['given a group'] = {
     var g = this.group;
     var result = g.include(__dirname+'/fixtures/rendertest/').resolve();
     assert.equal(result.length, 2);
-    assert.equal(result[0], __dirname+'/fixtures/rendertest/has_dependency.js');
-    assert.equal(result[1], __dirname+'/fixtures/rendertest/simple.js');
+    assert.equal(result[0], path.normalize(__dirname+'/fixtures/rendertest/has_dependency.js'));
+    assert.equal(result[1], path.normalize(__dirname+'/fixtures/rendertest/simple.js'));
     done();
   },
 
@@ -32,7 +33,7 @@ exports['given a group'] = {
       .exclude(new RegExp('.*simple\\.js$'))
       .resolve();
     assert.equal(result.length, 1);
-    assert.equal(result[0], __dirname+'/fixtures/rendertest/has_dependency.js');
+    assert.equal(result[0], path.normalize(__dirname+'/fixtures/rendertest/has_dependency.js'));
     done();
   }
 };

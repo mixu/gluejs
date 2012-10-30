@@ -1,4 +1,5 @@
 var fs = require('fs'),
+    path = require('path'),
     util = require('util'),
     assert = require('assert'),
     Package = require('../lib/package');
@@ -33,9 +34,9 @@ exports['package'] = {
     var child = this.p.children[0];
     assert.equal(child.name, 'foo');
     assert.equal(child.main, '/foo.js');
-    assert.equal(child.basepath, __dirname+'/fixtures/expandsingle/node_modules');
+    assert.equal(child.basepath, path.normalize(__dirname+'/fixtures/expandsingle/node_modules'));
     assert.equal(child.files.length, 1);
-    assert.equal(child.files[0], __dirname+'/fixtures/expandsingle/node_modules/foo.js');
+    assert.equal(child.files[0], path.normalize(__dirname+'/fixtures/expandsingle/node_modules/foo.js'));
 
     var result = [];
     this.p.render(result, function(selfId) {
@@ -54,11 +55,11 @@ exports['package'] = {
     var child = this.p.children[0];
     assert.equal(child.name, 'foo');
     assert.equal(child.main, '/index.js');
-    assert.equal(child.basepath, __dirname+'/fixtures/expandindex/node_modules/foo');
+    assert.equal(child.basepath, path.normalize(__dirname+'/fixtures/expandindex/node_modules/foo'));
     assert.equal(child.files.length, 3);
-    assert.equal(child.files[0], child.basepath+'/index.js');
-    assert.equal(child.files[1], child.basepath+'/lib/sub.js');
-    assert.equal(child.files[2], child.basepath+'/other.js');
+    assert.equal(child.files[0], path.normalize(child.basepath+'/index.js'));
+    assert.equal(child.files[1], path.normalize(child.basepath+'/lib/sub.js'));
+    assert.equal(child.files[2], path.normalize(child.basepath+'/other.js'));
 
     var result = [];
     this.p.render(result, function(selfId) {
@@ -81,11 +82,11 @@ exports['package'] = {
     assert.equal(p.children.length, 1);
     assert.equal(p.children[0].name, 'foo');
     assert.equal(p.children[0].main, '/lib/sub.js');
-    assert.equal(p.children[0].basepath, __dirname+'/fixtures/expandpackage/node_modules/foo');
+    assert.equal(p.children[0].basepath, path.normalize(__dirname+'/fixtures/expandpackage/node_modules/foo'));
     assert.equal(p.children[0].files.length, 3);
-    assert.equal(p.children[0].files[0], p.children[0].basepath+'/lib/sub.js');
-    assert.equal(p.children[0].files[1], p.children[0].basepath+'/other.js');
-    assert.equal(p.children[0].files[2], p.children[0].basepath+'/package.json');
+    assert.equal(p.children[0].files[0], path.normalize(p.children[0].basepath+'/lib/sub.js'));
+    assert.equal(p.children[0].files[1], path.normalize(p.children[0].basepath+'/other.js'));
+    assert.equal(p.children[0].files[2], path.normalize(p.children[0].basepath+'/package.json'));
 
     var result = [];
     p.render(result, function(selfId) {
@@ -106,18 +107,18 @@ exports['package'] = {
     assert.equal(p.children.length, 1);
     assert.equal(p.children[0].name, 'foo');
     assert.equal(p.children[0].main, '/index.js');
-    assert.equal(p.children[0].basepath, __dirname+'/fixtures/hassubdependency/node_modules/foo');
+    assert.equal(p.children[0].basepath, path.normalize(__dirname+'/fixtures/hassubdependency/node_modules/foo'));
     assert.equal(p.children[0].files.length, 2);
-    assert.equal(p.children[0].files[0], p.children[0].basepath+'/index.js');
-    assert.equal(p.children[0].files[1], p.children[0].basepath+'/package.json');
+    assert.equal(p.children[0].files[0], path.normalize(p.children[0].basepath+'/index.js'));
+    assert.equal(p.children[0].files[1], path.normalize(p.children[0].basepath+'/package.json'));
     // subdependency
     assert.equal(p.children[0].children.length, 1);
     var child = p.children[0].children[0];
     assert.equal(child.name, 'bar');
     assert.equal(child.main, '/index.js');
-    assert.equal(child.basepath, __dirname+'/fixtures/hassubdependency/node_modules/foo/node_modules/bar');
+    assert.equal(child.basepath, path.normalize(__dirname+'/fixtures/hassubdependency/node_modules/foo/node_modules/bar'));
     assert.equal(child.files.length, 1);
-    assert.equal(child.files[0], child.basepath+'/index.js');
+    assert.equal(child.files[0], path.normalize(child.basepath+'/index.js'));
 
     var result = [];
     p.render(result, function(selfId) {
