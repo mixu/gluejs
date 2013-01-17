@@ -1,7 +1,7 @@
 var fs = require('fs'),
     path = require('path'),
     assert = require('assert'),
-    Glue = require('../lib/glue.js');
+    Glue = require('../lib/index.js');
 
 exports['glue'] = {
 

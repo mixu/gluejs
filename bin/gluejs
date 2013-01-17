@@ -6,6 +6,8 @@ var fs = require('fs'),
     log = require('minilog')('cmd'),
     args = require('argsparser').parse();
 
+Glue.defaults({ 'reqpath': path.dirname(process.cwd()) });
+
 var build = new Glue(),
     paths = (Array.isArray(args['--include']) ? args['--include'] : [args['--include']]).filter(function(v) { return !!v; }),
     basepath = args['--basepath'] || process.cwd(),
