@@ -18,6 +18,7 @@ exports['given a group'] = {
     done();
 
   },
+
   'can include a directory': function(done) {
     var g = this.group;
     var result = g.include(__dirname+'/fixtures/rendertest/').resolve();
@@ -31,6 +32,16 @@ exports['given a group'] = {
     var g = this.group;
     var result = g.include(__dirname+'/fixtures/rendertest/')
       .exclude(new RegExp('.*simple\\.js$'))
+      .resolve();
+    assert.equal(result.length, 1);
+    assert.equal(result[0], path.normalize(__dirname+'/fixtures/rendertest/has_dependency.js'));
+    done();
+  },
+
+  'can exclude a path by string': function(done) {
+    var g = this.group;
+    var result = g.include(__dirname+'/fixtures/rendertest/')
+      .exclude('simple.js')
       .resolve();
     assert.equal(result.length, 1);
     assert.equal(result[0], path.normalize(__dirname+'/fixtures/rendertest/has_dependency.js'));
