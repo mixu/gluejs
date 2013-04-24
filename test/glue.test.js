@@ -5,11 +5,19 @@ var fs = require('fs'),
 
 exports['glue'] = {
 
-  beforeEach: function(done) {
+  beforeEach: function() {
     this.g = new Glue()
           .basepath('./fixtures/')
           .export('module.exports');
-    done();
+  },
+
+  'can set default values for replace': function() {
+    Glue.defaults({ replace: { foo: 'bar'} });
+    // inspect the render metadata
+    this.g._render(function(metadata) {
+      assert.deepEqual(metadata.replaced, { foo: 'bar'});
+    });
+    Glue.defaults({ replace: {} });
   },
 
   'can render a single file and require the result': function (done) {
@@ -49,7 +57,6 @@ exports['glue'] = {
         done();
     });
   },
-
 
   'can define custom handlers': function(done) {
     var g = this.g,
