@@ -36,7 +36,7 @@ exports['glue'] = {
     this.g.include('./fixtures/rendertest/has_dependency.js')
       .main('./rendertest/has_dependency.js')
       .replace('dependency', '1234')
-      ._render(function(out) { console.log(out); })
+//      ._render(function(out) { console.log(out); })
       .render(function(err, text) {
         assert.ok(g.replaced.dependency);
         assert.equal('1234', g.replaced.dependency);
@@ -62,13 +62,16 @@ exports['glue'] = {
     var g = this.g,
         extensionRe = new RegExp('(.+)\\.handlebars$');
     g.include('./fixtures/mixed_content/')
+      // if the handler matches ".handlebars"
       .handler(extensionRe, function(opts, done) {
         var filename = opts.filename;
-        var template = fs.readFileSync(filename).toString();
+        // this would, for example, be a compilation of a template
+        var template = 'HELLO WORLD';
         done(filename.replace(extensionRe, '$1.js'), template);
       })
       .render(function(err, txt) {
-        console.log(txt);
+        // check that the task ran
+        assert.ok(txt.indexOf('HELLO WORLD') > -1);
         done();
       });
   },
@@ -79,8 +82,10 @@ exports['glue'] = {
     g.include(__dirname+'/tmp/placeholder.txt')
       .watch(function(err, txt) {
         calls++;
-        console.log(txt);
+        // console.log(txt);
         if(calls == 2) {
+          // called twice: once when the watch is established, and another time when the writeFileSync runs
+          assert.equal(calls, 2);
           done();
         }
       });
@@ -88,15 +93,23 @@ exports['glue'] = {
   },
 
   'can include a single npm package': function(done) {
+    var asserted = false;
     this.g
       .basepath('./fixtures/expandsingle/')
       .include(__dirname+'/fixtures/expandsingle/')
       .npm('foo', __dirname+'/fixtures/expandsingle/')
       ._render(function(out) {
-        console.log(out);
+        // check that there are two package spaces
+        assert.equal(out.modules.length, 2);
+        // and that the first one contains a reference to foo
+        assert.ok(out.modules[0]['foo']);
+        asserted = true;
       })
       .render(function(err, text) {
         require('fs').writeFileSync(__dirname + '/tmp/out3.js', text);
+        // assert that _render ran
+        assert.ok(asserted);
+        // assert that requiring the file will return the string inside it
         assert.deepEqual(require('./tmp/out3.js'), 'foo.js');
         done();
       });
@@ -107,9 +120,9 @@ exports['glue'] = {
       .basepath('./fixtures/includepackage/')
       .include(__dirname+'/fixtures/includepackage/')
       .npm(__dirname+'/fixtures/includepackage/package.json')
-      ._render(function(out) {
-        console.log(out);
-      })
+//      ._render(function(out) {
+//        console.log(out);
+//      })
       .render(function(err, text) {
         require('fs').writeFileSync(__dirname + '/tmp/out4.js', text);
         assert.deepEqual(require('./tmp/out4.js'),  {"aaa":{"aaa":"aaa","ccc":"ccc"},"bbb":"bbb"});
