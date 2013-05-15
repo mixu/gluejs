@@ -1,0 +1,19 @@
+{
+  "name": "glue2",
+  "version": "0.0.0",
+  "description": "ERROR: No README.md file found!",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "",
+  "author": "Mikito Takada <mikito.takada@gmail.com> (http://mixu.net/)",
+  "license": "BSD",
+  "gitHead": "1d7507ccb9d662a900ddd158020a4d33e00d3150",
+  "dependencies": {
+    "readable-stream": "~1.0.2"
+  }
+}
