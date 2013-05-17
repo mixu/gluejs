@@ -101,6 +101,10 @@ var cases = {
 
 };
 
+Object.keys(cases).forEach(function(name) {
+  cases[name].files = cases[name].files.map(function(file) { return { name: file }; });
+});
+
 exports['can infer the package structure'] = {
 
   before: function() {
@@ -118,7 +122,7 @@ exports['can infer the package structure'] = {
 
 
   'can infer a single-file package': function() {
-    var tree = { files: cases['single-file'].files.map(function(file) { return { name: file }; }) };
+    var tree = cases['single-file'];
     infer(tree);
     // console.log(util.inspect(tree, null, 10, true));
     assert.equal(tree.packages.length, 1);
@@ -131,7 +135,7 @@ exports['can infer the package structure'] = {
   },
 
   'can infer two packages from module-file and detect the right main file': function() {
-    var tree = { files: cases['has-node-module-file'].files.map(function(file) { return { name: file }; }) };
+    var tree = cases['has-node-module-file'];
     infer(tree);
     console.log(util.inspect(tree, null, 10, true));
     assert.equal(tree.packages.length, 2);
@@ -150,7 +154,7 @@ exports['can infer the package structure'] = {
   },
 
   'can infer two packages from module-folder': function() {
-    var tree = { files: cases['has-node-module-folder'].files.map(function(file) { return { name: file }; }) };
+    var tree = cases['has-node-module-folder'];
     infer(tree);
     console.log(util.inspect(tree, null, 10, true));
     assert.equal(tree.packages.length, 2);
@@ -169,10 +173,10 @@ exports['can infer the package structure'] = {
   },
 
   'can pick up main file name from package.json': function() {
-    var tree = { files: cases['has-node-module-folder-mainfile-via-package-json'].files.map(function(file) { return { name: file }; }) };
+    var tree = cases['has-node-module-folder-mainfile-via-package-json'];
 
     // set up fakeFS
-    this.fakeFS = cases['has-node-module-folder-mainfile-via-package-json'].fakeFS;
+    this.fakeFS = tree.fakeFS;
 
     infer(tree);
     console.log(util.inspect(tree, null, 10, true));
@@ -192,9 +196,9 @@ exports['can infer the package structure'] = {
   },
 
   'can pick up recursive node_modules': function(){
-    var tree = { files: cases['has-sub-sub-sub-module'].files.map(function(file) { return { name: file }; }) };
+    var tree = cases['has-sub-sub-sub-module'];
     // set up fakeFS
-    this.fakeFS = cases['has-sub-sub-sub-module'].fakeFS;
+    this.fakeFS = tree.fakeFS;
     infer(tree);
     console.log(util.inspect(tree, null, 10, true));
     assert.equal(tree.packages.length, 4);
@@ -219,7 +223,7 @@ exports['can infer the package structure'] = {
   },
 
   'can resolve single .json file npm module': function() {
-    var tree = { files: cases['json-node-module'].files.map(function(file) { return { name: file }; }) };
+    var tree = cases['json-node-module'];
     infer(tree);
     console.log(util.inspect(tree, null, 10, true));
     assert.equal(tree.packages.length, 2);
@@ -234,9 +238,9 @@ exports['can infer the package structure'] = {
   },
 
   'it should be OK to define the main file without the .js extension': function() {
-    var tree = { files: cases['package-json-guess-extension'].files.map(function(file) { return { name: file }; }) };
+    var tree = cases['package-json-guess-extension'];
     // set up fakeFS
-    this.fakeFS = cases['package-json-guess-extension'].fakeFS;
+    this.fakeFS = tree.fakeFS;
     infer(tree);
     console.log(util.inspect(tree, null, 10, true));
     assert.equal(tree.packages.length, 2);
@@ -251,9 +255,9 @@ exports['can infer the package structure'] = {
   },
 
   'it should be OK to define the main file as just a directory': function() {
-    var tree = { files: cases['package-json-guess-directory'].files.map(function(file) { return { name: file }; }) };
+    var tree = cases['package-json-guess-directory'];
     // set up fakeFS
-    this.fakeFS = cases['package-json-guess-directory'].fakeFS;
+    this.fakeFS = tree.fakeFS;
     infer(tree);
     console.log(util.inspect(tree, null, 10, true));
     assert.equal(tree.packages.length, 2);

@@ -14,6 +14,7 @@
   "license": "BSD",
   "gitHead": "1d7507ccb9d662a900ddd158020a4d33e00d3150",
   "dependencies": {
-    "readable-stream": "~1.0.2"
+    "readable-stream": "~1.0.2",
+    "minimatch": "~0.2.12"
   }
 }
