@@ -105,7 +105,7 @@ Object.keys(cases).forEach(function(name) {
   cases[name].files = cases[name].files.map(function(file) { return { name: file }; });
 });
 
-exports['can infer the package structure'] = {
+exports['infer-packages'] = {
 
   before: function() {
     var self = this;
@@ -137,7 +137,7 @@ exports['can infer the package structure'] = {
   'can infer two packages from module-file and detect the right main file': function() {
     var tree = cases['has-node-module-file'];
     infer(tree);
-    console.log(util.inspect(tree, null, 10, true));
+    // console.log(util.inspect(tree, null, 10, true));
     assert.equal(tree.packages.length, 2);
     // the root (or base) package should be anonymous (=> name is given by the user)
     assert.ok(typeof tree.packages[0].name == 'undefined');
@@ -156,7 +156,7 @@ exports['can infer the package structure'] = {
   'can infer two packages from module-folder': function() {
     var tree = cases['has-node-module-folder'];
     infer(tree);
-    console.log(util.inspect(tree, null, 10, true));
+    // console.log(util.inspect(tree, null, 10, true));
     assert.equal(tree.packages.length, 2);
     // the root (or base) package should be anonymous (=> name is given by the user)
     assert.ok(typeof tree.packages[0].name == 'undefined');
@@ -179,7 +179,7 @@ exports['can infer the package structure'] = {
     this.fakeFS = tree.fakeFS;
 
     infer(tree);
-    console.log(util.inspect(tree, null, 10, true));
+    // console.log(util.inspect(tree, null, 10, true));
     assert.equal(tree.packages.length, 2);
     // the root (or base) package should be anonymous (=> name is given by the user)
     assert.ok(typeof tree.packages[0].name == 'undefined');
@@ -200,7 +200,7 @@ exports['can infer the package structure'] = {
     // set up fakeFS
     this.fakeFS = tree.fakeFS;
     infer(tree);
-    console.log(util.inspect(tree, null, 10, true));
+    // console.log(util.inspect(tree, null, 10, true));
     assert.equal(tree.packages.length, 4);
     assert.deepEqual(tree.packages, [
       { files: [ '/fixtures/index.js' ], dependencies: { aa: 1 } },
@@ -225,7 +225,7 @@ exports['can infer the package structure'] = {
   'can resolve single .json file npm module': function() {
     var tree = cases['json-node-module'];
     infer(tree);
-    console.log(util.inspect(tree, null, 10, true));
+    // console.log(util.inspect(tree, null, 10, true));
     assert.equal(tree.packages.length, 2);
     assert.deepEqual(tree.packages, [
       { files: [ '/a/index.js' ], dependencies: { b: 1 } },
@@ -242,7 +242,7 @@ exports['can infer the package structure'] = {
     // set up fakeFS
     this.fakeFS = tree.fakeFS;
     infer(tree);
-    console.log(util.inspect(tree, null, 10, true));
+    // console.log(util.inspect(tree, null, 10, true));
     assert.equal(tree.packages.length, 2);
     assert.deepEqual(tree.packages, [
       { files: [ '/a/index.js' ], dependencies: { b: 1 } },
@@ -259,7 +259,7 @@ exports['can infer the package structure'] = {
     // set up fakeFS
     this.fakeFS = tree.fakeFS;
     infer(tree);
-    console.log(util.inspect(tree, null, 10, true));
+    // console.log(util.inspect(tree, null, 10, true));
     assert.equal(tree.packages.length, 2);
     assert.deepEqual(tree.packages, [
       { files: [ '/a/index.js' ], dependencies: { b: 1 } },

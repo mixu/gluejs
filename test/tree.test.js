@@ -13,17 +13,19 @@ exports['given a tree'] = {
     var g = this.tree;
     var result = g.add(__dirname+'/fixtures/single-file/simple.js').files;
     assert.equal(result.length, 1);
-    assert.equal(result[0], path.normalize(__dirname+'/fixtures/single-file/simple.js'));
+    assert.deepEqual(result, [
+      { name: path.normalize(__dirname+'/fixtures/single-file/simple.js') },
+    ]);
   },
 
   'can add a directory': function() {
     var g = this.tree;
     var result = g.add(__dirname+'/fixtures/single-file/').files;
     assert.equal(result.length, 2);
-    assert.equal(result[0], path.normalize(__dirname+'/fixtures/single-file/has_dependency.js'));
-    assert.equal(result[1], path.normalize(__dirname+'/fixtures/single-file/simple.js'));
-
-    console.log(g);
+    assert.deepEqual(result, [
+      { name: path.normalize(__dirname+'/fixtures/single-file/has_dependency.js') },
+      { name: path.normalize(__dirname+'//fixtures/single-file/simple.js') },
+    ]);
   }
 };
 

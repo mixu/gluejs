@@ -94,7 +94,7 @@ exports['filter-package'] = {
     infer(tree);
     // now apply the filter
     filter(tree);
-    console.log(util.inspect(tree, null, 10, true));
+    // console.log(util.inspect(tree, null, 10, true));
     assert.deepEqual(tree.files, [
       { name: '/a/included_file.js' },
       { name: '/a/included_file.foobar' },
@@ -110,7 +110,7 @@ exports['filter-package'] = {
     infer(tree);
     // now apply the filter
     filter(tree);
-    console.log(util.inspect(tree, null, 10, true));
+    // console.log(util.inspect(tree, null, 10, true));
     assert.deepEqual(tree.files, [
       { name: '/a/included_file.js' },
       { name: '/a/included_file.foobar' },
