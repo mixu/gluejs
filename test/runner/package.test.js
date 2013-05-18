@@ -6,5 +6,5 @@ var task = require('../../lib/runner/package-commonjs'),
 
 tree.add(__dirname+'/../fixtures/complex-package/');
 
-task(tree);
+task(tree, { basepath: __dirname+'/../fixtures/complex-package/'} );
 
