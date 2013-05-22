@@ -10,6 +10,7 @@ function API() {
 
 API.prototype.include = function(filepath) {
   this.files.add(path.resolve(process.cwd(), filepath));
+  console.log(this.files);
   return this;
 };
 
@@ -18,7 +19,9 @@ API.prototype.render = function(dest) {
 
   } else if(dest.write) {
     // writable stream
-    packageCommonJs(this.files, this.options, dest);
+    packageCommonJs(this.files, this.options, dest, function() {
+      dest.end();
+    });
   }
 };
 
@@ -36,7 +39,7 @@ API.prototype.set = function(key, val) {};
 });
 
 API.prototype.basepath = function(value) {
-  path.resolve(process.cwd(), value);
+  this.options.basepath = path.resolve(process.cwd(), value);
   return this;
 };
 
