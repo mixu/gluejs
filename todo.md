@@ -10,7 +10,9 @@
   - e.g. add a file to the root from outside the root, with a different virtual filename
   - e.g. swap out the content a directory for the content of another one (shimming)
 - better logging (e.g. during filtering)
-- better reporting (e.g. post-build summary)
+- minification reporting:
+  - "Original size:  xx bytes"
+  - "Processed size: yy bytes (zz.zz% of original)"
 
 
 # Internals
