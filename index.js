@@ -5,7 +5,9 @@ var path = require('path'),
 // API wrapper
 function API() {
   this.files = new Tree();
-  this.options = {};
+  this.options = {
+    replaced: {}
+  };
 }
 
 API.prototype.include = function(filepath) {
@@ -45,6 +47,21 @@ API.prototype.basepath = function(value) {
 
 // other
 API.prototype.replace = function(module, code) {
+  if(arguments.length == 1 && module === Object(module)) {
+    Object.keys(module).forEach(function(k) {
+      this.replace(k, module[k]);
+    }, this);
+  } else {
+    // TODO: exclude the module with the same name
+
+    if(typeof code == 'object') {
+      this.options.replaced[module] = JSON.stringify(code);
+    } else {
+      // function / number / boolean / undefined all convert to string already
+      this.options.replaced[module] = code;
+    }
+  }
+
   return this;
 };
 
