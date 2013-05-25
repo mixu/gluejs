@@ -1,8 +1,8 @@
 var assert = require('assert'),
     util = require('util');
 
-var infer = require('../../lib/tree-tasks/infer-packages.js'),
-    filter = require('../../lib/tree-tasks/filter-packages.js');
+var infer = require('../../lib/list-tasks/infer-packages.js'),
+    filter = require('../../lib/list-tasks/filter-packages.js');
 
 var cases = {
 
@@ -88,14 +88,14 @@ exports['filter-package'] = {
   },
 
   'can exclude via package.json whitelist': function() {
-    var tree = cases['package.json whitelist'];
-    this.fakeFS = tree.fakeFS;
+    var list = cases['package.json whitelist'];
+    this.fakeFS = list.fakeFS;
     // first, infer the package structure
-    infer(tree);
+    infer(list);
     // now apply the filter
-    filter(tree);
-    // console.log(util.inspect(tree, null, 10, true));
-    assert.deepEqual(tree.files, [
+    filter(list);
+    // console.log(util.inspect(list, null, 10, true));
+    assert.deepEqual(list.files, [
       { name: '/a/included_file.js' },
       { name: '/a/included_file.foobar' },
       { name: '/a/included_directory/bbb.js' },
@@ -104,14 +104,14 @@ exports['filter-package'] = {
   },
 
   'can exclude via .npmignore': function() {
-    var tree = cases['npmignore blacklist'];
-    this.fakeFS = tree.fakeFS;
+    var list = cases['npmignore blacklist'];
+    this.fakeFS = list.fakeFS;
     // first, infer the package structure
-    infer(tree);
+    infer(list);
     // now apply the filter
-    filter(tree);
-    // console.log(util.inspect(tree, null, 10, true));
-    assert.deepEqual(tree.files, [
+    filter(list);
+    // console.log(util.inspect(list, null, 10, true));
+    assert.deepEqual(list.files, [
       { name: '/a/included_file.js' },
       { name: '/a/included_file.foobar' },
       { name: '/a/.npmignore' },

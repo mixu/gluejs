@@ -1,16 +1,16 @@
 var fs = require('fs'),
     path = require('path'),
     assert = require('assert'),
-    Tree = require('../lib/tree.js');
+    List = require('minitask').list;
 
-exports['given a tree'] = {
+exports['given a list'] = {
 
   beforeEach: function() {
-    this.tree = new Tree();
+    this.list = new List();
   },
 
   'can add a single file': function () {
-    var g = this.tree;
+    var g = this.list;
     var result = g.add(__dirname+'/fixtures/single-file/simple.js').files;
     assert.equal(result.length, 1);
     assert.deepEqual(result, [
@@ -19,7 +19,7 @@ exports['given a tree'] = {
   },
 
   'can add a directory': function() {
-    var g = this.tree;
+    var g = this.list;
     var result = g.add(__dirname+'/fixtures/single-file/').files;
     assert.equal(result.length, 2);
     assert.deepEqual(result, [

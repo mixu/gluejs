@@ -1,10 +1,9 @@
 var util = require('util'),
-    Tree = require('../lib/tree.js');
+    List = require('minitask').list;
 
 var task = require('../lib/runner/static-server.js'),
-    tree = new Tree();
+    list = new List();
 
-tree.add(__dirname+'/fixtures/single-file/');
+list.add(__dirname+'/fixtures/single-file/');
 
-task(tree);
-
+task(list);

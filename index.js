@@ -1,10 +1,10 @@
 var path = require('path'),
-    Tree = require('./lib/tree.js'),
+    List = require('minitask').list,
     packageCommonJs = require('./lib/runner/package-commonjs');
 
 // API wrapper
 function API() {
-  this.files = new Tree();
+  this.files = new List();
   this.options = {
     replaced: {}
   };

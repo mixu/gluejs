@@ -1,7 +1,7 @@
 var assert = require('assert'),
     util = require('util');
 
-var filter = require('../../lib/tree-tasks/filter-npm.js');
+var filter = require('../../lib/list-tasks/filter-npm.js');
 
 var cases = {
   'built-in ignores': {
@@ -38,10 +38,10 @@ Object.keys(cases).forEach(function(name) {
 exports['filter-npm'] = {
 
   'can exclude using the npm built-in ignore list': function() {
-    var tree = cases['built-in ignores'];
-    filter(tree);
-    //console.log(util.inspect(tree, null, 10, true));
-    assert.deepEqual(tree.files, [
+    var list = cases['built-in ignores'];
+    filter(list);
+    //console.log(util.inspect(list, null, 10, true));
+    assert.deepEqual(list.files, [
       { name: '/a/.lock-wscript-keepme' },
       { name: '/a/.wafpickle-2-keepme' },
       { name: '/a/keepme.swp' },

@@ -1,10 +1,10 @@
 var util = require('util'),
-    Tree = require('../lib/tree.js');
+    List = require('minitask').list;
 
 var concat = require('../lib/runner/concat.js'),
-    tree = new Tree();
+    list = new List();
 
-tree.add(__dirname+'/fixtures/single-file/');
+list.add(__dirname+'/fixtures/single-file/');
 
-concat(tree);
+concat(list);
 

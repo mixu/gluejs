@@ -19,7 +19,8 @@
   "main": "index.js",
   "dependencies": {
     "readable-stream": "~1.0.2",
-    "minimatch": "~0.2.12"
+    "minimatch": "~0.2.12",
+    "minitask": "0.0.0"
   },
   "devDependencies": {
     "mocha": "1.x"

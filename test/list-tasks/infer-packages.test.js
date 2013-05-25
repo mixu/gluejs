@@ -1,7 +1,7 @@
 var assert = require('assert'),
     util = require('util');
 
-var infer = require('../../lib/tree-tasks/infer-packages.js');
+var infer = require('../../lib/list-tasks/infer-packages.js');
 
 var cases = {
 
@@ -122,87 +122,87 @@ exports['infer-packages'] = {
 
 
   'can infer a single-file package': function() {
-    var tree = cases['single-file'];
-    infer(tree);
-    // console.log(util.inspect(tree, null, 10, true));
-    assert.equal(tree.packages.length, 1);
+    var list = cases['single-file'];
+    infer(list);
+    // console.log(util.inspect(list, null, 10, true));
+    assert.equal(list.packages.length, 1);
     // the root (or base) package should be anonymous (=> name is given by the user)
-    assert.ok(typeof tree.packages[0].name == 'undefined');
-    assert.ok(typeof tree.packages[0].basepath == 'undefined');
-    assert.ok(typeof tree.packages[0].mainfile == 'undefined');
+    assert.ok(typeof list.packages[0].name == 'undefined');
+    assert.ok(typeof list.packages[0].basepath == 'undefined');
+    assert.ok(typeof list.packages[0].mainfile == 'undefined');
     // the package files should be correct
-    assert.deepEqual(tree.packages[0].files, [ '/fixtures/simple.js' ]);
+    assert.deepEqual(list.packages[0].files, [ '/fixtures/simple.js' ]);
   },
 
   'can infer two packages from module-file and detect the right main file': function() {
-    var tree = cases['has-node-module-file'];
-    infer(tree);
-    // console.log(util.inspect(tree, null, 10, true));
-    assert.equal(tree.packages.length, 2);
+    var list = cases['has-node-module-file'];
+    infer(list);
+    // console.log(util.inspect(list, null, 10, true));
+    assert.equal(list.packages.length, 2);
     // the root (or base) package should be anonymous (=> name is given by the user)
-    assert.ok(typeof tree.packages[0].name == 'undefined');
+    assert.ok(typeof list.packages[0].name == 'undefined');
     // the package files should be correct
-    assert.deepEqual(tree.packages[0].files, [ '/fixtures/index.js' ]);
-    assert.deepEqual(tree.packages[0].dependencies, { foo: 1 });
+    assert.deepEqual(list.packages[0].files, [ '/fixtures/index.js' ]);
+    assert.deepEqual(list.packages[0].dependencies, { foo: 1 });
 
     // foo package
-    assert.equal(tree.packages[1].name, 'foo');
-    assert.equal(tree.packages[1].basepath, '/fixtures/node_modules/');
-    assert.equal(tree.packages[1].mainfile, 'foo.js');
-    assert.deepEqual(tree.packages[1].files, [ 'foo.js' ]);
-    assert.deepEqual(tree.packages[1].dependencies, { });
+    assert.equal(list.packages[1].name, 'foo');
+    assert.equal(list.packages[1].basepath, '/fixtures/node_modules/');
+    assert.equal(list.packages[1].mainfile, 'foo.js');
+    assert.deepEqual(list.packages[1].files, [ 'foo.js' ]);
+    assert.deepEqual(list.packages[1].dependencies, { });
   },
 
   'can infer two packages from module-folder': function() {
-    var tree = cases['has-node-module-folder'];
-    infer(tree);
-    // console.log(util.inspect(tree, null, 10, true));
-    assert.equal(tree.packages.length, 2);
+    var list = cases['has-node-module-folder'];
+    infer(list);
+    // console.log(util.inspect(list, null, 10, true));
+    assert.equal(list.packages.length, 2);
     // the root (or base) package should be anonymous (=> name is given by the user)
-    assert.ok(typeof tree.packages[0].name == 'undefined');
+    assert.ok(typeof list.packages[0].name == 'undefined');
     // the package files should be correct
-    assert.deepEqual(tree.packages[0].files, [ '/fixtures/index.js' ]);
-    assert.deepEqual(tree.packages[0].dependencies, { foo: 1 });
+    assert.deepEqual(list.packages[0].files, [ '/fixtures/index.js' ]);
+    assert.deepEqual(list.packages[0].dependencies, { foo: 1 });
 
     // foo package
-    assert.equal(tree.packages[1].name, 'foo');
-    assert.equal(tree.packages[1].basepath, '/fixtures/node_modules/foo/');
-    assert.equal(tree.packages[1].mainfile, 'index.js');
-    assert.deepEqual(tree.packages[1].files, [ 'index.js', 'lib/sub.js' ]);
-    assert.deepEqual(tree.packages[1].dependencies, { });
+    assert.equal(list.packages[1].name, 'foo');
+    assert.equal(list.packages[1].basepath, '/fixtures/node_modules/foo/');
+    assert.equal(list.packages[1].mainfile, 'index.js');
+    assert.deepEqual(list.packages[1].files, [ 'index.js', 'lib/sub.js' ]);
+    assert.deepEqual(list.packages[1].dependencies, { });
   },
 
   'can pick up main file name from package.json': function() {
-    var tree = cases['has-node-module-folder-mainfile-via-package-json'];
+    var list = cases['has-node-module-folder-mainfile-via-package-json'];
 
     // set up fakeFS
-    this.fakeFS = tree.fakeFS;
+    this.fakeFS = list.fakeFS;
 
-    infer(tree);
-    // console.log(util.inspect(tree, null, 10, true));
-    assert.equal(tree.packages.length, 2);
+    infer(list);
+    // console.log(util.inspect(list, null, 10, true));
+    assert.equal(list.packages.length, 2);
     // the root (or base) package should be anonymous (=> name is given by the user)
-    assert.ok(typeof tree.packages[0].name == 'undefined');
+    assert.ok(typeof list.packages[0].name == 'undefined');
     // the package files should be correct
-    assert.deepEqual(tree.packages[0].files, [ '/fixtures/index.js' ]);
-    assert.deepEqual(tree.packages[0].dependencies, { foo: 1 });
+    assert.deepEqual(list.packages[0].files, [ '/fixtures/index.js' ]);
+    assert.deepEqual(list.packages[0].dependencies, { foo: 1 });
 
     // foo package
-    assert.equal(tree.packages[1].name, 'foo');
-    assert.equal(tree.packages[1].basepath, '/fixtures/node_modules/foo/');
-    assert.equal(tree.packages[1].mainfile, 'main.js');
-    assert.deepEqual(tree.packages[1].files, [ 'main.js', 'package.json', 'lib/sub.js' ]);
-    assert.deepEqual(tree.packages[1].dependencies, { });
+    assert.equal(list.packages[1].name, 'foo');
+    assert.equal(list.packages[1].basepath, '/fixtures/node_modules/foo/');
+    assert.equal(list.packages[1].mainfile, 'main.js');
+    assert.deepEqual(list.packages[1].files, [ 'main.js', 'package.json', 'lib/sub.js' ]);
+    assert.deepEqual(list.packages[1].dependencies, { });
   },
 
   'can pick up recursive node_modules': function(){
-    var tree = cases['has-sub-sub-sub-module'];
+    var list = cases['has-sub-sub-sub-module'];
     // set up fakeFS
-    this.fakeFS = tree.fakeFS;
-    infer(tree);
-    // console.log(util.inspect(tree, null, 10, true));
-    assert.equal(tree.packages.length, 4);
-    assert.deepEqual(tree.packages, [
+    this.fakeFS = list.fakeFS;
+    infer(list);
+    // console.log(util.inspect(list, null, 10, true));
+    assert.equal(list.packages.length, 4);
+    assert.deepEqual(list.packages, [
       { files: [ '/fixtures/index.js' ], dependencies: { aa: 1 } },
       { name: 'aa',
         basepath: '/fixtures/node_modules/aa/',
@@ -223,11 +223,11 @@ exports['infer-packages'] = {
   },
 
   'can resolve single .json file npm module': function() {
-    var tree = cases['json-node-module'];
-    infer(tree);
-    // console.log(util.inspect(tree, null, 10, true));
-    assert.equal(tree.packages.length, 2);
-    assert.deepEqual(tree.packages, [
+    var list = cases['json-node-module'];
+    infer(list);
+    // console.log(util.inspect(list, null, 10, true));
+    assert.equal(list.packages.length, 2);
+    assert.deepEqual(list.packages, [
       { files: [ '/a/index.js' ], dependencies: { b: 1 } },
       { name: 'b',
         basepath: '/a/node_modules/',
@@ -238,13 +238,13 @@ exports['infer-packages'] = {
   },
 
   'it should be OK to define the main file without the .js extension': function() {
-    var tree = cases['package-json-guess-extension'];
+    var list = cases['package-json-guess-extension'];
     // set up fakeFS
-    this.fakeFS = tree.fakeFS;
-    infer(tree);
-    // console.log(util.inspect(tree, null, 10, true));
-    assert.equal(tree.packages.length, 2);
-    assert.deepEqual(tree.packages, [
+    this.fakeFS = list.fakeFS;
+    infer(list);
+    // console.log(util.inspect(list, null, 10, true));
+    assert.equal(list.packages.length, 2);
+    assert.deepEqual(list.packages, [
       { files: [ '/a/index.js' ], dependencies: { b: 1 } },
       { name: 'b',
         basepath: '/a/node_modules/b/',
@@ -255,13 +255,13 @@ exports['infer-packages'] = {
   },
 
   'it should be OK to define the main file as just a directory': function() {
-    var tree = cases['package-json-guess-directory'];
+    var list = cases['package-json-guess-directory'];
     // set up fakeFS
-    this.fakeFS = tree.fakeFS;
-    infer(tree);
-    // console.log(util.inspect(tree, null, 10, true));
-    assert.equal(tree.packages.length, 2);
-    assert.deepEqual(tree.packages, [
+    this.fakeFS = list.fakeFS;
+    infer(list);
+    // console.log(util.inspect(list, null, 10, true));
+    assert.equal(list.packages.length, 2);
+    assert.deepEqual(list.packages, [
       { files: [ '/a/index.js' ], dependencies: { b: 1 } },
       { name: 'b',
         basepath: '/a/node_modules/b/',

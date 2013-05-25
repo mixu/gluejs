@@ -1,10 +1,10 @@
 var util = require('util'),
-    Tree = require('../../lib/tree.js');
+    List = require('minitask').list;
 
 var task = require('../../lib/runner/package-commonjs'),
-    tree = new Tree();
+    list = new List();
 
-tree.add(__dirname+'/../fixtures/complex-package/');
+list.add(__dirname+'/../fixtures/complex-package/');
 
-task(tree, { basepath: __dirname+'/../fixtures/complex-package/'} );
+task(list, { basepath: __dirname+'/../fixtures/complex-package/'} );
 

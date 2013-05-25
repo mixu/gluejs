@@ -1,5 +1,5 @@
 TESTS += test/*.test.js
-TESTS += test/tree-tasks/*.test.js
+TESTS += test/list-tasks/*.test.js
 
 test:
 	@mocha \
