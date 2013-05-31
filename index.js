@@ -5,6 +5,7 @@ var path = require('path'),
 // API wrapper
 function API() {
   this.files = new List();
+  // default options
   this.options = {
     replaced: {}
   };
@@ -31,7 +32,10 @@ API.prototype.render = function(dest) {
 
 // setters
 API.defaults = API.prototype.defaults = function(opts) {};
-API.prototype.set = function(key, val) {};
+API.prototype.set = function(key, value) {
+  this.options[key] = value;
+  return this;
+};
 
 ['export', 'main'].forEach(function(key) {
   API.prototype[key] = function(value) {
