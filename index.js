@@ -23,7 +23,9 @@ API.prototype.render = function(dest) {
   } else if(dest.write) {
     // writable stream
     packageCommonJs(this.files, this.options, dest, function() {
-      dest.end();
+      if(dest !== process.stdout) {
+        dest.end();
+      }
     });
   }
 };

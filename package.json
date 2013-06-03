@@ -7,6 +7,9 @@
     "email": "mikito.takada@gmail.com",
     "url": "http://blog.mixu.net/"
   },
+  "bin": {
+    "gluejs": "./bin/gluejs"
+  },
   "keywords": [
     "browser",
     "require",
@@ -20,7 +23,8 @@
   "dependencies": {
     "readable-stream": "~1.0.2",
     "minimatch": "~0.2.12",
-    "minitask": "0.0.0"
+    "minitask": "0.0.0",
+    "optimist": "~0.5.2"
   },
   "devDependencies": {
     "mocha": "1.x"

@@ -3,6 +3,12 @@ var fs = require('fs'),
     assert = require('assert'),
     List = require('minitask').list;
 
+function pluck(key, obj) {
+  var o = { };
+  o[key] = obj[key];
+  return o;
+}
+
 exports['given a list'] = {
 
   beforeEach: function() {
@@ -13,7 +19,10 @@ exports['given a list'] = {
     var g = this.list;
     var result = g.add(__dirname+'/fixtures/single-file/simple.js').files;
     assert.equal(result.length, 1);
-    assert.deepEqual(result, [
+
+    // console.log(result.map(pluck.bind(this, 'name')));
+
+    assert.deepEqual(result.map(pluck.bind(this, 'name')), [
       { name: path.normalize(__dirname+'/fixtures/single-file/simple.js') },
     ]);
   },
@@ -22,7 +31,7 @@ exports['given a list'] = {
     var g = this.list;
     var result = g.add(__dirname+'/fixtures/single-file/').files;
     assert.equal(result.length, 2);
-    assert.deepEqual(result, [
+    assert.deepEqual(result.map(pluck.bind(this, 'name')), [
       { name: path.normalize(__dirname+'/fixtures/single-file/has_dependency.js') },
       { name: path.normalize(__dirname+'//fixtures/single-file/simple.js') },
     ]);

@@ -1,0 +1,61 @@
+#!/usr/bin/env node
+var fs = require('fs'),
+    path = require('path'),
+    Glue = require('../index.js');
+
+var argv = require('optimist')
+    .usage('Usage: $0 --include <file/dir ...> --out filename.js')
+    .options({
+      'include': {
+        describe: 'Paths to import.'
+      },
+      'out': {
+        describe: 'File to write. Default: stdout'
+      },
+      'global': {
+        describe: 'Name of the global to export. Default: "Foo"',
+      },
+      'basepath': {
+        describe: 'Base path for the list of files. Default: process.cwd().',
+        'default': process.cwd()
+      },
+      'main': {
+        describe: 'Name of the main file/module to export. Default: index.js',
+        'default': 'index.js'
+      },
+      'replace': {
+        describe: 'Bind require("name") to the expression, e.g. jQuery to window.$.'
+      },
+      'silent': {
+        describe: 'Disable verbose output.'
+      },
+    })
+    .demand(['include'])
+    .parse(process.argv);
+
+var g = new Glue();
+
+// --include
+g.include(argv['include']);
+
+// --global
+g.export(argv['global']);
+
+// --basepath
+g.basepath(argv['basepath']);
+
+// --main
+g.main(argv['main'])
+
+// --replace
+if(argv['replace']) {
+  argv['replace'].split(',').forEach(function(item) {
+    var parts = item.split('=', 2);
+    g.replace(parts[0], parts[1]);
+  });
+}
+
+// --silent
+
+// -- out
+g.render(argv['out'] || process.stdout);
