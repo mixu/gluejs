@@ -12,8 +12,13 @@ function API() {
 }
 
 API.prototype.include = function(filepath) {
-  this.files.add(path.resolve(process.cwd(), filepath));
-  console.log(this.files);
+  if(!filepath) return this;
+  var self = this,
+      paths = (Array.isArray(filepath) ? filepath : [ filepath ]);
+
+  paths.forEach(function(p) {
+    self.files.add(path.resolve(process.cwd(), p));
+  });
   return this;
 };
 

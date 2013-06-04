@@ -29,6 +29,16 @@ var argv = require('optimist')
       'silent': {
         describe: 'Disable verbose output.'
       },
+      'source-url': {
+        describe: 'Add source URL annotations to the files. Useful for development, ' +
+                  'but note that they are not compatible with IE.'
+      },
+      'global-require': {
+        describe: 'Export the require() implementation into the global space.'
+      },
+      'command': {
+        describe: 'Pipe each file through a shell command and capture the output (e.g. --command "uglifyjs --no-copyright").'
+      }
     })
     .demand(['include'])
     .parse(process.argv);
@@ -56,6 +66,23 @@ if(argv['replace']) {
 }
 
 // --silent
+// if not explicitly disabled and output is defined
+if(!argv['silent'] && argv['out']) {
+  g.set('report', true);
+}
+
+if(argv['command']) {
+  g.set('command', argv['command'].split(' '));
+}
+
+if(argv['npm']) {
+  process.stderr.write('Warning: the --npm flag is deprecated. ' +
+    'Directly include the file path to module, e.g. --include ./node_modules/foo instead.\n');
+}
 
 // -- out
-g.render(argv['out'] || process.stdout);
+if(argv['out']) {
+  g.render(fs.createWriteStream(argv['out']));
+} else {
+  g.render(process.stdout);
+}
