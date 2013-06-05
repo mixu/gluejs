@@ -65,6 +65,27 @@ var cases = {
         // glob "dir/*/**"
         'included_directory/*/**\n'
     }
+  },
+
+  'package.json devDependencies': {
+    files: [
+      '/a/index.js',
+      '/a/node_modules/bar/index.js',
+      '/a/node_modules/bar/package.json',
+      '/a/node_modules/bar/node_modules/include_me.js',
+      '/a/node_modules/bar/node_modules/exclude_me.js',
+      '/a/node_modules/bar/node_modules/include/second.js',
+      '/a/node_modules/bar/node_modules/exclude/second.js',
+      '/a/node_modules/bar/node_modules/exclude/node_modules/subdependency.js',
+    ],
+    fakeFS: {
+      '/a/node_modules/bar/package.json': JSON.stringify({
+        devDependencies: {
+          exclude_me: '*',
+          exclude: '*'
+        }
+      })
+    }
   }
 };
 
@@ -76,14 +97,21 @@ exports['filter-package'] = {
 
   before: function() {
     var self = this;
-    filter._setFS({
-      readFileSync: function(filename) {
-        if(self.fakeFS[filename]) {
-          return self.fakeFS[filename];
-        }
-        console.log('fs.readFileSync', filename);
-        return '{}';
+
+    function mock(filename) {
+      if(self.fakeFS[filename]) {
+        return self.fakeFS[filename];
       }
+      console.log('fs.readFileSync', filename);
+      return '{}';
+    }
+
+    infer._setFS({
+      readFileSync: mock
+    });
+
+    filter._setFS({
+      readFileSync: mock
     });
   },
 
@@ -119,6 +147,26 @@ exports['filter-package'] = {
     ]);
 
   },
+
+  'packages listed in package.json as devDependencies are ignored': function() {
+    var list = cases['package.json devDependencies'];
+    this.fakeFS = list.fakeFS;
+    // first, infer the package structure
+    infer(list);
+    // now apply the filter
+    filter(list);
+    console.log(util.inspect(list, null, 10, true));
+    assert.deepEqual(list.files, [
+     { name: '/a/index.js' },
+     { name: '/a/node_modules/bar/index.js' },
+     { name: '/a/node_modules/bar/package.json' },
+     { name: '/a/node_modules/bar/node_modules/include_me.js' },
+     { name: '/a/node_modules/bar/node_modules/include/second.js' }
+    ]);
+    // base package, bar, include and include_me = 4 packages
+    assert.equal(list.packages.length, 4);
+  }
+
 /*
   'test minimatch': function() {
     var minimatch = require("minimatch");

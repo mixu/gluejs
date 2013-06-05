@@ -59,10 +59,18 @@ g.main(argv['main'])
 
 // --replace
 if(argv['replace']) {
-  argv['replace'].split(',').forEach(function(item) {
-    var parts = item.split('=', 2);
-    g.replace(parts[0], parts[1]);
-  });
+  // allow --replace foo=bar,baz=abc or --replace foo=bar --replace bar=abc
+  if(Array.isArray(argv['replace'])) {
+    argv['replace'].forEach(function(item) {
+      var parts = item.split('=', 2);
+      g.replace(parts[0], parts[1]);
+    });
+  } else {
+    argv['replace'].split(',').forEach(function(item) {
+      var parts = item.split('=', 2);
+      g.replace(parts[0], parts[1]);
+    });
+  }
 }
 
 // --silent

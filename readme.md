@@ -12,3 +12,7 @@ Build CommonJS modules for the browser via a chainable API.
 - .set('silent', false): enable verbose logging
 - .set('sourceurl', true): enable source urls
 - .set('global-require', true): overwrite / export the require implementation from the package, allowing you to call require() from outside the package as if you were inside the package.
+
+## Upgrading
+
+`gluejs --include foo bar` has to be written as `gluejs --include foo --include bar`.
