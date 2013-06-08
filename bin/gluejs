@@ -79,6 +79,10 @@ if(!argv['silent'] && argv['out']) {
   g.set('report', true);
 }
 
+if(argv['source-url']) {
+  g.set('source-url', true);
+}
+
 if(argv['command']) {
   g.set('command', argv['command'].split(' '));
 }
