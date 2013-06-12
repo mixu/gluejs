@@ -19,6 +19,10 @@
     "module",
     "package"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mixu/gluejs.git"
+  },
   "main": "index.js",
   "dependencies": {
     "readable-stream": "~1.0.2",
