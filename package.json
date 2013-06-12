@@ -28,6 +28,10 @@
     "bytes": "~0.2.1"
   },
   "devDependencies": {
-    "mocha": "1.x"
+    "mocha": "1.x",
+    "minilog": "~2.0.0"
+  },
+  "peerDependencies": {
+    "minilog": "~2.0.0"
   }
 }

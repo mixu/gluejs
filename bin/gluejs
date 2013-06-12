@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 var fs = require('fs'),
     path = require('path'),
-    Glue = require('../index.js');
+    Glue = require('../index.js'),
+    Minilog = require('minilog');
 
 var argv = require('optimist')
     .usage('Usage: $0 --include <file/dir ...> --out filename.js')
     .options({
       'include': {
-        describe: 'Paths to import.'
+        describe: 'Path to import.'
+      },
+      'exclude': {
+        describe: 'JS regular expression string to match against the included paths',
       },
       'out': {
         describe: 'File to write. Default: stdout'
@@ -38,6 +42,12 @@ var argv = require('optimist')
       },
       'command': {
         describe: 'Pipe each file through a shell command and capture the output (e.g. --command "uglifyjs --no-copyright").'
+      },
+      'silent': {
+        describe: 'Disable all output, including the reporter.'
+      },
+      'verbose': {
+        describe: 'More verbose output, such as files being filtered out and processed.'
       }
     })
     .demand(['include'])
@@ -47,6 +57,11 @@ var g = new Glue();
 
 // --include
 g.include(argv['include']);
+
+// --exclude
+if(argv['exclude']) {
+  g.set('exclude', argv['exclude']);
+}
 
 // --global
 g.export(argv['global']);
@@ -77,6 +92,11 @@ if(argv['replace']) {
 // if not explicitly disabled and output is defined
 if(!argv['silent'] && argv['out']) {
   g.set('report', true);
+}
+
+if(argv['verbose']) {
+  g.set('report', true);
+  Minilog.enable();
 }
 
 if(argv['source-url']) {
