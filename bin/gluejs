@@ -30,9 +30,6 @@ var argv = require('optimist')
       'replace': {
         describe: 'Bind require("name") to the expression, e.g. jQuery to window.$.'
       },
-      'silent': {
-        describe: 'Disable verbose output.'
-      },
       'source-url': {
         describe: 'Add source URL annotations to the files. Useful for development, ' +
                   'but note that they are not compatible with IE.'
