@@ -17,10 +17,6 @@
   - e.g. add a file to the root from outside the root, with a different virtual filename
   - e.g. swap out the content a directory for the content of another one (shimming)
 - better logging (e.g. during filtering)
-- minification reporting:
-  - "Original size:  xx bytes"
-  - "Processed size: yy bytes (zz.zz% of original)"
-
 
 # Internals
 
@@ -67,13 +63,8 @@ Final tasks:
 - package-commonjs (to any writable stream)
 
 
-## What's new
-
-gluejs (v2) is out, with a comprehensive refactoring to make use of Node 0.10.x -style streams (under 0.8.x via [readable-stream](https://github.com/isaacs/readable-stream)).
-
 New features:
 
-- internals refactored to make working with unix pipes (e.g. minification, obfuscation etc.) much easier via Node 0.10.x streams
 - vastly better conventions and support for writing dual-platform (browser + server) code that has some functions replaced with platform-specific equivalents
 - Mocha test server and conventions to make it easy to repackage and run your Mocha tests inside a browser
 - static file serving and Connect middleware
@@ -88,8 +79,6 @@ Minor, but cool features:
 - custom build task support
 - better support for .npmignore files and filtering in general
 - choice between throwing, or returning undefined in the require shim
-
-
 
 # How do I ...?
 
