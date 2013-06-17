@@ -73,16 +73,20 @@ Ability to export the module via `--amd` using the require.js AMD define("name",
 Usage: node ./bin/gluejs --include <file/dir ...> --out filename.js
 
 Options:
-  --include         Path to import.                                                                                                                                                                                                                [required]
+  --include         Path to import.
   --exclude         JS regular expression string to match against the included paths
   --out             File to write. Default: stdout
   --global          Name of the global to export. Default: "Foo"
-  --basepath        Base path for the list of files. Default: process.cwd().                                                                                                                                                                       [default: "/home/m/mnt/gluejs"]
-  --main            Name of the main file/module to export. Default: index.js                                                                                                                                                                      [default: "index.js"]
+  --basepath        Base path for the list of files. Default: process.cwd().
+  --main            Name of the main file/module to export. Default: index.js
   --replace         Bind require("name") to the expression, e.g. jQuery to window.$.
-  --source-url      Add source URL annotations to the files. Useful for development, but note that they are not compatible with IE.
+  --source-url      Add source URL annotations to the files. Useful for development,
+                    but note that they are not compatible with IE.
   --global-require  Export the require() implementation into the global space.
-  --amd             Export the module via the require.js AMD define("name", ...) using the name specified in --global. Note that the requirejs will not pick up modules defined like this unless you do at least one asynchronous require() call.
+  --amd             Export the module via the require.js AMD define("name", ...) using
+                    the name specified in --global. Note that the requirejs will not
+                    pick up modules defined like this unless you do at least one
+                    asynchronous require() call.
   --command         Pipe each file through a shell command and capture the output (e.g. --command "uglifyjs --no-copyright").
   --silent          Disable all output, including the reporter.
   --verbose         More verbose output, such as files being filtered out and processed.
