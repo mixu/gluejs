@@ -41,8 +41,8 @@ if(paths.length == 0) {
 }
 
 // --silent
-if(!args['--silent'] && args['--out']) {
-  require('../lib/index.js');
+if(args['--silent']) {
+  build.set('silent', true);
 }
 
 // --basepath

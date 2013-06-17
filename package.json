@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "package-json-resolver": "0.0.1",
-    "minilog": "0.0.4",
+    "minilog": "2.0.0",
     "argsparser": "0.0.6"
   },
   "devDependencies": {
