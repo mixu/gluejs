@@ -11,6 +11,8 @@ gluejs (v2) is a comprehensive refactoring to make use of Node 0.10.x -style str
 - internals refactored to make working with unix pipes (e.g. minification, obfuscation etc.) much easier via Node 0.10.x streams
 - internals refactored to make file operation easier to apply (e.g. each task is separated into it's own pipe)
 
+Warning! Dragons! gluejs2 is still under development. It works well enough that I use it for our own builds but you may run into small issues and I haven't had the time to fully document it. Please report issues if you run into them.
+
 ## Neat new features
 
 Easier minification (or other processing) via `--command`:
@@ -22,6 +24,8 @@ Easier minification (or other processing) via `--command`:
     --global Foo \
     --main lib/index.js \
     --out dist/foo.js
+
+With that option, all files are piped through `uglifyjs` before writing to disk.
 
 Gorgeous new reporter, with stats on savings from minification:
 
