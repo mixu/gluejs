@@ -87,7 +87,8 @@ Options:
                     the name specified in --global. Note that the requirejs will not
                     pick up modules defined like this unless you do at least one
                     asynchronous require() call.
-  --command         Pipe each file through a shell command and capture the output (e.g. --command "uglifyjs --no-copyright").
+  --command         Pipe each file through a shell command and capture the output
+                    (e.g. --command "uglifyjs --no-copyright").
   --silent          Disable all output, including the reporter.
   --verbose         More verbose output, such as files being filtered out and processed.
 ````

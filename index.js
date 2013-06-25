@@ -1,6 +1,8 @@
 var path = require('path'),
     List = require('minitask').list,
-    packageCommonJs = require('./lib/runner/package-commonjs');
+    packageCommonJs = require('./lib/runner/package-commonjs'),
+    Capture = require('./lib/file-tasks/capture.js'),
+    Minilog = require('minilog');
 
 // API wrapper
 function API() {
@@ -14,17 +16,21 @@ function API() {
 API.prototype.include = function(filepath) {
   if(!filepath) return this;
   var self = this,
-      paths = (Array.isArray(filepath) ? filepath : [ filepath ]);
+      paths = (Array.isArray(filepath) ? filepath : [ filepath ]),
+      base = this.options.basepath || process.cwd();
 
   paths.forEach(function(p) {
-    self.files.add(path.resolve(process.cwd(), p));
+    self.files.add(path.resolve(base, p));
   });
   return this;
 };
 
 API.prototype.render = function(dest) {
   if(typeof dest == 'function') {
-
+    var capture = new Capture();
+    packageCommonJs(this.files, this.options, capture, function() {
+      dest(null, capture.get());
+    });
   } else if(dest.write) {
     // writable stream
     packageCommonJs(this.files, this.options, dest, function() {
@@ -41,6 +47,9 @@ API.prototype.render = function(dest) {
 API.defaults = API.prototype.defaults = function(opts) {};
 API.prototype.set = function(key, value) {
   this.options[key] = value;
+  if(key == 'verbose') {
+    Minilog.enable();
+  }
   return this;
 };
 
