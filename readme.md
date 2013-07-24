@@ -1,6 +1,6 @@
 # gluejs
 
-Build CommonJS modules for the browser via a chainable API.
+Package Node/CommonJS modules for the browser
 
 New and improved gluejs v2.
 
@@ -236,7 +236,9 @@ Note that source URLs require that scripts are wrapped in a eval block with a sp
 
 The cache speeds up large builds (and minified builds) significantly since only source files that have changed (different last modified date; different file size or different build options) are updated.
 
-Use a directory with a dot in front to hide the cached files (remember to also gitignore the directory). The path is relative to the working directory. For example: `--cache .cache`
+Use a directory with a dot in front to hide the cached files (remember to also gitignore the directory). The path is relative to the working directory. For example:
+
+    --cache .cache
 
 When the cache is in use, the number of cache hits are shown:
 
