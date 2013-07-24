@@ -43,6 +43,9 @@ var opts = require('optimist')
       'command': {
         describe: 'Pipe each file through a shell command and capture the output (e.g. --command "uglifyjs --no-copyright").'
       },
+      'cache': {
+        describe: 'Use a cache directory to store file builds. The cache speeds up large builds (and minified builds) significantly since only source files that have changed are updated.'
+      },
       'silent': {
         describe: 'Disable all output, including the reporter.'
       },

@@ -112,7 +112,7 @@ The `.concat(packageA, packageB)`, `.define(module, code)`, `.defaults()` featur
 ## Usage
 
 ````bash
-Usage: node ./bin/gluejs --include <file/dir ...> --out filename.js
+Usage: gluejs --include <file/dir ...> --out filename.js
 
 Options:
   --include         Path to import.
@@ -131,8 +131,12 @@ Options:
                     asynchronous require() call.
   --command         Pipe each file through a shell command and capture the output
                     (e.g. --command "uglifyjs --no-copyright").
+  --cache           Use a cache directory to store file builds. The cache speeds up
+                    large builds (and minified builds) significantly since only source
+                    files that have changed are updated.
   --silent          Disable all output, including the reporter.
   --verbose         More verbose output, such as files being filtered out and processed.
+  --version         Version info
 ````
 
 ## API usage example
