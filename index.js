@@ -85,14 +85,20 @@ API.prototype.replace = function(module, code) {
   return this;
 };
 
-API.prototype.exclude = function(path) {};
-API.prototype.npm = function(name, pathTo) {};
+API.prototype.exclude = function(path) {
+  if(!this.options['exclude']) {
+    this.options['exclude'] = [];
+  }
+  this.options['exclude'].push((path instanceof RegExp ? path : new RegExp(path)));
+  return this;
+};
 API.prototype.handler = function(regex, fn) {};
 API.prototype.define = function(module, code) {};
 API.prototype.watch = function(onDone) {};
-API.concat = function(arr, callback) {};
 
 // deprecated
+API.prototype.npm = function(name, pathTo) {};
 API.prototype.reqpath = function(value) {};
+API.concat = function(arr, callback) {};
 
 module.exports = API;
