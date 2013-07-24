@@ -5,6 +5,73 @@
 - setting basepath to ./node_modules/foo causes the root to be empty rather than being based inside the package directory. E.g. you need to do require('foo') to get the result rather than require('./index.js');
 - replace('foo', 'window.foo') applies to all subdependencies indiscriminately. Need a better syntax to control this. Old behavior was to only replace top level dependencies.
 
+## --watch
+
+TODO
+
+Watch files for changes
+
+.watch(function(err, text){ ...}): renders and adds file watchers on the files.
+
+Note that this API is a bit clunky:
+
+there is no way to unwatch a file other than terminate the program
+on each watched file change, a console.log() message is shown
+the API uses fs.watchFile(), so you do not get notification of newly added files in directories; watches are registered on the files that were used on the first render
+But it works fine for automatically rebuilding e.g. when doing development locally.
+
+## --transform
+
+TODO
+
+Compiling template files and compile-to-JS files.
+
+By default, gluejs only handles files that end with ".js".
+
+You can create custom handlers that handle other types of files, such as templates for your favorite templating language.
+
+To specify a handler, call `handler(regexp, function(opts, done) { ... })`
+
+Here is an example:
+
+```javascript
+var Template = require('templating-library');
+var extensionRe = new RegExp('(.+)\\.tpl$');
+new Glue()
+  .include('./fixtures/mixed_content/')
+  .handler(extensionRe, function(opts, done) {
+    var wrap = opts.wrap, filename = opts.filename;
+    var out = Template.precompile(
+      fs.readFileSync(filename).toString()
+    );
+    done(filename.replace(extensionRe, '$1.js'), out);
+  })
+  .render(function(err, txt) {
+    console.log(txt);
+    done();
+  });
+```
+
+In fact, internally, the ".js" extension handler is just:
+
+```javascript
+.handler(new RegExp('.*\.js$'), function(opts, done) {
+  return done(opts.filename, fs.readFileSync(opts.filename, 'utf8'));
+});
+```
+
+Handler params:
+
+- first param (regexp): the regexp used to match files.
+- second param (callback): a callback(options, done) which will be called for each file.
+
+The callback params:
+
+- first param (options): has the following elements
+  - filename: the full path to the file
+  - relativeFilename: the file name relative to the gluejs basepath
+- second param (done): a callback(string) which should be called with the return value - this allows for async calls inside the handler.
+
 # Tasks
 
 - pre-filters for .git / svn / hg / cvs directories for better performance

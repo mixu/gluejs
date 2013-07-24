@@ -4,7 +4,7 @@ var fs = require('fs'),
     Glue = require('../index.js'),
     Minilog = require('minilog');
 
-var argv = require('optimist')
+var opts = require('optimist')
     .usage('Usage: $0 --include <file/dir ...> --out filename.js')
     .options({
       'include': {
@@ -48,10 +48,22 @@ var argv = require('optimist')
       },
       'verbose': {
         describe: 'More verbose output, such as files being filtered out and processed.'
+      },
+      'version': {
+        describe: 'Version info'
       }
-    })
-    .demand(['include'])
-    .parse(process.argv);
+    }),
+    argv = opts.parse(process.argv);
+
+if(argv['version'] || argv['v'] ) {
+  console.log(require('../package.json').version);
+  process.exit();
+}
+
+if(!argv['include']) {
+  console.log(opts.help());
+  process.exit();
+}
 
 var g = new Glue();
 
@@ -106,6 +118,14 @@ if(argv['verbose']) {
 
 if(argv['source-url']) {
   g.set('source-url', true);
+}
+
+if(argv['global-require']) {
+  g.set('global-require', true);
+}
+
+if(argv['cache']) {
+  g.set('cache', path.resolve(process.cwd(), argv['cache']));
 }
 
 if(argv['command']) {
