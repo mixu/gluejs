@@ -1,9 +1,8 @@
-# gluejs
+# gluejs V2
 
 Package Node/CommonJS modules for the browser
 
-New and improved gluejs v2.
-
+New version! gluejs v2 is now out with a bunch of new features ([v1 branch](https://github.com/mixu/gluejs/tree/master))
 
 - Converts code written for Node.js to run in the browser
 - Lightweight require shim (~400 characters, minified but not gzipped)

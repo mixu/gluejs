@@ -150,14 +150,14 @@ exports['infer-packages'] = {
     assert.ok(typeof list.packages[0].name == 'undefined');
     // the package files should be correct
     assert.deepEqual(list.packages[0].files, [ { name: '/fixtures/index.js' } ]);
-    assert.deepEqual(list.packages[0].dependencies, { foo: 1 });
+    assert.deepEqual(list.packages[0].dependenciesById, { foo: 1 });
 
     // foo package
     assert.equal(list.packages[1].name, 'foo');
     assert.equal(list.packages[1].basepath, '/fixtures/node_modules/');
     assert.equal(list.packages[1].main, 'foo.js');
     assert.deepEqual(list.packages[1].files, [ { name: '/fixtures/node_modules/foo.js' } ]);
-    assert.deepEqual(list.packages[1].dependencies, { });
+    assert.deepEqual(list.packages[1].dependenciesById, { });
   },
 
   'can infer two packages from module-folder': function() {
@@ -169,7 +169,7 @@ exports['infer-packages'] = {
     assert.ok(typeof list.packages[0].name == 'undefined');
     // the package files should be correct
     assert.deepEqual(list.packages[0].files, [ { name: '/fixtures/index.js' } ]);
-    assert.deepEqual(list.packages[0].dependencies, { foo: 1 });
+    assert.deepEqual(list.packages[0].dependenciesById, { foo: 1 });
 
     // foo package
     assert.equal(list.packages[1].name, 'foo');
@@ -179,7 +179,7 @@ exports['infer-packages'] = {
       { name: '/fixtures/node_modules/foo/index.js'  },
       { name: '/fixtures/node_modules/foo/lib/sub.js' }
       ]);
-    assert.deepEqual(list.packages[1].dependencies, { });
+    assert.deepEqual(list.packages[1].dependenciesById, { });
   },
 
   'can pick up main file name from package.json': function() {
@@ -195,14 +195,14 @@ exports['infer-packages'] = {
     assert.ok(typeof list.packages[0].name == 'undefined');
     // the package files should be correct
     assert.deepEqual(list.packages[0].files, [ { name: '/fixtures/index.js' } ]);
-    assert.deepEqual(list.packages[0].dependencies, { foo: 1 });
+    assert.deepEqual(list.packages[0].dependenciesById, { foo: 1 });
 
     // foo package
     assert.equal(list.packages[1].name, 'foo');
     assert.equal(list.packages[1].basepath, '/fixtures/node_modules/foo/');
     assert.equal(list.packages[1].main, 'main.js');
     assert.deepEqual(list.packages[1].files, [ { name: '/fixtures/node_modules/foo/main.js' }, { name: '/fixtures/node_modules/foo/package.json' } , { name: '/fixtures/node_modules/foo/lib/sub.js' } ]);
-    assert.deepEqual(list.packages[1].dependencies, { });
+    assert.deepEqual(list.packages[1].dependenciesById, { });
   },
 
   'can pick up recursive node_modules': function(){
@@ -212,29 +212,30 @@ exports['infer-packages'] = {
     infer(list);
     // console.log(util.inspect(list.packages, null, 10, true));
     assert.equal(list.packages.length, 4);
-    assert.deepEqual(list.packages, [
+    assert.deepEqual(list.packages,
+      [
       { files: [ { name: '/fixtures/index.js' } ],
-        dependencies: { aa: 1 }
-      },
+        dependenciesById: { aa: 1 } },
       { name: 'aa',
+        uid: 1,
         basepath: '/fixtures/node_modules/aa/',
         main: 'index.js',
         files: [ { name: '/fixtures/node_modules/aa/index.js' } ],
-        dependencies: { bb: 2, cc: 3 } },
+        dependenciesById: { bb: 2, cc: 3 } },
       { name: 'bb',
+        uid: 2,
         basepath: '/fixtures/node_modules/aa/node_modules/',
         main: 'bb.js',
         files: [ { name: '/fixtures/node_modules/aa/node_modules/bb.js' } ],
-        dependencies: {} },
+        dependenciesById: {} },
       { name: 'cc',
+        uid: 3,
         basepath: '/fixtures/node_modules/aa/node_modules/cc/',
         main: 'differentfile.js',
-        files: [
-          { name: '/fixtures/node_modules/aa/node_modules/cc/differentfile.js' },
-          { name: '/fixtures/node_modules/aa/node_modules/cc/package.json' }
-        ],
-        dependencies: {} }
-    ]);
+        files:
+         [ { name: '/fixtures/node_modules/aa/node_modules/cc/differentfile.js' },
+           { name: '/fixtures/node_modules/aa/node_modules/cc/package.json' } ],
+        dependenciesById: {} } ]);
   },
 
   'can resolve single .json file npm module': function() {
@@ -242,14 +243,16 @@ exports['infer-packages'] = {
     infer(list);
     // console.log(util.inspect(list, null, 10, true));
     assert.equal(list.packages.length, 2);
-    assert.deepEqual(list.packages, [
-      { files: [ { name: '/a/index.js' } ], dependencies: { b: 1 } },
+    assert.deepEqual(list.packages,
+     [
+      { files: [ { name: '/a/index.js' } ],
+       dependenciesById: { b: 1 } },
       { name: 'b',
-        basepath: '/a/node_modules/',
-        main: 'b.json',
-        files: [ { name: '/a/node_modules/b.json' } ],
-        dependencies: {} }
-    ]);
+       uid: 1,
+       basepath: '/a/node_modules/',
+       main: 'b.json',
+       files: [ { name: '/a/node_modules/b.json' } ],
+       dependenciesById: {} } ]);
   },
 
   'it should be OK to define the main file without the .js extension': function() {
@@ -260,13 +263,16 @@ exports['infer-packages'] = {
     // console.log(util.inspect(list, null, 10, true));
     assert.equal(list.packages.length, 2);
     assert.deepEqual(list.packages, [
-      { files: [ { name: '/a/index.js' } ], dependencies: { b: 1 } },
-      { name: 'b',
-        basepath: '/a/node_modules/b/',
-        main: 'alt.js',
-        files: [ { name: '/a/node_modules/b/alt.js'}, { name: '/a/node_modules/b/package.json' } ],
-        dependencies: {} }
-    ]);
+     { files: [ { name: '/a/index.js' } ],
+       dependenciesById: { b: 1 } },
+     { name: 'b',
+       uid: 1,
+       basepath: '/a/node_modules/b/',
+       main: 'alt.js',
+       files:
+        [ { name: '/a/node_modules/b/alt.js' },
+          { name: '/a/node_modules/b/package.json' } ],
+       dependenciesById: {} } ]);
   },
 
   'it should be OK to define the main file as just a directory': function() {
@@ -276,14 +282,16 @@ exports['infer-packages'] = {
     infer(list);
     // console.log(util.inspect(list, null, 10, true));
     assert.equal(list.packages.length, 2);
-    assert.deepEqual(list.packages, [
-      { files: [ { name: '/a/index.js' } ], dependencies: { b: 1 } },
-      { name: 'b',
-        basepath: '/a/node_modules/b/',
-        main: 'lib/index.js',
-        files: [ { name: '/a/node_modules/b/package.json' }, { name: '/a/node_modules/b/lib/index.js' } ],
-        dependencies: {} }
-    ]);
+    assert.deepEqual(list.packages,  [ { files: [ { name: '/a/index.js' } ],
+       dependenciesById: { b: 1 } },
+     { name: 'b',
+       uid: 1,
+       basepath: '/a/node_modules/b/',
+       main: 'lib/index.js',
+       files:
+        [ { name: '/a/node_modules/b/package.json' },
+          { name: '/a/node_modules/b/lib/index.js' } ],
+       dependenciesById: {} } ]);
   },
 
 };
