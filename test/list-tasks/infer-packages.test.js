@@ -11,7 +11,7 @@ function pluck(key, obj) {
 
 var cases = {
 
-  'single-file': {
+  'can infer a single-file package': {
     files: [ '/fixtures/simple.js' ]
   },
 
@@ -105,6 +105,18 @@ var cases = {
     }
   },
 
+  'if the main path is a relative path, it should be normalized': {
+    files: [
+      '/a/index.js',
+      '/a/node_modules/b/url.js',
+      '/a/node_modules/b/package.json'
+    ],
+    fakeFS: {
+      '/a/node_modules/b/package.json': JSON.stringify({
+        main: './url.js'
+      })
+    }
+  }
 };
 
 Object.keys(cases).forEach(function(name) {
@@ -129,7 +141,7 @@ exports['infer-packages'] = {
 
 
   'can infer a single-file package': function() {
-    var list = cases['single-file'];
+    var list = cases['can infer a single-file package'];
     infer(list);
     // console.log(util.inspect(list, null, 10, true));
     assert.equal(list.packages.length, 1);
@@ -293,6 +305,25 @@ exports['infer-packages'] = {
           { name: '/a/node_modules/b/lib/index.js' } ],
        dependenciesById: {} } ]);
   },
+
+  'if the main path is a relative path, it should be normalized': function() {
+    var list = cases['if the main path is a relative path, it should be normalized'];
+    // set up fakeFS
+    this.fakeFS = list.fakeFS;
+    infer(list);
+    // console.log(util.inspect(list, null, 10, true));
+    assert.equal(list.packages.length, 2);
+    assert.deepEqual(list.packages,  [ { files: [ { name: '/a/index.js' } ],
+       dependenciesById: { b: 1 } },
+     { name: 'b',
+       uid: 1,
+       basepath: '/a/node_modules/b/',
+       main: 'url.js',
+       files:
+        [ { name: '/a/node_modules/b/url.js' },
+          { name: '/a/node_modules/b/package.json' } ],
+       dependenciesById: {} } ]);
+  }
 
 };
 
