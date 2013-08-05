@@ -10,3 +10,6 @@ test:
 		$(TESTS)
 
 .PHONY: test
+
+style:
+	jshint index.js lib bin --exclude "lib/runner/package-commonjs/resources/require*"

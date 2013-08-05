@@ -97,13 +97,17 @@ if(argv['replace']) {
   // allow --replace foo=bar,baz=abc or --replace foo=bar --replace bar=abc
   if(Array.isArray(argv['replace'])) {
     argv['replace'].forEach(function(item) {
-      var parts = item.split('=', 2);
-      g.replace(parts[0], parts[1]);
+      var pos = item.indexOf('='),
+          name = item.substring(0, pos),
+          value = item.substring(pos+1);
+      g.replace(name, value);
     });
   } else {
     argv['replace'].split(',').forEach(function(item) {
-      var parts = item.split('=', 2);
-      g.replace(parts[0], parts[1]);
+      var pos = item.indexOf('='),
+          name = item.substring(0, pos),
+          value = item.substring(pos+1);
+      g.replace(name, value);
     });
   }
 }
