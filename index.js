@@ -9,7 +9,8 @@ function API() {
   this.files = new List();
   // default options
   this.options = {
-    replaced: {}
+    replaced: {},
+    remap: {}
   };
 }
 
@@ -73,7 +74,6 @@ API.prototype.replace = function(module, code) {
     }, this);
   } else {
     // TODO: exclude the module with the same name
-
     if(typeof code == 'object') {
       this.options.replaced[module] = JSON.stringify(code);
     } else {
@@ -84,6 +84,23 @@ API.prototype.replace = function(module, code) {
 
   return this;
 };
+
+API.prototype.remap = function(module, code) {
+  if(arguments.length == 1 && module === Object(module)) {
+    Object.keys(module).forEach(function(k) {
+      this.remap(k, module[k]);
+    }, this);
+  } else {
+    if(typeof code == 'object') {
+      this.options.remap[module] = JSON.stringify(code);
+    } else {
+      // function / number / boolean / undefined all convert to string already
+      this.options.remap[module] = code;
+    }
+  }
+  return this;
+};
+
 
 API.prototype.exclude = function(path) {
   if(!this.options['exclude']) {

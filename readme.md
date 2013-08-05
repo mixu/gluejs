@@ -4,6 +4,7 @@ Package Node/CommonJS modules for the browser
 
 New version! gluejs v2 is now out with a bunch of new features ([v1 branch](https://github.com/mixu/gluejs/tree/master))
 
+
 - Converts code written for Node.js to run in the browser
 - Lightweight require shim (~400 characters, minified but not gzipped)
 - Easy to connect to intermediate shell tasks (e.g. minifiers) due to streams2 support
@@ -213,6 +214,16 @@ Using a global require (e.g. to bind to the value of a AMD module):
 
     --replace sha1="window.require('sha1')"
 
+## --remap
+
+`--remap name=expr` / `.remap(key, value)`: Remap a name to another name (within the same package).
+
+For example, to remap `require('assert')` to `require('chai').assert`:
+
+    --remap "assert=require('chai').assert"
+
+When you are binding to a external module, use `--replace`. When the module is internal to the package (e.g. fs, assert, ...), use `--remap`. Basically the difference is that `--remap` dependencies are only resolved when they are first required, whereas `--replace` is a direct assignment / evaluation. The delayed evaluation is needed for internal modules to prevent circular dependencies from causing issues during load time.
+
 ## --source-url
 
 `--source-url` / `.set('source-url', true)`: Source URLs are additional annotations that make it possible to show the directory tree when looking at scripts (instead of just the one compiled file):
@@ -222,7 +233,7 @@ Using a global require (e.g. to bind to the value of a AMD module):
 To enable source URLs, set the following option:
 
 ```javascript
-.set('debug', true)
+.set('source-url', true)
 ```
 
 Note that source URLs require that scripts are wrapped in a eval block with a special comment, which is not supported by IE, so don't use source URLs for production builds.

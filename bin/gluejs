@@ -28,7 +28,10 @@ var opts = require('optimist')
         'default': 'index.js'
       },
       'replace': {
-        describe: 'Bind require("name") to the expression, e.g. jQuery to window.$.'
+        describe: 'Bind require("name") to an expression, e.g. --replace jQuery=window.$'
+      },
+      'remap': {
+        describe: 'Remap require("name") to another (internal) module e.g. --replace "assert=require(\'chai\').assert"'
       },
       'source-url': {
         describe: 'Add source URL annotations to the files. Useful for development, ' +
@@ -110,6 +113,15 @@ if(argv['replace']) {
       g.replace(name, value);
     });
   }
+
+}
+if(argv['remap']) {
+  (Array.isArray(argv['remap']) ? argv['remap'] : [argv['remap']]).forEach(function(item) {
+    var pos = item.indexOf('='),
+        name = item.substring(0, pos),
+        value = item.substring(pos+1);
+    g.remap(name, value);
+  });
 }
 
 // --silent
