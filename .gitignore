@@ -1,4 +1,4 @@
-node_modules/
+/node_modules/
 test/tmp/
 npm-debug.log
 test/list-tasks/tmp/node_modules/
