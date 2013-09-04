@@ -55,6 +55,9 @@ var opts = require('optimist')
       'verbose': {
         describe: 'More verbose output, such as files being filtered out and processed.'
       },
+      'reset-exclude': {
+        describe: 'Advanced: do not apply the default exclusions (/dist/, /example/, /benchmark/, .min.js).'
+      },
       'version': {
         describe: 'Version info'
       }
@@ -79,6 +82,11 @@ g.include(argv['include']);
 // --exclude
 if(argv['exclude']) {
   g.set('exclude', argv['exclude']);
+}
+
+// reset-exclude
+if(argv['reset-exclude']) {
+  g.set('reset-exclude', true);
 }
 
 // --amd
