@@ -2,3 +2,4 @@
 test/tmp/
 npm-debug.log
 test/list-tasks/tmp/node_modules/
+test/node_modules/

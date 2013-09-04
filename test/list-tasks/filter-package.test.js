@@ -155,7 +155,7 @@ exports['filter-package'] = {
     infer(list);
     // now apply the filter
     filter(list);
-    console.log(util.inspect(list, null, 10, true));
+    // console.log(util.inspect(list, null, 10, true));
     assert.deepEqual(list.files, [
      { name: '/a/index.js' },
      { name: '/a/node_modules/bar/index.js' },

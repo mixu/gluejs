@@ -6,8 +6,7 @@ var fs = require('fs'),
 exports['integration tests'] = {
 
   'can build a json file': function(done) {
-    var Glue = require('gluejs'),
-        file = fs.createWriteStream(__dirname + '/tmp/temp.js');
+    var file = fs.createWriteStream(__dirname + '/tmp/temp.js');
 
     file.once('close', function() {
       var result = require(__dirname + '/tmp/temp.js');
@@ -20,7 +19,52 @@ exports['integration tests'] = {
       .include('./')
       .export('module.exports')
       .render(file);
+  },
+
+  '--command with unix pipe': function(done) {
+    new Glue()
+      .basepath(__dirname +'/fixtures/jade-file/')
+      .include('./')
+      .set('command', 'bash -c "echo \'module.exports = \"bar\";\'"')
+      .export('module.exports')
+      .render(function(err, txt) {
+        console.log(txt);
+        done();
+      });
+  },
+
+  '--command with specific extension': function(done) {
+    var file = fs.createWriteStream(__dirname + '/tmp/temp2.js');
+
+    file.once('close', function() {
+      var name = new Date().getTime();
+      // use standard require
+      var result = require(__dirname + '/tmp/temp2.js')({ name: name });
+      assert.deepEqual(result, '<h1>Hello '+name+'</h1>');
+      done();
+    });
+
+    new Glue()
+      .basepath(__dirname +'/fixtures/jade-file/')
+      .include('./')
+      .set('require', false)
+      .set('command', [
+        {
+          expr: new RegExp('^.+\.jade$'),
+          cmd: 'jade --client --no-debug',
+          wrap: 'exports'
+          // cmd: 'bash -c "echo \'module.exports = \"bar\";\'"'
+        },
+        {
+          expr: new RegExp('^.+\.jade$'),
+          cmd: 'uglifyjs --no-copyright'
+        }
+      ])
+      .main('foo.jade')
+      .export('module.exports')
+      .render(file);
   }
+
 };
 
 // if this module is the script being run, then run the tests:

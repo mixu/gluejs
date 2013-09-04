@@ -83,7 +83,22 @@ The callback params:
 - ability to remap paths
   - e.g. add a file to the root from outside the root, with a different virtual filename
   - e.g. swap out the content a directory for the content of another one (shimming)
-- better logging (e.g. during filtering)
+
+# Evaluation
+
+- Convert JSON: needs documentation
+- Convert templates: needs examples + documentation + pluggability
+- Optimal bundling:
+  - UMD bundle support **
+  - empirically based packaging / dynamic loading **
+- Generate obfuscated code server side **
+- Source maps support
+- Fix issues with interrupted cached data
+- Caching support for different options
+- Remapping cross environment dependencies / dependency injection
+- Mocking out dependencies during testing/runtime **
+- RequireJS to CommonJS conversion
+- Easier conventions for adding a module both on the client and server side, e.g. only a node_modules entry => client side
 
 # Internals
 
@@ -97,11 +112,6 @@ Phases:
 - run tasks
 - squash result (or save to a directory)
 
-Pre-task:
-
-- acquire => e.g. convert inputs to a tree of files
-- read
-
 File tasks:
 
 - run-shell (e.g. run uglify)
@@ -110,25 +120,12 @@ File tasks:
 - wrap-commonjs-amd (e.g. take commonJS files, resolve their direct dependencies, wrap into an AMD module)
 - wrap-amd-commonjs-web (e.g. take a AMD file, look at the dependency declaration, convert that to a string, wrap into a web-commonjs module)
 
-Tree tasks:
-
-- annotate-basepath
-- annotate-stat
-- annotate-structured
-- annotate-with-task
-- annotate-main-file
-
-- filter-regex
-- filter-npm
-- filter-packages
-
 
 Final tasks:
 
 - concatenate
 - static-server (e.g. serve over http)
 - package-commonjs (to any writable stream)
-
 
 New features:
 

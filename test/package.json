@@ -1,0 +1,8 @@
+{
+  "name": "gluejs-tests",
+  "description": "Tests for gluejs",
+  "dependencies": {
+    "jade": "~2.0.0",
+    "coffee-script": "~1.6.3"
+  }
+}
