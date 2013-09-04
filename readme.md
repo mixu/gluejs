@@ -180,6 +180,8 @@ Sub-dependencies are also automatically bundled, as long as they've been install
 
 `--exclude <regexp>` / `.exclude(regexp)`: Excludes all files matching the regexp from the build. Evaluated just before rendering the build so it applies to all files.
 
+`--reset-exclude`: **New advanced option**. Removes the default exclusions (matching /dist/, /example/, /benchmark/, [-.]min.js$). For example: `--reset-exclude --exclude '/foo/'`.
+
 ## --global
 
 `--global <name>` / `.export(name)`: Name of the global name to export. Default: `foo` (e.g. `window.foo`)
