@@ -29,15 +29,25 @@ API.prototype.include = function(filepath) {
 API.prototype.render = function(dest) {
   if(typeof dest == 'function') {
     var capture = new Capture();
-    packageCommonJs(this.files, this.options, capture, function() {
+
+    capture.on('error', function(err) {
+      console.error('Error in the capture stream: ', err);
+      console.trace();
+    });
+
+    capture.once('finish', function() {
       dest(null, capture.get());
+    });
+
+    packageCommonJs(this.files, this.options, capture, function() {
+      // NOP
     });
   } else if(dest.write) {
     // writable stream
     packageCommonJs(this.files, this.options, dest, function() {
-      if(dest !== process.stdout) {
-        dest.end();
-      }
+      // if(dest !== process.stdout) {
+      //   dest.end();
+      // }
     });
   }
 };
