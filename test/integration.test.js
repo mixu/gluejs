@@ -33,9 +33,6 @@ exports['integration tests'] = {
       });
   },
 
-/*
-  TODO: add back when getFileTasks supports "expr" matching in addition to "ext" matching
-
   '--command with specific extension': function(done) {
     var file = fs.createWriteStream(__dirname + '/tmp/temp2.js');
 
@@ -43,9 +40,16 @@ exports['integration tests'] = {
       var name = new Date().getTime();
       // use standard require
       var result = require(__dirname + '/tmp/temp2.js')({ name: name });
+      console.log(result);
       assert.deepEqual(result, '<h1>Hello '+name+'</h1>');
       done();
     });
+
+    var spawn = require('../lib/file-tasks/spawn.js'),
+        wrapJadeExports = require('../lib/file-tasks/wrap-exports-web.js'),
+        wrapCommonJs = require('../lib/file-tasks/wrap-commonjs-web.js');
+
+    // There are way too many internals exposed here ... must encapsulate these better.
 
     new Glue()
       .basepath(__dirname +'/fixtures/jade-file/')
@@ -54,20 +58,57 @@ exports['integration tests'] = {
       .set('command', [
         {
           expr: new RegExp('^.+\.jade$'),
-          cmd: 'jade --client --no-debug',
-          wrap: 'exports'
-          // cmd: 'bash -c "echo \'module.exports = \"bar\";\'"'
+          task: function(item, pkg) {
+            return function() {
+              return spawn({
+                name: item.name, // full path
+                task: 'jade --client --no-debug'
+              });
+            };
+          }
         },
+        // NOTE: run the uglify beautify on the jade output (not on the partial produced by the
+        // CJS wrapper...
         {
           expr: new RegExp('^.+\.jade$'),
-          cmd: 'uglifyjs --no-copyright'
+          task: function(item, pkg) {
+            return function() {
+              return spawn({
+                name: item.name, // full path
+                task: 'uglifyjs --no-copyright --beautify'
+              });
+            };
+          }
+        },
+        {
+          // wrapper 1:
+          // var jade = require("jade").runtime; module.exports = <input>;
+          expr: new RegExp('^.+\.jade$'),
+          task: function() {
+            return function() {
+              return wrapJadeExports({ });
+            };
+          }
+        },
+        {
+          // wrapper 2:
+          // function(module, exports, require){ <input> };
+          expr: new RegExp('^.+\.jade$'),
+          task: function(item, packageObj) {
+            var relname = path.relative(packageObj.basepath, item.name);
+            return function() {
+              return wrapCommonJs({
+                'source-url': false,
+                'name': '' // only used for source url
+              });
+            };
+          }
         }
       ])
       .main('foo.jade')
       .export('module.exports')
       .render(file);
   }
-*/
 
 };
 
