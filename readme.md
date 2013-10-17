@@ -317,3 +317,7 @@ The main file is determined by looking at the "main" key in package.json and res
 Only files ending with .js are included in the builds, since require() only works with .js, .json and .node files (the last one being for compiled native modules).
 
 The .npmignore file is honored. It works like a .gitignore file. This is the preferred way of excluding files and directories from npm dependencies according to `npm help developers`.
+
+## License
+
+BSD

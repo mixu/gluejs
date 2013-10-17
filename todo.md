@@ -3,15 +3,75 @@
 - Refactor the `expr` and `ext` thing into something that just has '.test()'
 - test robustness against getting killed or having cache metadata become corrupted
 - add `cache clean`
+- test multiple `--command`
 
-## What's new in v2
+## What's new in v2.1
 
 gluejs v2.1 adds significant performance improvements over v2.0.x! In addition, it adds support for custom transformations, including ones that were written for browserify.
 
-- the task execution engine now supports running multiple tasks concurrently while producing a single output file. Most build systems only use a single output stream, which means that expensive tasks such as `uglifyjs` are run on each file in serial order. gluejs v2.1's new engine executes all tasks in parallel, kind of like MapReduce at a small scale.
+- the task execution engine now supports running multiple tasks concurrently while producing a single output file. Most build systems only use a single output stream, which means that expensive tasks such as `uglifyjs` are run on each file in serial order. gluejs v2.1's new engine executes all tasks in parallel, kind of like MapReduce at a small scale (configurable via `--jobs`).
 - anecdotally, this has reduced build time for CPU-intensive builds (e.g. minifying a large number of files) by ~50% by making use of all the available CPU cores.
 - the system now enables caching by default; if you run the same gluejs task twice, only the changed files are re-processed. Changes are detected either using md5 hashing or filesize + modification time. Caching used to be an advanced option, but it helps a lot in practice so I figured I'd enable it by default. You can opt out via `--no-cache`, but why?
+- the cache supports multiple versions of the same input file (e.g. if you have a gluejs task for a debug build and a production build, switching between the two no longer invalidates the cache).
 - added support for custom transformations, such as compiling template files and other compile-to-JS files.
+
+## --command
+
+`--command <cmd>` / `.set('command', <cmd>)`: Pipe each file through a shell command and capture the output. For example:
+
+    --command "uglifyjs --no-copyright"
+
+For more complicated use cases, you'll probably want to use `--transform`.
+
+## --transform (v2.1)
+
+`--transform <module>`: activates a source transformation module. This enables 3rd party extensions for things that are more complex than just piping through via `--command`.  API-compatible with browserify's source transformation modules.
+
+For example:
+
+    npm install coffeeify
+    gluejs --transform coffeeify --include main.coffee > bundle.js
+
+gluejs uses [minitask](https://github.com/mixu/minitask) internally, so you can also write modules that return sync / async functions, Node core duplex / transform streams or Node core child_process objects.
+
+## --jobs (v2.1)
+
+`--jobs <n>` / `.set('jobs', <n>)`: Sets the maximum level of parallelism for the task execution pipeline. Default: `os.cpus().length * 2`.
+
+## --cache
+
+`--cache <path>` / `.set('cache', <path>)`: Use a specific directory for caching. This is a directory where the results of the previous builds are stored along with metadata. Caching is enabled by default in v2.1. If a path is not set, then `~/.gluejs-cache` is used for storing cache results. You can just delete the directory to invalidate the cache.
+
+The cache speeds up large builds (and minified builds) significantly since only source files that have changed are updated.
+
+Use a directory with a dot in front to hide the cached files (remember to also gitignore the directory). The path is relative to the working directory. For example:
+
+    --cache .cache
+
+When the cache is in use, the number of cache hits are shown:
+
+    Cache hits: 2 / 2 files
+
+To get even more info, enable `--verbose`.
+
+## --cache-clean (v2.1)
+
+`--cache-clean`: Clears the global cache folder by deleting it. This is always done before processing anything else.
+
+## --cache-method (v2.1)
+
+`--cache-method <stat|md5|sha512>`: Sets the cache invalidation method. `stat` uses the file size and last modified date of the input file. `md5` (and other hash algorithms supported by `crypto.createHash`) uses hashes to verify that the input file has not changed. Default: stat.
+
+## --no-cache (v2.1)
+
+`--no-cache` / `.set('cache', false)`: Disables the cache; sets the cache directory to a temporary directory.
+
+## Writing transform modules
+
+By default, gluejs only handles files that end with ".js".
+
+You can create custom handlers that handle other types of files, such as templates for your favorite templating language.
+
 
 # Known issues
 

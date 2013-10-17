@@ -62,42 +62,42 @@ exports['integration tests'] = {
       .set('cache', false)
       .set('require', false)
       .set('command', [
-        {
-          expr: new RegExp('^.+\.jade$'),
-          task: function(item, pkg) {
-            return function() {
-              return spawn({
-                name: item.name, // full path
-                task: 'jade --client --no-debug'
-              });
-            };
+        function(filename, pkg) {
+          if(path.extname(filename) != '.jade') {
+            return;
           }
+          return function() {
+            return spawn({
+              name: filename, // full path
+              task: 'jade --client --no-debug'
+            });
+          };
         },
         // NOTE: run the uglify beautify on the jade output (not on the partial produced by the
         // CJS wrapper...
-        {
-          expr: new RegExp('^.+\.jade$'),
-          task: function(item, pkg) {
-            return function() {
-              return spawn({
-                name: item.name, // full path
-                task: 'uglifyjs --no-copyright --beautify'
-              });
-            };
+        function(filename, pkg) {
+          if(path.extname(filename) != '.jade') {
+            return;
           }
+          return function() {
+            return spawn({
+              name: filename, // full path
+              task: 'uglifyjs --no-copyright --beautify'
+            });
+          };
         },
-        {
-          // wrapper 1:
-          // var jade = require("jade").runtime; module.exports = <input>;
-          expr: new RegExp('^.+\.jade$'),
-          task: function() {
-            return function(input) {
-              return 'function(module, exports, require){' +
-                     'var jade = require(\'jade\').runtime;\n' +
-                     'module.exports = ' + (input.length === 0 ? '{}' : input) +
-                     '}';
-            };
+        // wrapper:
+        // var jade = require("jade").runtime; module.exports = <input>;
+        function(filename, pkg) {
+          if(path.extname(filename) != '.jade') {
+            return;
           }
+          return function(input) {
+            return 'function(module, exports, require){' +
+                   'var jade = require(\'jade\').runtime;\n' +
+                   'module.exports = ' + (input.length === 0 ? '{}' : input) +
+                   '}';
+          };
         }
       ])
       .main('foo.jade')
@@ -115,14 +115,15 @@ exports['integration tests'] = {
       .set('cache', false)
       .set('require', false)
       .set('command', [
-        {
-          ext: '.brfs.js',
-          task: function(file, pkg) {
-            return function() {
-              // note that brfs seems to only use the filename for resolving the fs calls
-              return brfs(file.name);
-            };
+        function(filename, pkg) {
+          var ext = '.brfs.js';
+          if(filename.substr(filename.length - ext.length) != ext) {
+            return;
           }
+          return function() {
+            // note that brfs seems to only use the filename for resolving the fs calls
+            return brfs(filename);
+          };
         }
       ])
       .main('test.brfs.js')

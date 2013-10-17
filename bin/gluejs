@@ -7,60 +7,24 @@ var fs = require('fs'),
 var opts = require('optimist')
     .usage('Usage: $0 --include <file/dir ...> --out filename.js')
     .options({
-      'include': {
-        describe: 'Path to import.'
-      },
-      'exclude': {
-        describe: 'JS regular expression string to match against the included paths',
-      },
-      'out': {
-        describe: 'File to write. Default: stdout'
-      },
-      'global': {
-        describe: 'Name of the global to export. Default: "Foo"',
-      },
-      'basepath': {
-        describe: 'Base path for the list of files. Default: process.cwd().',
-        'default': process.cwd()
-      },
-      'main': {
-        describe: 'Name of the main file/module to export. Default: index.js',
-        'default': 'index.js'
-      },
-      'replace': {
-        describe: 'Bind require("name") to an expression, e.g. --replace jQuery=window.$'
-      },
-      'remap': {
-        describe: 'Remap require("name") to another (internal) module e.g. --replace "assert=require(\'chai\').assert"'
-      },
-      'source-url': {
-        describe: 'Add source URL annotations to the files. Useful for development, ' +
-                  'but note that they are not compatible with IE.'
-      },
-      'global-require': {
-        describe: 'Export the require() implementation into the global space.'
-      },
-      'amd': {
-        describe: 'Export the module via the require.js AMD define("name", ...) using the name specified in --global. Note that the requirejs will not pick up modules defined like this unless you do at least one asynchronous require() call.'
-      },
-      'command': {
-        describe: 'Pipe each file through a shell command and capture the output (e.g. --command "uglifyjs --no-copyright").'
-      },
-      'cache': {
-        describe: 'Use a cache directory to store file builds. The cache speeds up large builds (and minified builds) significantly since only source files that have changed are updated.'
-      },
-      'silent': {
-        describe: 'Disable all output, including the reporter.'
-      },
-      'verbose': {
-        describe: 'More verbose output, such as files being filtered out and processed.'
-      },
-      'reset-exclude': {
-        describe: 'Advanced: do not apply the default exclusions (/dist/, /example/, /benchmark/, .min.js).'
-      },
-      'version': {
-        describe: 'Version info'
-      }
+      'include': { },
+      'exclude': { },
+      'out': { },
+      'global': { },
+      'basepath': { 'default': process.cwd() },
+      'main': { 'default': 'index.js' },
+      'replace': { },
+      'remap': { },
+      'source-url': { },
+      'global-require': { },
+      'amd': { },
+      'command': { },
+      'cache': { },
+      'jobs': { },
+      'silent': { },
+      'verbose': { },
+      'reset-exclude': { },
+      'version': { }
     }),
     argv = opts.parse(process.argv);
 
@@ -70,8 +34,7 @@ if(argv['version'] || argv['v'] ) {
 }
 
 if(!argv['include']) {
-  console.log(opts.help());
-  process.exit();
+  return fs.createReadStream(__dirname + '/usage.txt').pipe(process.stdout).on('close', function () { process.exit(1) });
 }
 
 var g = new Glue();
@@ -157,6 +120,10 @@ if(argv['cache']) {
 
 if(argv['command']) {
   g.set('command', argv['command']);
+}
+
+if(argv['jobs']) {
+  g.set('jobs', argv['jobs']);
 }
 
 if(argv['npm']) {
