@@ -5,6 +5,10 @@ var fs = require('fs'),
 
 exports['integration tests'] = {
 
+  // ADD TESTS FOR:
+  // - the stream size reporter
+
+
   'can build a json file': function(done) {
     var file = fs.createWriteStream(__dirname + '/tmp/temp.js');
 
@@ -17,6 +21,7 @@ exports['integration tests'] = {
     new Glue()
       .basepath(__dirname +'/fixtures/json-file/')
       .include('./')
+      .set('cache', true)
       .export('module.exports')
       .render(file);
   },
@@ -25,6 +30,7 @@ exports['integration tests'] = {
     new Glue()
       .basepath(__dirname +'/fixtures/jade-file/')
       .include('./')
+      .set('cache', true)
       .set('command', 'bash -c "echo \'module.exports = \"bar\";\'"')
       .export('module.exports')
       .render(function(err, txt) {
@@ -54,6 +60,7 @@ exports['integration tests'] = {
     new Glue()
       .basepath(__dirname +'/fixtures/jade-file/')
       .include('./')
+      .set('cache', true)
       .set('require', false)
       .set('command', [
         {

@@ -156,7 +156,7 @@ if(argv['cache']) {
 }
 
 if(argv['command']) {
-  g.set('command', argv['command'].split(' '));
+  g.set('command', argv['command']);
 }
 
 if(argv['npm']) {
