@@ -21,7 +21,7 @@ exports['integration tests'] = {
     new Glue()
       .basepath(__dirname +'/fixtures/json-file/')
       .include('./')
-      .set('cache', true)
+      .set('cache', false)
       .export('module.exports')
       .render(file);
   },
@@ -30,12 +30,12 @@ exports['integration tests'] = {
     new Glue()
       .basepath(__dirname +'/fixtures/jade-file/')
       .include('./')
-      .set('cache', true)
+      .set('cache', false)
       .set('command', 'bash -c "echo \'module.exports = \"bar\";\'"')
       .export('module.exports')
       .render(function(err, txt) {
         console.log(txt);
-        setTimeout(done, 1);
+        done();
       });
   },
 
@@ -52,7 +52,6 @@ exports['integration tests'] = {
     });
 
     var spawn = require('../lib/file-tasks/spawn.js'),
-        wrapJadeExports = require('../lib/file-tasks/wrap-exports-web.js'),
         wrapCommonJs = require('../lib/file-tasks/wrap-commonjs-web.js');
 
     // There are way too many internals exposed here ... must encapsulate these better.
@@ -60,7 +59,7 @@ exports['integration tests'] = {
     new Glue()
       .basepath(__dirname +'/fixtures/jade-file/')
       .include('./')
-      .set('cache', true)
+      .set('cache', false)
       .set('require', false)
       .set('command', [
         {
@@ -92,22 +91,11 @@ exports['integration tests'] = {
           // var jade = require("jade").runtime; module.exports = <input>;
           expr: new RegExp('^.+\.jade$'),
           task: function() {
-            return function() {
-              return wrapJadeExports({ });
-            };
-          }
-        },
-        {
-          // wrapper 2:
-          // function(module, exports, require){ <input> };
-          expr: new RegExp('^.+\.jade$'),
-          task: function(item, packageObj) {
-            var relname = path.relative(packageObj.basepath, item.name);
-            return function() {
-              return wrapCommonJs({
-                'source-url': false,
-                'name': '' // only used for source url
-              });
+            return function(input) {
+              return 'function(module, exports, require){' +
+                     'var jade = require(\'jade\').runtime;\n' +
+                     'module.exports = ' + (input.length === 0 ? '{}' : input) +
+                     '}';
             };
           }
         }
@@ -115,6 +103,35 @@ exports['integration tests'] = {
       .main('foo.jade')
       .export('module.exports')
       .render(file);
+  },
+
+  'try brfs': function(done) {
+    var brfs = require('brfs');
+
+
+    new Glue()
+      .basepath(__dirname +'/command-integration/')
+      .include('./test.brfs.js')
+      .set('cache', false)
+      .set('require', false)
+      .set('command', [
+        {
+          ext: '.brfs.js',
+          task: function(file, pkg) {
+            return function() {
+              // note that brfs seems to only use the filename for resolving the fs calls
+              return brfs(file.name);
+            };
+          }
+        }
+      ])
+      .main('test.brfs.js')
+      .export('module.exports')
+      .render(function(err, txt) {
+        console.log(txt);
+        done();
+      });
+
   }
 
 };

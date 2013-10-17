@@ -1,5 +1,18 @@
 # Todo
 
+- Refactor the `expr` and `ext` thing into something that just has '.test()'
+- test robustness against getting killed or having cache metadata become corrupted
+- add `cache clean`
+
+## What's new in v2
+
+gluejs v2.1 adds significant performance improvements over v2.0.x! In addition, it adds support for custom transformations, including ones that were written for browserify.
+
+- the task execution engine now supports running multiple tasks concurrently while producing a single output file. Most build systems only use a single output stream, which means that expensive tasks such as `uglifyjs` are run on each file in serial order. gluejs v2.1's new engine executes all tasks in parallel, kind of like MapReduce at a small scale.
+- anecdotally, this has reduced build time for CPU-intensive builds (e.g. minifying a large number of files) by ~50% by making use of all the available CPU cores.
+- the system now enables caching by default; if you run the same gluejs task twice, only the changed files are re-processed. Changes are detected either using md5 hashing or filesize + modification time. Caching used to be an advanced option, but it helps a lot in practice so I figured I'd enable it by default. You can opt out via `--no-cache`, but why?
+- added support for custom transformations, such as compiling template files and other compile-to-JS files.
+
 # Known issues
 
 - setting basepath to ./node_modules/foo causes the root to be empty rather than being based inside the package directory. E.g. you need to do require('foo') to get the result rather than require('./index.js');
