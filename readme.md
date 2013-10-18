@@ -274,7 +274,11 @@ For example, using coffeeify:
     npm install coffeeify
     gluejs --transform coffeeify --include index.coffee > bundle.js
 
-gluejs uses [minitask](https://github.com/mixu/minitask) internally, so you can also write modules that return sync / async functions, Node core duplex / transform streams or Node core child_process objects. See `./test/command-integration/es6-module.js` and `./test/command-integration/jade-module.js` for examples.
+gluejs uses [minitask](https://github.com/mixu/minitask) internally, so you can also write modules that return sync / async functions, Node core duplex / transform streams or Node core child_process objects.
+
+See the [section on writing transform modules](#writing_transform_modules) as well as [this example which uses Square's ES6-module-compiler](https://github.com/mixu/gluejs/blob/glue2/test/command-integration/es6-module.js) and [Jade example](https://github.com/mixu/gluejs/blob/glue2/test/command-integration/jade-module.js) for examples.
+
+If you write a transformation, file a PR against the readme so I can feature it here. I've tested functionality using the examples above, but I haven't published them as modules as it's hard to maintain something I'm not using.
 
 ## --report
 
