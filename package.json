@@ -1,7 +1,7 @@
 {
   "name": "gluejs",
   "description": "Build CommonJS modules for the browser via a chainable API",
-  "version": "2.0.7",
+  "version": "2.1.0",
   "author": {
     "name": "Mikito Takada",
     "email": "mikito.takada@gmail.com",
