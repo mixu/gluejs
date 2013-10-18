@@ -55,7 +55,7 @@ Alternatively, you can run the tool (e.g. via a Makefile) as `./node_modules/glu
 
 Note: if you are upgrading from v2.0: `--cache` is now called `--cache-path`.
 
-gluejs v2.1 adds significant performance improvements over v2.0! In addition, it adds support for custom transformations, including ones that were written for [browserify](https://github.com/substack/node-browserify).
+gluejs v2.1 adds significant performance improvements over v2.0! In addition, it adds support for custom transformations, including ones that were written for [browserify](https://github.com/substack/node-browserify#list-of-source-transforms).
 
 - the task execution engine now supports running multiple tasks concurrently while producing a single output file. Most build systems only use a single output stream, which means that expensive tasks such as `uglifyjs` are run on each file in serial order. gluejs v2.1's new engine executes all tasks in parallel, kind of like MapReduce at a small scale (configurable via `--jobs`).
 - anecdotally, this has reduced build time for CPU-intensive builds (e.g. minifying a large number of files) by ~50% by making use of all the available CPU cores.

@@ -27,7 +27,8 @@ var opts = require('optimist')
       'reset-exclude': { },
       'version': { }
     })
-    .boolean('cache'),
+    .boolean('cache')
+    .boolean('report'),
     argv = opts.parse(process.argv);
 
 if(argv['version'] || argv['v'] ) {
@@ -105,7 +106,11 @@ if(!argv['silent'] && argv['out']) {
 
 if(argv['verbose']) {
   g.set('report', true);
-  Minilog.enable();
+  g.set('verbose', true);
+}
+
+if(typeof argv['report'] !== 'undefined') {
+  g.set('report', argv['report']);
 }
 
 if(argv['source-url']) {
@@ -142,6 +147,9 @@ if(argv['npm']) {
   process.stderr.write('Warning: the --npm flag is deprecated. ' +
     'Directly include the file path to module, e.g. --include ./node_modules/foo instead.\n');
 }
+
+// set this so that builds are invalidates as the version changes
+g.set('gluejs-version', require('../package.json').version);
 
 // -- out
 if(argv['out']) {
