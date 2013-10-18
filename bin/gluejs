@@ -28,7 +28,9 @@ var opts = require('optimist')
       'version': { }
     })
     .boolean('cache')
-    .boolean('report'),
+    .boolean('report')
+    .boolean('progress')
+    .boolean('verbose'),
     argv = opts.parse(process.argv);
 
 if(argv['version'] || argv['v'] ) {
@@ -98,19 +100,31 @@ if(argv['remap']) {
   });
 }
 
-// --silent
 // if not explicitly disabled and output is defined
-if(!argv['silent'] && argv['out']) {
-  g.set('report', true);
+if(argv['out']) {
+  g.set('progress', true);
+  argv['progress'] = true;
 }
 
 if(argv['verbose']) {
   g.set('report', true);
   g.set('verbose', true);
+  argv['progress'] = false;
 }
 
 if(typeof argv['report'] !== 'undefined') {
   g.set('report', argv['report']);
+}
+
+if(typeof argv['progress'] !== 'undefined') {
+  g.set('progress', argv['progress']);
+}
+
+// --silent
+if(argv['silent']) {
+  g.set('report', false);
+  g.set('verbose', false);
+  g.set('progress', false);
 }
 
 if(argv['source-url']) {
