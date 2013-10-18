@@ -63,6 +63,16 @@ gluejs v2.1 adds significant performance improvements over v2.0! In addition, it
 - the cache supports multiple versions of the same input file (e.g. if you have a gluejs task for a debug build and a production build, switching between the two no longer invalidates the cache).
 - added support for custom transformations, such as compiling template files and other compile-to-JS files.
 
+For example, on a Macbook Pro using a ~1.2Mb input with ~600 files, `--no-cache --jobs 1` (e.g. force serial execution):
+
+    0:56.75 wall clock time, 39.90 user, 21.18 system
+
+and `--no-cache` (e.g. parallel execution with default options):
+
+    0:18.89 wall clock time, 72.78 user, 29.04 system
+
+In other words, the build completes almost 3x faster than before.
+
 ## What's new in v2
 
 gluejs (v2) is a comprehensive refactoring to make use of Node 0.10.x -style streams (under 0.8.x via [readable-stream](https://github.com/isaacs/readable-stream)).
@@ -395,6 +405,19 @@ Here is an example:
 
     // indicate that this is a gluejs module rather than a browserify module
     module.exports.gluejs = true;
+
+### Benchmark methodology
+
+Ran this:
+
+    /usr/bin/time -f "\n%E wall clock,\n%U user mode CPU seconds,\n%S kernel mode CPU seconds" \
+      gluejs \
+      --no-cache \
+      --jobs 1 \
+      --command 'uglifyjs --no-copyright' \
+      --no-report \
+      --progress \
+      ...
 
 ## License
 
