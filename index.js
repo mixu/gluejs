@@ -1,8 +1,11 @@
-var path = require('path'),
+var os = require('os'),
+    path = require('path'),
     List = require('minitask').list,
     packageCommonJs = require('./lib/runner/package-commonjs'),
     Capture = require('./lib/file-tasks/capture.js'),
     Minilog = require('minilog');
+
+var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
 
 // API wrapper
 function API() {
@@ -10,7 +13,9 @@ function API() {
   // default options
   this.options = {
     replaced: {},
-    remap: {}
+    remap: {},
+    cache: true,
+    'cache-path': path.normalize(homePath) + path.sep + '.gluejs-cache' + path.sep
   };
 }
 
@@ -27,6 +32,11 @@ API.prototype.include = function(filepath) {
 };
 
 API.prototype.render = function(dest) {
+  // if the cache is disabled, then use a temp path
+  if(!this.options.cache) {
+    this.options['cache-path'] = os.tmpDir() + '/gluejs-' + new Date().getTime();
+  }
+
   if(typeof dest == 'function') {
     var capture = new Capture();
 
@@ -51,8 +61,6 @@ API.prototype.render = function(dest) {
     });
   }
 };
-
-// NOPs
 
 // setters
 API.defaults = API.prototype.defaults = function(opts) {};

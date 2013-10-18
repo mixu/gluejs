@@ -19,13 +19,15 @@ var opts = require('optimist')
       'global-require': { },
       'amd': { },
       'command': { },
-      'cache': { },
+      'cache': { default: true },
+      'cache-path': { },
       'jobs': { },
       'silent': { },
       'verbose': { },
       'reset-exclude': { },
       'version': { }
-    }),
+    })
+    .boolean('cache'),
     argv = opts.parse(process.argv);
 
 if(argv['version'] || argv['v'] ) {
@@ -114,8 +116,10 @@ if(argv['global-require']) {
   g.set('global-require', true);
 }
 
-if(argv['cache']) {
-  g.set('cache', path.resolve(process.cwd(), argv['cache']));
+g.set('cache', argv['cache']);
+
+if(argv['cache-path']) {
+  g.set('cache-path', path.resolve(process.cwd(), argv['cache-path']));
 }
 
 if(argv['cache-method']) {

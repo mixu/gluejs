@@ -2,7 +2,7 @@
 
 Package Node/CommonJS modules for the browser
 
-New version! gluejs v2 is now out with a bunch of new features ([v1 branch](https://github.com/mixu/gluejs/tree/master))
+New version! gluejs v2.1 is now out with a bunch of new features ([v1 branch](https://github.com/mixu/gluejs/tree/master))
 
 
 - Converts code written for Node.js to run in the browser
@@ -51,6 +51,18 @@ To install the command line tool globally, run
 
 Alternatively, you can run the tool (e.g. via a Makefile) as `./node_modules/gluejs/bin/gluejs`.
 
+## What's new in v2.1
+
+Note: if you are upgrading from v2.0: `--cache` is now called `--cache-path`.
+
+gluejs v2.1 adds significant performance improvements over v2.0! In addition, it adds support for custom transformations, including ones that were written for [browserify](https://github.com/substack/node-browserify).
+
+- the task execution engine now supports running multiple tasks concurrently while producing a single output file. Most build systems only use a single output stream, which means that expensive tasks such as `uglifyjs` are run on each file in serial order. gluejs v2.1's new engine executes all tasks in parallel, kind of like MapReduce at a small scale (configurable via `--jobs`).
+- anecdotally, this has reduced build time for CPU-intensive builds (e.g. minifying a large number of files) by ~50% by making use of all the available CPU cores.
+- the system now enables caching by default; if you run the same gluejs task twice, only the changed files are re-processed. Changes are detected either using md5 hashing or filesize + modification time. Caching used to be an advanced option, but it helps a lot in practice so I figured I'd enable it by default. You can opt out via `--no-cache`, but why?
+- the cache supports multiple versions of the same input file (e.g. if you have a gluejs task for a debug build and a production build, switching between the two no longer invalidates the cache).
+- added support for custom transformations, such as compiling template files and other compile-to-JS files.
+
 ## What's new in v2
 
 gluejs (v2) is a comprehensive refactoring to make use of Node 0.10.x -style streams (under 0.8.x via [readable-stream](https://github.com/isaacs/readable-stream)).
@@ -74,7 +86,7 @@ Easier minification (or other processing) via `--command`:
 
 With that option, all files are piped through `uglifyjs` before writing to disk.
 
-Gorgeous new reporter, with stats on savings from minification:
+Gorgeous new reporter (enable via `--report`), with stats on savings from minification:
 
     # Root package
       lib/web/shim.js                          12.94kb 38% -> 3.84kb (-9324b -71%)
@@ -132,7 +144,7 @@ Options:
                     asynchronous require() call.
   --command         Pipe each file through a shell command and capture the output
                     (e.g. --command "uglifyjs --no-copyright").
-  --cache           Use a cache directory to store file builds. The cache speeds up
+  --cache-path      Use a cache directory to store file builds. The cache speeds up
                     large builds (and minified builds) significantly since only source
                     files that have changed are updated.
   --silent          Disable all output, including the reporter.
@@ -177,7 +189,7 @@ You can also render e.g. to a http response:
 
 Sub-dependencies are also automatically bundled, as long as they've been installed by npm. Since the require() semantics are the same as in Node, subdependencies can depend on different versions of the same module without conflicting with each other.
 
-`.json` files are also supported; just like in Node, you can simply use `require('./foo.json')` to load them.
+`.json` files are also supported; just like in Node, you can use `require('./foo.json')` within the resulting bundle.
 
 ## --exclude
 
@@ -272,15 +284,15 @@ Display the summary report. Particularly useful if you are minifying files, sinc
 
 `--jobs <n>` / `.set('jobs', <n>)`: Sets the maximum level of parallelism for the task execution pipeline. Default: `os.cpus().length * 2`.
 
-## --cache
+## --cache-path (v2.1)
 
-`--cache <path>` / `.set('cache', <path>)`: Use a cache for file builds (disabled by default). This is a directory where the results of the previous build are stored along with metadata.
+`--cache-path <path>` / `.set('cache-path', <path>)`: Use a specific directory for caching. This is a directory where the results of the previous builds are stored along with metadata. Caching is enabled by default in v2.1. If a path is not set, then `~/.gluejs-cache` is used for storing cache results. You can just delete the directory to invalidate the cache.
 
-The cache speeds up large builds (and minified builds) significantly since only source files that have changed (different last modified date; different file size or different build options) are updated.
+The cache speeds up large builds (and minified builds) significantly since only source files that have changed are updated.
 
 Use a directory with a dot in front to hide the cached files (remember to also gitignore the directory). The path is relative to the working directory. For example:
 
-    --cache .cache
+    --cache-path .cache
 
 When the cache is in use, the number of cache hits are shown:
 
@@ -351,6 +363,34 @@ The main file is determined by looking at the "main" key in package.json and res
 Only files ending with .js are included in the builds, since require() only works with .js, .json and .node files (the last one being for compiled native modules).
 
 The .npmignore file is honored. It works like a .gitignore file. This is the preferred way of excluding files and directories from npm dependencies according to `npm help developers`.
+
+## Writing transform modules
+
+By default, gluejs only handles files that end with ".js".
+
+You can create custom transform modules that handle other types of files, such as templates for your favorite templating language.
+
+Here is an example:
+
+    var path = require('path'),
+        jade = require('jade');
+
+    module.exports = function(filename) {
+      // gluejs modules can be skipped by returning false
+      if(path.extname(filename) != '.jade') {
+        return;
+      }
+
+      // Minitask "sync" function
+      return function(input) {
+        return 'var jade = require(\'jade\').runtime;\n' +
+                'module.exports = ' +
+                jade.compile(input, { filename: filename }).toString() + ';';
+      };
+    };
+
+    // indicate that this is a gluejs module rather than a browserify module
+    module.exports.gluejs = true;
 
 ## License
 
