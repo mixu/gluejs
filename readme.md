@@ -63,7 +63,7 @@ gluejs v2.1 adds significant performance improvements over v2.0! In addition, it
 - the cache supports multiple versions of the same input file (e.g. if you have a gluejs task for a debug build and a production build, switching between the two no longer invalidates the cache).
 - added support for custom transformations, such as compiling template files and other compile-to-JS files.
 
-For example, on a Macbook Pro using a ~1.2Mb input with ~600 files, `--no-cache --jobs 1` (e.g. force serial execution):
+For example, on a Macbook Pro using a ~1.2Mb input with ~600 files and applying minification (which is CPU-intensive), `--no-cache --jobs 1` (e.g. force serial execution):
 
     0:56.75 wall clock time, 39.90 user, 21.18 system
 
