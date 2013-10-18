@@ -118,8 +118,16 @@ if(argv['cache']) {
   g.set('cache', path.resolve(process.cwd(), argv['cache']));
 }
 
+if(argv['cache-method']) {
+  g.set('cache-method', argv['cache-method']);
+}
+
 if(argv['command']) {
   g.set('command', argv['command']);
+}
+
+if(argv['transform']) {
+  g.set('transform', argv['transform']);
 }
 
 if(argv['jobs']) {

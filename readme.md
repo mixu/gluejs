@@ -137,6 +137,7 @@ Options:
                     files that have changed are updated.
   --silent          Disable all output, including the reporter.
   --verbose         More verbose output, such as files being filtered out and processed.
+  --report          Display the file size report.
   --version         Version info
 ````
 
@@ -175,6 +176,8 @@ You can also render e.g. to a http response:
 - If the path is a node module, include all files in it and all subdependencies in the build.
 
 Sub-dependencies are also automatically bundled, as long as they've been installed by npm. Since the require() semantics are the same as in Node, subdependencies can depend on different versions of the same module without conflicting with each other.
+
+`.json` files are also supported; just like in Node, you can simply use `require('./foo.json')` to load them.
 
 ## --exclude
 
@@ -246,6 +249,29 @@ Note that source URLs require that scripts are wrapped in a eval block with a sp
 
     --command "uglifyjs --no-copyright"
 
+For more complicated use cases, you'll probably want to use `--transform`.
+
+## --transform (v2.1)
+
+`--transform <module>`: activates a source transformation module. This enables 3rd party extensions for things that are more complex than just piping through via `--command`.  API-compatible with browserify's [source transformation modules](https://github.com/substack/node-browserify#list-of-source-transforms).
+
+This feature is new, so let me know if you run into issues with it.
+
+For example, using coffeeify:
+
+    npm install coffeeify
+    gluejs --transform coffeeify --include index.coffee > bundle.js
+
+gluejs uses [minitask](https://github.com/mixu/minitask) internally, so you can also write modules that return sync / async functions, Node core duplex / transform streams or Node core child_process objects. See `./test/command-integration/es6-module.js` and `./test/command-integration/jade-module.js` for examples.
+
+## --report
+
+Display the summary report. Particularly useful if you are minifying files, since the report will show the file size after transformation.
+
+## --jobs (v2.1)
+
+`--jobs <n>` / `.set('jobs', <n>)`: Sets the maximum level of parallelism for the task execution pipeline. Default: `os.cpus().length * 2`.
+
 ## --cache
 
 `--cache <path>` / `.set('cache', <path>)`: Use a cache for file builds (disabled by default). This is a directory where the results of the previous build are stored along with metadata.
@@ -261,6 +287,14 @@ When the cache is in use, the number of cache hits are shown:
     Cache hits: 2 / 2 files
 
 To get even more info, enable `--verbose`.
+
+## --cache-method (v2.1)
+
+`--cache-method <stat|md5|sha512>` / `.set('cache-method', <method>)`: Sets the cache invalidation method. `stat` uses the file size and last modified date of the input file. `md5` (and other hash algorithms supported by `crypto.createHash`) uses hashes to verify that the input file has not changed. Default: stat.
+
+## --no-cache (v2.1)
+
+`--no-cache` / `.set('cache', false)`: Disables the cache; sets the cache directory to a temporary directory.
 
 ## --global-require
 

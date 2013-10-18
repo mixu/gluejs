@@ -4,6 +4,10 @@
   "dependencies": {
     "coffee-script": "~1.6.3",
     "jade": "~0.35.0",
-    "brfs": "0.0.8"
+    "brfs": "0.0.8",
+    "coffeeify": "~0.5.2",
+    "es6-module-transpiler": "~0.3.1",
+    "handlebars-runtime": "~1.0.12",
+    "hbsfy": "~0.1.5"
   }
 }

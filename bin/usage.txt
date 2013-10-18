@@ -54,13 +54,19 @@ PERFORMANCE
   --jobs <n>        Sets the maximum level of parallelism for the task
                     execution pipeline. Default: `os.cpus().length * 2`
 
-MISC / ADVANCED
+  --cache-method    Sets the cache method: stat | hash algorighm name.
+
+REPORTING
+
+  --report          Display the file size report.
 
   --silent          Disable all output, including the reporter.
 
   --verbose         More verbose output.
 
+  --version         Version info
+
+ADVANCED
+
   --reset-exclude   Advanced: do not apply the default exclusions
                     (/dist/, /example/, /benchmark/, .min.js).
-
-  --version         Version info

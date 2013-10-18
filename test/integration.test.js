@@ -106,23 +106,40 @@ exports['integration tests'] = {
   },
 
   'try brfs': function(done) {
-    var brfs = require('brfs');
-
-
     new Glue()
       .basepath(__dirname +'/command-integration/')
       .include('./test.brfs.js')
       .set('cache', false)
       .set('require', false)
+      .set('report', true)
       .set('command', [
         function(filename, pkg) {
-          var ext = '.brfs.js';
-          if(filename.substr(filename.length - ext.length) != ext) {
-            return;
-          }
           return function() {
             // note that brfs seems to only use the filename for resolving the fs calls
-            return brfs(filename);
+            return require('brfs')(filename);
+          };
+        }
+      ])
+      .main('test.brfs.js')
+      .export('module.exports')
+      .render(function(err, txt) {
+        console.log(txt);
+        done();
+      });
+
+  },
+
+  'try coffeeify': function(done) {
+    new Glue()
+      .basepath(__dirname +'/command-integration/')
+      .include('./test.coffee')
+      .set('cache', false)
+      .set('require', false)
+      .set('report', true)
+      .set('command', [
+        function(filename, pkg) {
+          return function() {
+            return require('coffeeify')(filename);
           };
         }
       ])
@@ -134,6 +151,7 @@ exports['integration tests'] = {
       });
 
   }
+
 
 };
 
