@@ -2,6 +2,7 @@
 
 - test robustness against getting killed or having cache metadata become corrupted
 - add `cache clean`
+- improve the autodetection code so that people don't need to supply a --main argument in default cases (e.g. when there is a index.js or there is just one file in the package)
 
 ## --cache-clean
 

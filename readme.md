@@ -169,6 +169,7 @@ Options:
 var Glue = require('gluejs');
 new Glue()
   .basepath('./lib') // output paths are relative to this
+  .main('index.js')  // the file that's exported as the root of the package
   .include('./lib')  // includes all files in the dir
   .exclude(new RegExp('.+\\.test\\.js')) // excludes .test.js
   .replace({
