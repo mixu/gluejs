@@ -134,33 +134,59 @@ The `.concat(packageA, packageB)`, `.define(module, code)`, `.defaults()` featur
 
 ## Usage
 
-````bash
-Usage: gluejs --include <file/dir ...> --out filename.js
+````markdown
+Usage: gluejs --include <file/dir ...> {OPTIONS}
 
-Options:
+## Basic
+
   --include         Path to import.
   --exclude         JS regular expression string to match against the included paths
   --out             File to write. Default: stdout
   --global          Name of the global to export. Default: "Foo"
   --basepath        Base path for relative file paths. Default: process.cwd()
   --main            Name of the main file/module to export. Default: index.js
+
+## Replace / remap
+
   --replace foo=bar Bind require("name") to an expression, e.g. jQuery to window.$.
+  --remap foo=bar   Remap a name to another name (within the same package). See the docs.
+
+## Build options
+
   --source-url      Add source URL annotations to the files. Useful for development,
-                    but note that they are not compatible with IE.
+                    but note that this is not compatible with IE.
   --global-require  Export the require() implementation into the global space.
   --amd             Export the module via the require.js AMD define("name", ...) using
                     the name specified in --global. Note that the requirejs will not
                     pick up modules defined like this unless you do at least one
                     asynchronous require() call.
+
+## Minification / source transforms
+
   --command         Pipe each file through a shell command and capture the output
                     (e.g. --command "uglifyjs --no-copyright").
+  --transform       Activates a source transformation module.
+
+## Performance
+
   --cache-path      Use a cache directory to store file builds. The cache speeds up
                     large builds (and minified builds) significantly since only source
                     files that have changed are updated.
+  --jobs            Sets the maximum level of parallelism for the task
+                    execution pipeline. Default: `os.cpus().length * 2`
+  --cache-method    Sets the cache method: stat | hash algorighm name.
+
+## Reporting
+
+  --report          Display the file size report.
   --silent          Disable all output, including the reporter.
   --verbose         More verbose output, such as files being filtered out and processed.
-  --report          Display the file size report.
   --version         Version info
+
+## Advanced
+
+  --reset-exclude   Advanced: do not apply the default exclusions
+                    (/dist/, /example/, /benchmark/, .min.js).
 ````
 
 ## API usage example

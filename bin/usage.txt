@@ -28,7 +28,7 @@ REPLACE / REMAP
 BUILD OPTIONS
 
   --source-url      Add source URL annotations to the files. Useful for
-                    development, but note that they are not compatible with IE.
+                    development, but note that this is not compatible with IE.
 
   --global-require  Export the require() implementation into the global space.
 
@@ -47,7 +47,7 @@ MINIFICATION / SOURCE TRANSFORMS
 
 PERFORMANCE
 
-  --cache <path>    Use a cache directory to store file builds. The cache
+  --cache-path <p>  Use a cache directory to store file builds. The cache
                     speeds up large builds (and minified builds) significantly
                     since only source files that have changed are updated.
 
