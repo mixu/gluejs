@@ -9,7 +9,16 @@ test:
 		--bail \
 		$(TESTS)
 
-.PHONY: test
+.PHONY: test lint
 
-style:
-	jshint index.js lib bin --exclude "lib/runner/package-commonjs/resources/require*"
+lint:
+	jshint . \
+	--exclude="**/node_modules" \
+	--exclude="lib/runner/package-commonjs/resources" \
+	--exclude="test/command-integration"
+	gjslint \
+	--nojsdoc \
+	--jslint_error=all \
+	--disable=6 \
+	--max_line_length=120 \
+	--exclude_directories=node_modules,lib/runner/package-commonjs/resources,test/command-integration -r .
