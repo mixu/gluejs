@@ -130,11 +130,10 @@ API.prototype.exclude = function(path) {
 
 // Express Middleware
 API.middleware = function (opts) {
-
-  // -- Throw error on bad options hash
-  if(!opts || !opts.include) throw new Error('You must define an options hash with an include property.');
   
   // -- Set some sane defaults
+  opts = opts || {};
+  opts.include = opts.include || './lib';
   opts.basepath = opts.basepath || (Array.isArray(opts.include) ? opts.include[0] : opts.include);
   opts.main = opts.main || 'index.js';
 
@@ -143,7 +142,7 @@ API.middleware = function (opts) {
     .include(opts.include)    // Use API function to define
     .basepath(opts.basepath)  // Use API function to define
 
-  // -- Set options (Clobber the glue.options hash with the passed options hash)
+  // -- All other options are set by clobbering the glue.options hash
   Object.keys(opts).forEach(function (key) {
     glue.set(key, opts[key]);
   });
