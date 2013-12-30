@@ -8,6 +8,8 @@ test:
 		--slow 2000ms \
 		--bail \
 		$(TESTS)
+	@echo "Note: you need to go run npm install in ./test to install the test dependencies..."
+	@echo "You also need uglifyjs and jade as global modules"
 
 .PHONY: test lint
 
