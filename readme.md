@@ -142,7 +142,7 @@ Usage: gluejs --include <file/dir ...> {OPTIONS}
   --include         Path to import.
   --exclude         JS regular expression string to match against the included paths
   --out             File to write. Default: stdout
-  --global          Name of the global to export. Default: "Foo"
+  --global          Name of the global to export. Default: "App"
   --basepath        Base path for relative file paths. Default: process.cwd()
   --main            Name of the main file/module to export. Default: index.js
 
