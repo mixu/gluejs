@@ -127,6 +127,41 @@ API.prototype.exclude = function(path) {
   this.options['exclude'].push((path instanceof RegExp ? path : new RegExp(path)));
   return this;
 };
+
+// Express Middleware
+API.middleware = function (opts) {
+
+  // -- Throw error on bad options hash
+  if(!opts || !opts.include) throw new Error('You must define an options hash with an include property.');
+  
+  // -- Set some sane defaults
+  opts.basepath = opts.basepath || (Array.isArray(opts.include) ? opts.include[0] : opts.include);
+  opts.main = opts.main || 'index.js';
+
+  // -- Create an instance of the API to use
+  var glue = new API()
+    .include(opts.include)    // Use API function to define
+    .basepath(opts.basepath)  // Use API function to define
+
+  // -- Set options (Clobber the glue.options hash with the passed options hash)
+  Object.keys(opts).forEach(function (key) {
+    glue.set(key, opts[key]);
+  });
+  
+  // -- Middleware to return
+  return function (req, res, next) {
+
+    // -- Return all non GET requests
+    if('GET' !== req.method) return next();
+
+    // -- Set content-type
+    res.set('Content-Type', 'application/javascript');
+
+    // -- Render file and pipe to response
+    glue.render(res);
+  }
+};
+
 API.prototype.handler = function(regex, fn) {};
 API.prototype.define = function(module, code) {};
 API.prototype.watch = function(onDone) {};
