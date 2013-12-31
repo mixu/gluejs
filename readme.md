@@ -16,7 +16,7 @@ New version! gluejs v2.1 is now out with a bunch of new features ([v1 branch](ht
 - Compile templating language files to JS via a custom handler
 - Source url support
 
-## Usage example
+## Usage example: console
 
     gluejs \
       --include ./lib/ \
@@ -27,6 +27,23 @@ New version! gluejs v2.1 is now out with a bunch of new features ([v1 branch](ht
       --command 'uglifyjs --no-copyright --mangle-toplevel'
 
 All of these options are also available via a Node API (e.g. `require('gluejs')`).
+
+## Usage example: express middleware (new in v2.2!)
+
+    var express = require('express'),
+        glue = require('gluejs'),
+        app = express();
+
+    app.use(express.static(__dirname + '/index.html'));
+
+    app.use('/app.js', glue.middleware({
+      include: [ './lib', './node_modules/microee/' ]
+    }));
+
+    app.listen(3000);
+    console.log('Listening on port 3000');
+
+`glue.middleware()` can accept most of the options supported by the Node API.
 
 ## Using the resulting file
 
@@ -50,6 +67,12 @@ To install the command line tool globally, run
     npm install -g gluejs
 
 Alternatively, you can run the tool (e.g. via a Makefile) as `./node_modules/gluejs/bin/gluejs`.
+
+## What's new in v2.2
+
+Note: if you are upgrading from an older version: the default value for `--global` is now `App` rather than `Foo`.
+
+gluejs v2.2 adds Express middleware for serving gluejs packages, thanks [@JibSales](https://github.com/JibSales).
 
 ## What's new in v2.1
 
@@ -90,9 +113,9 @@ Easier minification (or other processing) via `--command`:
     --include ./lib \
     --replace jQuery=window.jQuery \
     --command 'uglifyjs --no-copyright' \
-    --global Foo \
+    --global App \
     --main lib/index.js \
-    --out dist/foo.js
+    --out app.js
 
 With that option, all files are piped through `uglifyjs` before writing to disk.
 
@@ -142,7 +165,7 @@ Usage: gluejs --include <file/dir ...> {OPTIONS}
   --include         Path to import.
   --exclude         JS regular expression string to match against the included paths
   --out             File to write. Default: stdout
-  --global          Name of the global to export. Default: "Foo"
+  --global          Name of the global to export. Default: "App"
   --basepath        Base path for relative file paths. Default: process.cwd()
   --main            Name of the main file/module to export. Default: index.js
 
@@ -236,7 +259,7 @@ Sub-dependencies are also automatically bundled, as long as they've been install
 
 ## --global
 
-`--global <name>` / `.export(name)`: Name of the global name to export. Default: `foo` (e.g. `window.foo`)
+`--global <name>` / `.export(name)`: Name of the global name to export. Default: `App` (e.g. `window.App`)
 
 ## --basepath
 
@@ -251,6 +274,25 @@ Sub-dependencies are also automatically bundled, as long as they've been install
 `--out <path>` / `.render(destination)`: Write to the target path.
 
 For `.render`, the destination can be either a Writable Stream or a callback `function(err, output){}`. See the API usage example above.
+
+## .middleware
+
+`.middleware({ include: ... })`: Returns a Express/Connect compatible request handler.
+
+For example:
+
+    app.use('/js/app.js', glue.middleware({
+      include: __dirname + '/lib'
+    }));
+
+Or at the route level:
+
+    app.use(app.router);
+    app.get('/js/app.js', glue.middleware({
+      include: __dirname + '/lib'
+    }));
+
+Using full paths is recommended to avoid ambiguity. `basepath` defaults to the `include` path, and `main` defaults to `index.js`.
 
 ## --replace
 

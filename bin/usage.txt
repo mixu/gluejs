@@ -11,7 +11,7 @@ BASIC
 
   --out <path>      File to write. Default: stdout
 
-  --global <name>   Name of the global to export. Default: "Foo"
+  --global <name>   Name of the global to export. Default: "App"
 
   --basepath <path> Base path for the list of files. Default: process.cwd()
 
