@@ -38,6 +38,9 @@ var cases = {
       '/fixtures/node_modules/foo/package.json'
     ],
     fakeFS: {
+      existsSync: function(name) {
+        return !!(name == '/fixtures/node_modules/foo/package.json');
+      },
       '/fixtures/node_modules/foo/package.json': JSON.stringify({
         main: 'main.js'
       })
@@ -53,6 +56,9 @@ var cases = {
       '/fixtures/node_modules/aa/node_modules/cc/package.json'
     ],
     fakeFS: {
+      existsSync: function(name) {
+        return !!(name == '/fixtures/node_modules/aa/node_modules/cc/package.json');
+      },
       '/fixtures/node_modules/aa/node_modules/cc/package.json': JSON.stringify({
         main: 'differentfile.js'
       })
@@ -63,7 +69,12 @@ var cases = {
     files: [
       '/a/index.js',
       '/a/node_modules/b.json'
-    ]
+    ],
+    fakeFS: {
+      existsSync: function(name) {
+        return false;
+      }
+    }
   },
 
   'package-json-guess-extension': {
@@ -73,6 +84,9 @@ var cases = {
       '/a/node_modules/b/package.json'
     ],
     fakeFS: {
+      existsSync: function(name) {
+        return !!(name == '/a/node_modules/b/package.json');
+      },
       '/a/node_modules/b/package.json': JSON.stringify({
         main: 'alt'
       })
@@ -86,6 +100,9 @@ var cases = {
       '/a/node_modules/b/package.json'
     ],
     fakeFS: {
+      existsSync: function(name) {
+        return !!(name == '/a/node_modules/b/package.json');
+      },
       '/a/node_modules/b/package.json': JSON.stringify({
         main: './lib/'
       })
@@ -99,6 +116,9 @@ var cases = {
       '/a/node_modules/b/package.json'
     ],
     fakeFS: {
+      existsSync: function(name) {
+        return !!(name == '/a/node_modules/b/package.json');
+      },
       '/a/node_modules/b/package.json': JSON.stringify({
         main: './lib/foo/../foo/bar/alt.js'
       })
@@ -112,6 +132,9 @@ var cases = {
       '/a/node_modules/b/package.json'
     ],
     fakeFS: {
+      existsSync: function(name) {
+        return !!(name == '/a/node_modules/b/package.json');
+      },
       '/a/node_modules/b/package.json': JSON.stringify({
         main: './url.js'
       })
@@ -128,6 +151,9 @@ exports['infer-packages'] = {
   before: function() {
     var self = this;
     infer._setFS({
+      existsSync: function(filename) {
+        return self.fakeFS.existsSync(filename);
+      },
       readFileSync: function(filename) {
         if(self.fakeFS[filename]) {
           return self.fakeFS[filename];
@@ -138,7 +164,6 @@ exports['infer-packages'] = {
       }
     });
   },
-
 
   'can infer a single-file package': function() {
     var list = cases['can infer a single-file package'];

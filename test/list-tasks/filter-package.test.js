@@ -16,6 +16,9 @@ var cases = {
       '/a/included_directory/ccc/ddd.js'
     ],
     fakeFS: {
+      existsSync: function(name) {
+        return !!(name == '/a/package.json');
+      },
       '/a/package.json': JSON.stringify({
         files: [
           '/a/included_directory',
@@ -79,6 +82,9 @@ var cases = {
       '/a/node_modules/bar/node_modules/exclude/node_modules/subdependency.js',
     ],
     fakeFS: {
+      existsSync: function(name) {
+        return !!(name == '/a/node_modules/bar/package.json');
+      },
       '/a/node_modules/bar/package.json': JSON.stringify({
         devDependencies: {
           exclude_me: '*',
@@ -107,6 +113,9 @@ exports['filter-package'] = {
     }
 
     infer._setFS({
+      existsSync: function(filename) {
+        return self.fakeFS.existsSync(filename);
+      },
       readFileSync: mock
     });
 
