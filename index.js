@@ -130,7 +130,7 @@ API.prototype.exclude = function(path) {
 
 // Express Middleware
 API.middleware = function (opts) {
-  
+
   // -- Set some sane defaults
   opts = opts || {};
   opts.include = opts.include || './lib';
@@ -139,14 +139,14 @@ API.middleware = function (opts) {
 
   // -- Create an instance of the API to use
   var glue = new API()
-    .include(opts.include)    // Use API function to define
-    .basepath(opts.basepath)  // Use API function to define
+    .include(opts.include)     // Use API function to define
+    .basepath(opts.basepath);  // Use API function to define
 
   // -- All other options are set by clobbering the glue.options hash
   Object.keys(opts).forEach(function (key) {
     glue.set(key, opts[key]);
   });
-  
+
   // -- Middleware to return
   return function (req, res, next) {
 
@@ -158,7 +158,7 @@ API.middleware = function (opts) {
 
     // -- Render file and pipe to response
     glue.render(res);
-  }
+  };
 };
 
 API.prototype.handler = function(regex, fn) {};

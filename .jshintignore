@@ -1,0 +1,5 @@
+node_modules/
+test/node_modules
+test/tmp
+lib/runner/package-commonjs/resources
+test/command-integration

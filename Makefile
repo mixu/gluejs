@@ -13,14 +13,23 @@ test:
 
 .PHONY: test lint
 
+# Note: use latest gjslint e.g 2.3.13
 lint:
-	jshint . \
-	--exclude="**/node_modules" \
-	--exclude="lib/runner/package-commonjs/resources" \
-	--exclude="test/command-integration"
+	jshint .
 	gjslint \
 	--nojsdoc \
 	--jslint_error=all \
 	--disable=6 \
 	--max_line_length=120 \
-	--exclude_directories=node_modules,lib/runner/package-commonjs/resources,test/command-integration -r .
+	--custom_jsdoc_tags=api \
+	--exclude_directories=node_modules,lib/runner/package-commonjs/resources,test \
+	--max_line_length=120 --disable=0131,300,2,1,6 \
+	-r .
+
+test-lint:
+	./bin/gluejs \
+		--no-cache \
+		--include ./lib \
+		--basepath ./ \
+		--out ./test/tmp/lint.js
+	gjslint --nojsdoc --custom_jsdoc_tags=api --max_line_length=120 --disable=0131,300,2,1,6 ./test/tmp/lint.js
