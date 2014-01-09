@@ -1,12 +1,13 @@
+# v2.2.next
+
+- Added pre-filters to skip .git / svn / hg / cvs directories for better performance
+- Improved the behavior of the cache when the metadata is corrupted or in an unexpected format
+
 # Todo
 
-- test robustness against getting killed or having cache metadata become corrupted
-  ==> done in minitask, but the runner needs to be improved; in particular,
-      we should only have a single instance of the global cache (unless a different cache-path is set)
+- we should only have a single instance of the global cache (unless a different cache-path is set)
 - add `cache clean`
 - improve the autodetection code so that people don't need to supply a --main argument in default cases (e.g. when there is a index.js or there is just one file in the package)
-- pre-filters for .git / svn / hg / cvs directories for better performance
-  ==> again, this needs a small enhancement on the minitask side
 
 ## use detective
 

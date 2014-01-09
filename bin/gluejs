@@ -44,6 +44,13 @@ if(!argv['include']) {
 
 var g = new Glue();
 
+// set verbose early, so that all messages are shown
+if(argv['verbose']) {
+  g.set('report', true);
+  g.set('verbose', true);
+  argv['progress'] = false;
+}
+
 // --include
 g.include(argv['include']);
 
@@ -104,12 +111,6 @@ if(argv['remap']) {
 if(argv['out']) {
   g.set('progress', true);
   argv['progress'] = true;
-}
-
-if(argv['verbose']) {
-  g.set('report', true);
-  g.set('verbose', true);
-  argv['progress'] = false;
 }
 
 if(typeof argv['report'] !== 'undefined') {

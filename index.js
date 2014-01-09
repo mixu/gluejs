@@ -10,6 +10,16 @@ var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME
 // API wrapper
 function API() {
   this.files = new List();
+  // exclude matching paths from traversal - this is applied during the
+  // initial traversal because going into source control directories is
+  // potentially very expensive
+  this.files.exclude([
+    function(p) { return p.match(/\/.svn/); },
+    function(p) { return p.match(/\/.git/); },
+    function(p) { return p.match(/\/.hg/); },
+    function(p) { return p.match(/\/CVS/); }
+  ]);
+
   // default options
   this.options = {
     replaced: {},
@@ -66,8 +76,13 @@ API.prototype.render = function(dest) {
 API.defaults = API.prototype.defaults = function(opts) {};
 API.prototype.set = function(key, value) {
   this.options[key] = value;
-  if(key == 'verbose') {
+  if(key == 'verbose' && value) {
     Minilog.enable();
+  }
+  // --reset-exclude should also reset the pre-processing exclusion
+  // which prevent
+  if(key == 'reset-exclude' && value) {
+    this.files.exclude(null);
   }
   return this;
 };
