@@ -1,8 +1,55 @@
 # Todo
 
 - test robustness against getting killed or having cache metadata become corrupted
+  ==> done in minitask, but the runner needs to be improved; in particular,
+      we should only have a single instance of the global cache (unless a different cache-path is set)
 - add `cache clean`
 - improve the autodetection code so that people don't need to supply a --main argument in default cases (e.g. when there is a index.js or there is just one file in the package)
+- pre-filters for .git / svn / hg / cvs directories for better performance
+  ==> again, this needs a small enhancement on the minitask side
+
+## use detective
+
+- provides more accurate exclusion information (e.g. modules not connected from the main file can be ignored; files like package.json can often be safely excluded)
+- allows the user to only specify `--main` without any includes
+- allows us to auto-detect node_modules dependencies without explicit include management (making live reload possible / nice)
+- paves way for efficient node core module support
+
+Implementation:
+
+- should work as a preprocessing step
+- first, apply resolution (use cached data if possible)
+- next, add more files to the build if detected
+- next, apply normal filters such as .npmignore and .gitignore
+
+Test cases:
+
+- exclude unused file like package.json
+- include unmentioned file
+- include unmentioned module
+- apply .npmignore last
+- perf test: load large directory a couple of hundred times and ensure caching works
+
+## alternative requires
+
+- `require-file`:
+  - max: verbose, commented version, friendly error messages
+  - min: minimized version, friendly error message
+  - cascade: use global context version as well, works with Node (?)
+
+## Docs todo
+
+- need a good example of applying a transformation via the API
+- need a good example of using a transformation with the Express middleware
+- local dev server example post detective support
+- document the grunt task options that are available
+- Express middleware dev config example (e.g. if(DEV) { build() } else { express.static('..'); }
+- Using libraries with globals such as jQuery and underscore (and/or how to use --replace with big libs for greater efficiency)
+  - how --replace works in this case
+  - how cascading works when the desired target is a global var
+  - how cascading works when the desired target is a require() function
+  - how cascading works when the desired target is AMD
+- Making use of --amd with RequireJS
 
 ## --cache-clean
 
@@ -32,7 +79,11 @@ But it works fine for automatically rebuilding e.g. when doing development local
 
 # Tasks
 
-- pre-filters for .git / svn / hg / cvs directories for better performance
+- A better big lib handing system (e.g. --external backbone --external underscore)
+- [browser field](https://gist.github.com/defunctzombie/4339901) support in package.json
+- Etags support for build results (e.g. shortcutting repeated loads even further)
+- return a meaningful result from middleware if an error occurs
+  (e.g. either a status code or perhaps even a div-printing thing)
 - better metadata fetching from package.json
   - it should be possible to pre-filter the packages (before infer packages),
     so that devDependencies are not included in the processing
@@ -43,9 +94,8 @@ But it works fine for automatically rebuilding e.g. when doing development local
 
 # Evaluation
 
-- Optimal bundling:
-  - UMD bundle support **
-  - empirically based packaging / dynamic loading **
+- UMD bundle support **
+- empirically based packaging / dynamic loading **
 - Generate obfuscated code server side **
 - Source maps support
 - Fix issues with interrupted cached data
@@ -73,13 +123,6 @@ File tasks:
 - wrap-commonjs-web-sourceurl
 - wrap-commonjs-amd (e.g. take commonJS files, resolve their direct dependencies, wrap into an AMD module)
 - wrap-amd-commonjs-web (e.g. take a AMD file, look at the dependency declaration, convert that to a string, wrap into a web-commonjs module)
-
-
-Final tasks:
-
-- concatenate
-- static-server (e.g. serve over http)
-- package-commonjs (to any writable stream)
 
 New features:
 
@@ -109,10 +152,6 @@ The easiest way is to use the command line tool:
 This auto-detects the package name and main file, and bundles the content of the current directory and subdirectories as well as any npm modules in them.
 
 You can override this by explictly passing in various options - for example, if you only want to include the content of a single directory.
-
-## How do I integrate gluejs with my web app so that things are built automatically?
-
-You can use the API - and there is builtin Connect middleware if you're using Connect.
 
 ## How do I package tests for the browser?
 
