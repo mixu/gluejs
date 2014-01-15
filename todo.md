@@ -43,6 +43,14 @@ Test cases:
 - each module should also try to use the previous require function
 - if `--global-require` is set, then multiple modules will share the same set of lookups (e.g. as long as the bundles are loaded so that prerequisites come before their users then things work)
 
+New implementation relies on returns from IIFEs:
+
+- the require.js implementation returns a generic require() function bound to a specific `previousRequire` instance
+- this is then wrapped in another IIFE to prevent sharing the require() implementation accross chain boundaries
+- finally, the return value from the second IIFE is either:
+    - a) assigned to a window.foo variable (old default)
+    - b) passed to a UMD implementation (TODO)
+
 2) `require-file`: allows you to choose the require type
 
 - max: verbose, commented version, friendly error messages

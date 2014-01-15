@@ -27,12 +27,15 @@ function convert(arr) {
 
 
 function createCode(opts) {
+  var str = '';
+  // 0) global scope code
+  str += opts.global || 'module.exports = ';
   // 1) preamble
-  var str = opts.pre || '(function(){\n';
+  str += opts.pre || '(function(){\n';
   // 2) require implementation
-  str += fs.readFileSync('../lib/require/require.js');
+  str += 'var r = ' + fs.readFileSync('../lib/require/require.js');
   // 3) module definitions
-  str += 'require.m = ' + convert(opts.packages) + ';\n';
+  str += 'r.m = ' + convert(opts.packages) + ';\n';
   // 4) globals block
   str += opts.code;
   // 5) post
@@ -40,6 +43,12 @@ function createCode(opts) {
   return str;
 }
 
+function box() {
+  var sandbox = { exports: {}, console: console };
+  sandbox.module = sandbox;
+  sandbox.global = sandbox;
+  return sandbox;
+}
 
 exports['require tests'] = {
 
@@ -50,12 +59,10 @@ exports['require tests'] = {
           module.exports = 'index.js';
         }
       }],
-      code: "module.exports = require('index.js');\n",
+      code: "return r('index.js');\n",
     });
 
-    var sandbox = { exports: {} };
-    sandbox.module = sandbox;
-    sandbox.global = sandbox;
+    var sandbox = box();
     vm.runInNewContext(code, sandbox);
 
     assert.equal(sandbox.exports, 'index.js');
@@ -74,13 +81,11 @@ exports['require tests'] = {
           module.exports = 'Underscore';
         }
       }],
-      code: "module.exports = require('index.js');\n",
+      code: "return r('index.js');\n",
     });
 
-    var sandbox = { exports: {} };
-    sandbox.module = sandbox;
-    sandbox.global = sandbox;
-
+    var sandbox = box();
+    //console.log(code);
     vm.runInNewContext(code, sandbox);
 
     assert.equal(sandbox.exports, 'Underscore');
@@ -94,16 +99,16 @@ exports['require tests'] = {
           module.exports = require('foobar');
         }
       }],
-      code: "module.exports = require('index.js');\n",
+      code: "return r('index.js');\n",
     });
 
     var calls = 0;
-    var sandbox = { exports: {}, require: function() {
+
+    var sandbox = box();
+    sandbox.require = function() {
       calls++;
       return 'called';
-    } };
-    sandbox.module = sandbox;
-    sandbox.global = sandbox;
+    };
     vm.runInNewContext(code, sandbox);
 
     assert.equal(sandbox.exports, 'called');
@@ -112,7 +117,58 @@ exports['require tests'] = {
 
   'can chain requires': function() {
 
+    // first block should fall back to the root require()
+    // first block should export a require() implementation
+    // second block should export a require() implementation
+    // second block should fall back to the first require()
+
+    // this requires moving from code that runs inside the anon func
+    // to moving to window.foo = (function() { return require('main'); }());
+
+    var code;
+
+    code = "function require(name) { console.log('ROOT: ' + name); return 'OK ' + name; };";
+
+    code += createCode({
+      global: 'require = ',
+      packages: [{
+        "index.js": function(module, exports, require){
+          module.exports = require('foobar');
+        }
+      }],
+      // export the require() function rather than the module itself
+      code: "return r.relative('', 0);\n"
+    });
+
+    var calls = 0;
+    var sandbox = box();
+
+    code += createCode({
+      global: 'require = ',
+      packages: [{
+        "index.js": function(module, exports, require){
+          module.exports = require('foobar');
+        }
+      }],
+      // export the require() function rather than the module itself
+      code: "return r.relative('', 0);\n",
+    });
+
+    var sandbox2 = box();
+
+    code += "result = require('index.js');"
+
+    // console.log(code);
+
+    vm.runInNewContext(code, sandbox2);
+
+    assert.equal(sandbox2.result, 'OK foobar');
   }
+
+  // TODO: test various code paths when exporting a require function
+  // - require('./index.js')
+  // - require('innermodule')
+  // - require('./long/path/../foo.js')
 
 };
 
