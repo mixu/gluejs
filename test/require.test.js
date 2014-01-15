@@ -28,18 +28,44 @@ function convert(arr) {
 
 function createCode(opts) {
   var str = '';
-  // 0) global scope code
-  str += opts.global || 'module.exports = ';
-  // 1) preamble
-  str += opts.pre || '(function(){\n';
-  // 2) require implementation
+
+  if(!opts.type || !opts['root-file'] || typeof opts['global-require'] === 'undefined') {
+    throw new Error('Invalid opts');
+  }
+
+  // 0) Mandatory
+  // `main`: the expression
+  // Type:
+  // - `global` (plain global)
+  // - `node` (module.exports)
+  // - `umd` (node/amd/global)
+  //
+  // Option: `global-require`
+
+  str += '(function(){\n';
+  // 1) require implementation
   str += 'var r = ' + fs.readFileSync('../lib/require/require.js');
-  // 3) module definitions
+  // 2) module definitions
   str += 'r.m = ' + convert(opts.packages) + ';\n';
-  // 4) globals block
-  str += opts.code;
-  // 5) post
-  str += opts.post || '}());\n';
+  // 3) globals block
+
+
+  switch(opts.type) {
+    case 'node':
+      str += 'module.exports = r(' + JSON.stringify(opts['root-file'])  +');';
+      break;
+    case 'global':
+      str += opts['export'] + ' = r(' + JSON.stringify(opts['root-file'])  +');';
+      break;
+    case 'umd':
+      str += fs.readFileSync('../lib/require/umd.js');
+      str += 'umd(r(' + JSON.stringify(opts['root-file'])  +'), ' + JSON.stringify(opts['export']) + ');'
+      break;
+  }
+  if(opts['global-require']) {
+    str += 'require = r.relative("", 0);\n';
+  }
+  str += '}());\n';
   return str;
 }
 
@@ -54,12 +80,16 @@ exports['require tests'] = {
 
   'can require() a local file': function() {
     var code = createCode({
+
+      type: 'node',
+      'root-file': 'index.js',
+      'global-require': false,
+
       packages: [{
         "index.js": function(module, exports, require){
           module.exports = 'index.js';
         }
-      }],
-      code: "return r('index.js');\n",
+      }]
     });
 
     var sandbox = box();
@@ -70,6 +100,10 @@ exports['require tests'] = {
 
   'can require() a file in a different package': function() {
     var code = createCode({
+      type: 'node',
+      'root-file': 'index.js',
+      'global-require': false,
+
       packages: [{
         "underscore": {"c":1,"m":"underscore.js"},
         "index.js": function(module, exports, require){
@@ -80,8 +114,7 @@ exports['require tests'] = {
         "underscore.js": function(module, exports, require){
           module.exports = 'Underscore';
         }
-      }],
-      code: "return r('index.js');\n",
+      }]
     });
 
     var sandbox = box();
@@ -94,12 +127,15 @@ exports['require tests'] = {
 
   'try to use the previous require function for unknown modules': function() {
     var code = createCode({
+      type: 'node',
+      'root-file': 'index.js',
+      'global-require': false,
+
       packages: [{
         "index.js": function(module, exports, require){
           module.exports = require('foobar');
         }
-      }],
-      code: "return r('index.js');\n",
+      }]
     });
 
     var calls = 0;
@@ -130,33 +166,37 @@ exports['require tests'] = {
     code = "function require(name) { console.log('ROOT: ' + name); return 'OK ' + name; };";
 
     code += createCode({
-      global: 'require = ',
+      type: 'node',
+      'root-file': 'index.js',
+      'global-require': true,
+
       packages: [{
         "index.js": function(module, exports, require){
-          module.exports = require('foobar');
+          module.exports = require('abc');
         }
-      }],
-      // export the require() function rather than the module itself
-      code: "return r.relative('', 0);\n"
+      }]
+
     });
 
     var calls = 0;
     var sandbox = box();
 
     code += createCode({
-      global: 'require = ',
+      type: 'node',
+      'root-file': 'index.js',
+      'global-require': true,
+
       packages: [{
         "index.js": function(module, exports, require){
-          module.exports = require('foobar');
+          module.exports = require('def');
         }
-      }],
-      // export the require() function rather than the module itself
-      code: "return r.relative('', 0);\n",
+      }]
+
     });
 
     var sandbox2 = box();
 
-    code += "result = require('index.js');"
+    code += "result = require('foobar');"
 
     // console.log(code);
 
