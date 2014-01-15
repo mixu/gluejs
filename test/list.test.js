@@ -31,9 +31,11 @@ exports['given a list'] = {
     var g = this.list;
     var result = g.add(__dirname+'/fixtures/single-file/').files;
     assert.equal(result.length, 2);
-    assert.deepEqual(result.map(pluck.bind(this, 'name')), [
-      { name: path.normalize(__dirname+'/fixtures/single-file/has_dependency.js') },
-      { name: path.normalize(__dirname+'//fixtures/single-file/simple.js') },
+    assert.deepEqual(result.map(pluck.bind(this, 'name')).sort(function(a, b) {
+        return a.length - b.length;
+      }), [
+      { name: path.normalize(__dirname+'/fixtures/single-file/simple.js') },
+      { name: path.normalize(__dirname+'/fixtures/single-file/has_dependency.js') }
     ]);
   }
 };

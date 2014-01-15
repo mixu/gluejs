@@ -69,7 +69,7 @@ exports['integration tests'] = {
           return function() {
             return spawn({
               name: filename, // full path
-              task: 'jade --client --no-debug'
+              task: __dirname + '/node_modules/.bin/jade --client --no-debug'
             });
           };
         },
@@ -82,7 +82,7 @@ exports['integration tests'] = {
           return function() {
             return spawn({
               name: filename, // full path
-              task: 'uglifyjs --no-copyright --beautify'
+              task: __dirname + '/node_modules/.bin/uglifyjs --no-copyright --beautify'
             });
           };
         },

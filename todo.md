@@ -31,12 +31,22 @@ Test cases:
 - apply .npmignore last
 - perf test: load large directory a couple of hundred times and ensure caching works
 
-## alternative requires
+## UMD bundle support
 
-- `require-file`:
-  - max: verbose, commented version, friendly error messages
-  - min: minimized version, friendly error message
-  - cascade: use global context version as well, works with Node (?)
+- default: just export a global by assigning to the `--export` name
+- `--umd` should export the result within the umd wrapper (`--amd` should be a synonym)
+
+## Require improvements
+
+1) chained require() lookups:
+
+- each module should also try to use the previous require function
+- if `--global-require` is set, then multiple modules will share the same set of lookups (e.g. as long as the bundles are loaded so that prerequisites come before their users then things work)
+
+2) `require-file`: allows you to choose the require type
+
+- max: verbose, commented version, friendly error messages
+- min: minimized version, friendly error message
 
 ## Docs todo
 
@@ -95,7 +105,6 @@ But it works fine for automatically rebuilding e.g. when doing development local
 
 # Evaluation
 
-- UMD bundle support **
 - empirically based packaging / dynamic loading **
 - Generate obfuscated code server side **
 - Source maps support
