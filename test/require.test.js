@@ -1,7 +1,8 @@
 var fs = require('fs'),
     vm = require('vm'),
     path = require('path'),
-    assert = require('assert');
+    assert = require('assert'),
+    reqWrap = require('../lib/require/index.js');
 
 function stringify(value) {
   if(typeof value === 'function') {
@@ -27,45 +28,10 @@ function convert(arr) {
 
 
 function createCode(opts) {
-  var str = '';
-
-  if(!opts.type || !opts['root-file'] || typeof opts['global-require'] === 'undefined') {
-    throw new Error('Invalid opts');
-  }
-
-  // 0) Mandatory
-  // `main`: the expression
-  // Type:
-  // - `global` (plain global)
-  // - `node` (module.exports)
-  // - `umd` (node/amd/global)
-  //
-  // Option: `global-require`
-
-  str += '(function(){\n';
-  // 1) require implementation
-  str += 'var r = ' + fs.readFileSync('../lib/require/require.js');
+  var str = reqWrap.prelude(opts);
   // 2) module definitions
   str += 'r.m = ' + convert(opts.packages) + ';\n';
-  // 3) globals block
-
-
-  switch(opts.type) {
-    case 'node':
-      str += 'module.exports = r(' + JSON.stringify(opts['root-file'])  +');';
-      break;
-    case 'global':
-      str += opts['export'] + ' = r(' + JSON.stringify(opts['root-file'])  +');';
-      break;
-    case 'umd':
-      str += fs.readFileSync('../lib/require/umd.js');
-      str += 'umd(r(' + JSON.stringify(opts['root-file'])  +'), ' + JSON.stringify(opts['export']) + ');'
-      break;
-  }
-  if(opts['global-require']) {
-    str += 'require = r.relative("", 0);\n';
-  }
-  str += '}());\n';
+  str += reqWrap.postlude(opts);
   return str;
 }
 
@@ -76,141 +42,165 @@ function box() {
   return sandbox;
 }
 
-exports['require tests'] = {
-
-  'can require() a local file': function() {
-    var code = createCode({
-
-      type: 'node',
-      'root-file': 'index.js',
-      'global-require': false,
-
-      packages: [{
-        "index.js": function(module, exports, require){
-          module.exports = 'index.js';
-        }
-      }]
+// test matrix:
+// - `node` and `umd` should work equally well
+// - `min` and `max` versions should work equally well
+['node', 'umd'].forEach(function(exportType) {
+  ['max', 'min'].forEach(function(minType) {
+    exports[exportType + ' ' + minType + ' require tests'] = tests({
+      type: exportType,
+      require: minType
     });
+  });
+});
 
-    var sandbox = box();
-    vm.runInNewContext(code, sandbox);
+function tests(defaultOpts) {
+  return {
+    'can require() a local file': function() {
+      var code = createCode({
 
-    assert.equal(sandbox.exports, 'index.js');
-  },
+        type: defaultOpts.type,
+        'root-file': 'index.js',
+        'global-require': false,
+        'export': 'App',
+        require: defaultOpts.require,
 
-  'can require() a file in a different package': function() {
-    var code = createCode({
-      type: 'node',
-      'root-file': 'index.js',
-      'global-require': false,
+        packages: [{
+          "index.js": function(module, exports, require){
+            module.exports = 'index.js';
+          }
+        }]
+      });
 
-      packages: [{
-        "underscore": {"c":1,"m":"underscore.js"},
-        "index.js": function(module, exports, require){
-          module.exports = require('underscore');
-        }
-      },
-      {
-        "underscore.js": function(module, exports, require){
-          module.exports = 'Underscore';
-        }
-      }]
-    });
+      var sandbox = box();
+      // console.log(code);
+      vm.runInNewContext(code, sandbox);
 
-    var sandbox = box();
-    //console.log(code);
-    vm.runInNewContext(code, sandbox);
+      assert.equal(sandbox.exports, 'index.js');
+    },
 
-    assert.equal(sandbox.exports, 'Underscore');
+    'can require() a file in a different package': function() {
+      var code = createCode({
+        type: defaultOpts.type,
+        'root-file': 'index.js',
+        'global-require': false,
+        'export': 'App',
+        require: defaultOpts.require,
 
-  },
+        packages: [{
+          "underscore": {"c":1,"m":"underscore.js"},
+          "index.js": function(module, exports, require){
+            module.exports = require('underscore');
+          }
+        },
+        {
+          "underscore.js": function(module, exports, require){
+            module.exports = 'Underscore';
+          }
+        }]
+      });
 
-  'try to use the previous require function for unknown modules': function() {
-    var code = createCode({
-      type: 'node',
-      'root-file': 'index.js',
-      'global-require': false,
+      var sandbox = box();
+      //console.log(code);
+      vm.runInNewContext(code, sandbox);
 
-      packages: [{
-        "index.js": function(module, exports, require){
-          module.exports = require('foobar');
-        }
-      }]
-    });
+      assert.equal(sandbox.exports, 'Underscore');
 
-    var calls = 0;
+    },
 
-    var sandbox = box();
-    sandbox.require = function() {
-      calls++;
-      return 'called';
-    };
-    vm.runInNewContext(code, sandbox);
+    'try to use the previous require function for unknown modules': function() {
+      var code = createCode({
+        type: defaultOpts.type,
+        'root-file': 'index.js',
+        'global-require': false,
+        'export': 'App',
+        require: defaultOpts.require,
 
-    assert.equal(sandbox.exports, 'called');
-    assert.equal(calls, 1);
-  },
+        packages: [{
+          "index.js": function(module, exports, require){
+            module.exports = require('foobar');
+          }
+        }]
+      });
 
-  'can chain requires': function() {
+      var calls = 0;
 
-    // first block should fall back to the root require()
-    // first block should export a require() implementation
-    // second block should export a require() implementation
-    // second block should fall back to the first require()
+      var sandbox = box();
+      sandbox.require = function() {
+        calls++;
+        return 'called';
+      };
+      vm.runInNewContext(code, sandbox);
 
-    // this requires moving from code that runs inside the anon func
-    // to moving to window.foo = (function() { return require('main'); }());
+      assert.equal(sandbox.exports, 'called');
+      assert.equal(calls, 1);
+    },
 
-    var code;
+    'can chain requires': function() {
 
-    code = "function require(name) { console.log('ROOT: ' + name); return 'OK ' + name; };";
+      // first block should fall back to the root require()
+      // first block should export a require() implementation
+      // second block should export a require() implementation
+      // second block should fall back to the first require()
 
-    code += createCode({
-      type: 'node',
-      'root-file': 'index.js',
-      'global-require': true,
+      // this requires moving from code that runs inside the anon func
+      // to moving to window.foo = (function() { return require('main'); }());
 
-      packages: [{
-        "index.js": function(module, exports, require){
-          module.exports = require('abc');
-        }
-      }]
+      var code;
 
-    });
+      // code = "function require(name) { console.log('ROOT: ' + name); return 'OK ' + name; };";
+      code = "function require(name) { return 'OK ' + name; };";
 
-    var calls = 0;
-    var sandbox = box();
+      code += createCode({
+        type: defaultOpts.type,
+        'root-file': 'index.js',
+        'global-require': true,
+        'export': 'App',
+        require: defaultOpts.require,
 
-    code += createCode({
-      type: 'node',
-      'root-file': 'index.js',
-      'global-require': true,
+        packages: [{
+          "index.js": function(module, exports, require){
+            module.exports = require('abc');
+          }
+        }]
 
-      packages: [{
-        "index.js": function(module, exports, require){
-          module.exports = require('def');
-        }
-      }]
+      });
 
-    });
+      var calls = 0;
+      var sandbox = box();
 
-    var sandbox2 = box();
+      code += createCode({
+        type: defaultOpts.type,
+        'root-file': 'index.js',
+        'global-require': true,
+        'export': 'App',
+        require: defaultOpts.require,
 
-    code += "result = require('foobar');"
+        packages: [{
+          "index.js": function(module, exports, require){
+            module.exports = require('def');
+          }
+        }]
 
-    // console.log(code);
+      });
 
-    vm.runInNewContext(code, sandbox2);
+      var sandbox2 = box();
 
-    assert.equal(sandbox2.result, 'OK foobar');
-  }
+      code += "result = require('foobar');"
 
-  // TODO: test various code paths when exporting a require function
-  // - require('./index.js')
-  // - require('innermodule')
-  // - require('./long/path/../foo.js')
+      // console.log(code);
 
-};
+      vm.runInNewContext(code, sandbox2);
+
+      assert.equal(sandbox2.result, 'OK foobar');
+    }
+
+    // TODO: test various code paths when exporting a require function
+    // - require('./index.js')
+    // - require('innermodule')
+    // - require('./long/path/../foo.js')
+  };
+}
 
 // if this module is the script being run, then run the tests:
 if (module == require.main) {
