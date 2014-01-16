@@ -1,7 +1,54 @@
-# v2.2.next
+# What's new in v2.next
 
+gluejs v2.next adds UMD support and performance / robustness improvements.
+
+- UMD support: you can now run the same build result in Node and AMD and in the browser. This enables three use cases:
+  - you can use gluejs bundles in AMD/Require.js (via config.js, see the relevant section below)
+  - you can share the same file between AMD and Node
+  - you can use gluejs to produce a minified/obfuscated version of your codebase that's usable in Node
+- chained require() resolution. The gluejs `require()` shim has been redesigned so that if a `require` function is already defined, then it will fall back to that function. This has two implications:
+  - if `--global-require` is set (exporting the `require()` function), you can split your app into multiple bundles loaded separately in the browser and they will appropriately chain require() calls as long they are loaded in prerequisite order
+  - UMD bundles running under Node will fall back to using Node's native `require` for modules that are not in the bundle
 - Added pre-filters to skip .git / svn / hg / cvs directories for better performance
 - Improved the behavior of the cache when the metadata is corrupted or in an unexpected format
+
+## --umd
+
+`--umd` / `.set('umd', true)`: UMD compatible export.
+
+The resulting bundle can be loaded in Node (directly via require()), in AMD (as an external module) or alternatively as a global (in the browser). All you need to do is to add `--umd` to your build to include the UMD wrapper.
+
+Creating the bundle:
+
+    gluejs \
+      --umd \
+      --include ./lib/ \
+      --include ./node_modules/microee/ \
+      --global App \
+      --main lib/index.js \
+      --out app.js \
+
+In node:
+
+    node -e "console.log(require('./app.js'););"
+
+In AMD/Require.js,`config.js`, assuming `--global` was set to `App`:
+
+    {
+      paths: { "myapp": "/app.js" },
+      myapp: {
+        deps: [ ... ],
+        exports: 'App'
+      }
+    }
+
+after which the module is accessible as `myapp`.
+
+Note that Require.js might not pick up modules defined like this unless you do at least one asynchronous require() call, e.g. you need to run the no-op code `require(['foo'], function(foo){ });` before `require('foo')` will work. This seems to be a quirk in the Require.js AMD shim.
+
+Upgrade note: `--amd`, an older option which was only compatible with AMD/requirejs, is now equivalent to `--umd`.
+
+-----
 
 # Todo
 
@@ -30,31 +77,6 @@ Test cases:
 - include unmentioned module
 - apply .npmignore last
 - perf test: load large directory a couple of hundred times and ensure caching works
-
-## UMD bundle support
-
-- default: just export a global by assigning to the `--export` name
-- `--umd` should export the result within the umd wrapper (`--amd` should be a synonym)
-
-## Require improvements
-
-1) chained require() lookups:
-
-- each module should also try to use the previous require function
-- if `--global-require` is set, then multiple modules will share the same set of lookups (e.g. as long as the bundles are loaded so that prerequisites come before their users then things work)
-
-New implementation relies on returns from IIFEs:
-
-- the require.js implementation returns a generic require() function bound to a specific `previousRequire` instance
-- this is then wrapped in another IIFE to prevent sharing the require() implementation accross chain boundaries
-- finally, the return value from the second IIFE is either:
-    - a) assigned to a window.foo variable (old default)
-    - b) passed to a UMD implementation (TODO)
-
-2) `require-file`: allows you to choose the require type
-
-- max: verbose, commented version, friendly error messages
-- min: minimized version, friendly error message
 
 ## Docs todo
 
@@ -114,7 +136,6 @@ But it works fine for automatically rebuilding e.g. when doing development local
 # Evaluation
 
 - empirically based packaging / dynamic loading **
-- Generate obfuscated code server side **
 - Source maps support
 - Fix issues with interrupted cached data
 - Remapping cross environment dependencies / dependency injection
