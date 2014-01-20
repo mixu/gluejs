@@ -51,23 +51,32 @@ if(argv['verbose']) {
   argv['progress'] = false;
 }
 
+// Booleans:
+// --reset-exclude
+// --source-url
+// --global-require
+[ 'reset-exclude', 'source-url', 'global-require' ].forEach(function(key) {
+  if(argv[key]) {
+    g.set(key, true);
+  }
+});
+
+// Strings:
+// --exclude
+// --amd
+// --umd
+// --cache-method
+// --command
+// --transform
+// --jobs
+[ 'exclude', 'amd', 'umd', 'cache-method', 'command', 'transform', 'jobs' ].forEach(function(key) {
+  if(argv[key]) {
+    g.set(key, argv[key]);
+  }
+});
+
 // --include
 g.include(argv['include']);
-
-// --exclude
-if(argv['exclude']) {
-  g.set('exclude', argv['exclude']);
-}
-
-// reset-exclude
-if(argv['reset-exclude']) {
-  g.set('reset-exclude', true);
-}
-
-// --amd
-if(argv['amd']) {
-  g.set('amd', argv['amd']);
-}
 
 // --global
 g.export(argv['global']);
@@ -128,34 +137,10 @@ if(argv['silent']) {
   g.set('progress', false);
 }
 
-if(argv['source-url']) {
-  g.set('source-url', true);
-}
-
-if(argv['global-require']) {
-  g.set('global-require', true);
-}
-
 g.set('cache', argv['cache']);
 
 if(argv['cache-path']) {
   g.set('cache-path', path.resolve(process.cwd(), argv['cache-path']));
-}
-
-if(argv['cache-method']) {
-  g.set('cache-method', argv['cache-method']);
-}
-
-if(argv['command']) {
-  g.set('command', argv['command']);
-}
-
-if(argv['transform']) {
-  g.set('transform', argv['transform']);
-}
-
-if(argv['jobs']) {
-  g.set('jobs', argv['jobs']);
 }
 
 if(argv['npm']) {

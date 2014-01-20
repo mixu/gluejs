@@ -121,7 +121,7 @@ But it works fine for automatically rebuilding e.g. when doing development local
 # Tasks
 
 - A better big lib handing system (e.g. --external backbone --external underscore)
-- [browser field](https://gist.github.com/defunctzombie/4339901) support in package.json
+- [browser field](https://gist.github.com/defunctzombie/4339901) support in package.json via [browser-resolve](https://github.com/defunctzombie/node-browser-resolve)
 - Etags support for build results (e.g. shortcutting repeated loads even further)
 - return a meaningful result from middleware if an error occurs
   (e.g. either a status code or perhaps even a div-printing thing)
