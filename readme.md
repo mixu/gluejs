@@ -2,7 +2,7 @@
 
 Package Node/CommonJS modules for the browser
 
-New version! gluejs v2.1 is now out with a bunch of new features ([v1 branch](https://github.com/mixu/gluejs/tree/master))
+New version! gluejs v2 is now out with a bunch of new features ([v1 branch](https://github.com/mixu/gluejs/tree/master))
 
 
 - Converts code written for Node.js to run in the browser
@@ -67,6 +67,20 @@ To install the command line tool globally, run
     npm install -g gluejs
 
 Alternatively, you can run the tool (e.g. via a Makefile) as `./node_modules/gluejs/bin/gluejs`.
+
+# What's new in v2.3
+
+gluejs v2.3 adds UMD support and performance / robustness improvements.
+
+- UMD support: you can now run the same build result in Node and AMD and in the browser. This enables three use cases:
+  - you can use gluejs bundles in AMD/Require.js (via config.js, see the relevant section below)
+  - you can share the same file between AMD and Node
+  - you can use gluejs to produce a minified/obfuscated version of your codebase that's usable in Node
+- chained require() resolution. The gluejs `require()` shim has been redesigned so that if a `require` function is already defined, then it will fall back to that function. This has two implications:
+  - if `--global-require` is set (exporting the `require()` function), you can split your app into multiple bundles loaded separately in the browser and they will appropriately chain require() calls as long they are loaded in prerequisite order
+  - UMD bundles running under Node will fall back to using Node's native `require` for modules that are not in the bundle
+- Added pre-filters to skip .git / svn / hg / cvs directories for better performance
+- Improved the behavior of the cache when the metadata is corrupted or in an unexpected format
 
 ## What's new in v2.2
 
@@ -425,11 +439,41 @@ HTML page (assuming "foo" is a node module):
 
 With `--global-require`, `require()` statements are resolved as if they were inside index.js.
 
-## --amd
+## --umd (new in v2.3)
 
-`--amd` / `.set('amd', true)`: AMD compatible export, invokes `define('foo', ...)` to register the package with a AMD loader using the name specified in `--global`.
+`--umd` / `.set('umd', true)`: UMD compatible export.
 
-Note that Require.js will not pick up modules defined like this unless you do at least one asynchronous require() call, e.g. you need to run the no-op code `require(['foo'], function(foo){ });` before `require('foo')` will work. This seems to be a quirk in the Require.js AMD shim.
+The resulting bundle can be loaded in Node (directly via require()), in AMD (as an external module) or alternatively as a global (in the browser). All you need to do is to add `--umd` to your build to include the UMD wrapper.
+
+Creating the bundle:
+
+    gluejs \
+      --umd \
+      --include ./lib/ \
+      --include ./node_modules/microee/ \
+      --global App \
+      --main lib/index.js \
+      --out app.js \
+
+In node:
+
+    node -e "console.log(require('./app.js'););"
+
+In AMD/Require.js,`config.js`, assuming `--global` was set to `App`:
+
+    {
+      paths: { "myapp": "/app.js" },
+      myapp: {
+        deps: [ ... ],
+        exports: 'App'
+      }
+    }
+
+after which the module is accessible as `myapp`.
+
+Note that Require.js might not pick up modules defined like this unless you do at least one asynchronous require() call, e.g. you need to run the no-op code `require(['foo'], function(foo){ });` before `require('foo')` will work. This seems to be a quirk in the Require.js AMD shim.
+
+Upgrade note: `--amd`, an older option which was only compatible with AMD/requirejs, is now equivalent to `--umd`.
 
 ## --verbose
 
