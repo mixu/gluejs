@@ -14,4 +14,8 @@ build:
 	@$(COMPRESS) --compress --mangle sort ./umd.js 2> /dev/null > umd.min.js
 	@ls -lah
 
+debug:
+	cp -v ./require.js require.min.js
+	cp -v ./umd.js umd.min.js
+
 .PHONY: uglify build
