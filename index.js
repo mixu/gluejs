@@ -6,6 +6,7 @@ var os = require('os'),
     Minilog = require('minilog');
 
 var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
+homePath = path.normalize(homePath);
 
 // API wrapper
 function API() {
@@ -15,7 +16,7 @@ function API() {
     replaced: {},
     remap: {},
     cache: true,
-    'cache-path': path.normalize(homePath) + path.sep + '.gluejs-cache' + path.sep
+    'cache-path': homePath + path.sep + '.gluejs-cache' + path.sep
   };
 }
 
@@ -134,13 +135,12 @@ API.middleware = function (opts) {
   // -- Set some sane defaults
   opts = opts || {};
   opts.include = opts.include || './lib';
-  opts.basepath = opts.basepath || (Array.isArray(opts.include) ? opts.include[0] : opts.include);
   opts.main = opts.main || 'index.js';
 
   // -- Create an instance of the API to use
   var glue = new API()
-    .include(opts.include)    // Use API function to define
-    .basepath(opts.basepath)  // Use API function to define
+    .include(opts.include)
+    .basepath(opts.basepath || './lib');
 
   // -- All other options are set by clobbering the glue.options hash
   Object.keys(opts).forEach(function (key) {
