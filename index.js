@@ -6,7 +6,7 @@ var os = require('os'),
     Minilog = require('minilog');
 
 var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
-homePath = homepath ? path.normalize(homePath) : process.cwd();
+homePath = (typeof homePath === 'string' ? path.normalize(homePath) : process.cwd());
 
 // API wrapper
 function API() {
@@ -158,7 +158,7 @@ API.middleware = function (opts) {
   // -- Create an instance of the API to use
   var glue = new API()
     .include(opts.include)
-    .basepath(opts.basepath || './lib');
+    .basepath(opts.basepath);
 
   // -- All other options are set by clobbering the glue.options hash
   Object.keys(opts).forEach(function (key) {
