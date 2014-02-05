@@ -6,7 +6,7 @@ var os = require('os'),
     Minilog = require('minilog');
 
 var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
-homePath = path.normalize(homePath);
+homePath = homepath ? path.normalize(homePath) : process.cwd();
 
 // API wrapper
 function API() {
