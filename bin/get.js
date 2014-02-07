@@ -8,25 +8,26 @@ var fs = require('fs'),
 var List = require('minitask').list;
 
 var list = new List();
-list.exclude(function(filepath, stat) {
+list.find(function(filepath, stat, onDone) {
   // only .js files
-  return path.extname(filepath) != '.js';
-});
-list.find(function(filepath, stat) {
+  if(path.extname(filepath) != '.js') {
+    return onDone(null, []);
+  }
+
   var basepath = path.dirname(filepath),
       deps;
   try {
     deps = detective(fs.readFileSync(filepath).toString());
   } catch(e) {
     // console.log('parse error: ', fullpath, e);
-    return [];
+    return onDone(null, []);
   }
 
   if(!deps || deps.length === 0) {
-    return [];
+    return onDone(null, []);
   }
 
-  return deps.filter(function(dep) {
+  return onDone(null, deps.filter(function(dep) {
       return !resolve.isCore(dep);
     }).map(function(dep) {
       var normalized;
@@ -42,7 +43,7 @@ list.find(function(filepath, stat) {
       }
 
       return path.normalize(normalized);
-    }).filter(Boolean);
+    }).filter(Boolean));
 });
 
 var main = process.argv[2],

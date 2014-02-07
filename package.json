@@ -32,8 +32,8 @@
     "optimist": "~0.5.2",
     "bytes": "~0.2.1",
     "minilog": "~2.0.3",
-    "resolve": "~0.5.1",
-    "progress": "~1.1.2"
+    "progress": "~1.1.2",
+    "browser-resolve": "~1.2.2"
   },
   "devDependencies": {
     "mocha": "1.x",

@@ -28,6 +28,14 @@ Test cases:
 - apply .npmignore last
 - perf test: load large directory a couple of hundred times and ensure caching works
 
+## Production / dev
+
+- allow using the same code paths for production and dev
+- use a specific staging area folder
+  - in dev, check the upstream folders for changes
+  - in production, simply serve the staging area contents
+
+
 ## Docs todo
 
 - need a good example of applying a transformation via the API

@@ -7,30 +7,32 @@ var fs = require('fs'),
 var opts = require('optimist')
     .usage('Usage: $0 --include <file/dir ...> --out filename.js')
     .options({
-      'include': { },
-      'exclude': { },
-      'out': { },
-      'global': { },
-      'basepath': { 'default': process.cwd() },
-      'main': { 'default': 'index.js' },
-      'replace': { },
-      'remap': { },
-      'source-url': { },
-      'global-require': { },
       'amd': { },
-      'command': { },
+      'basepath': { 'default': process.cwd() },
       'cache': { default: true },
       'cache-path': { },
+      'command': { },
+      'exclude': { },
+      'global': { },
+      'global-require': { },
+      'include': { },
       'jobs': { },
-      'silent': { },
-      'verbose': { },
+      'main': { 'default': 'index.js' },
+      'out': { },
+      'parse': { },
+      'remap': { },
+      'replace': { },
       'reset-exclude': { },
+      'silent': { },
+      'source-url': { },
+      'verbose': { },
       'version': { }
     })
     .boolean('cache')
     .boolean('report')
     .boolean('progress')
-    .boolean('verbose'),
+    .boolean('verbose')
+    .boolean('parse'),
     argv = opts.parse(process.argv);
 
 if(argv['version'] || argv['v'] ) {
@@ -55,7 +57,8 @@ if(argv['verbose']) {
 // --reset-exclude
 // --source-url
 // --global-require
-[ 'reset-exclude', 'source-url', 'global-require' ].forEach(function(key) {
+// --parse
+[ 'reset-exclude', 'source-url', 'global-require', 'parse' ].forEach(function(key) {
   if(argv[key]) {
     g.set(key, true);
   }

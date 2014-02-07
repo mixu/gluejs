@@ -54,7 +54,7 @@ PERFORMANCE
   --jobs <n>        Sets the maximum level of parallelism for the task
                     execution pipeline. Default: `os.cpus().length * 2`
 
-  --cache-method    Sets the cache method: stat | hash algorighm name.
+  --cache-method    Sets the cache method: stat | hash algorithm name.
 
 REPORTING
 

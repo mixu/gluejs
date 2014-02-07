@@ -1,52 +1,67 @@
 var os = require('os'),
     path = require('path'),
     List = require('minitask').list,
+    DetectiveList = require('./lib/detective-list.js'),
     packageCommonJs = require('./lib/runner/package-commonjs'),
     Capture = require('./lib/file-tasks/capture.js'),
-    Minilog = require('minilog');
+    Minilog = require('minilog'),
+    Cache = require('minitask').Cache;
 
 var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
 homePath = (typeof homePath === 'string' ? path.normalize(homePath) : process.cwd());
 
 // API wrapper
 function API() {
-  this.files = new List();
-  // exclude matching paths from traversal - this is applied during the
-  // initial traversal because going into source control directories is
-  // potentially very expensive
-  this.files.exclude([
-    function(p) { return p.match(/\/.svn/); },
-    function(p) { return p.match(/\/.git/); },
-    function(p) { return p.match(/\/.hg/); },
-    function(p) { return p.match(/\/CVS/); }
-  ]);
-
   // default options
   this.options = {
     replaced: {},
     remap: {},
     cache: true,
-    'cache-path': homePath + path.sep + '.gluejs-cache' + path.sep
+    'cache-path': homePath + path.sep + '.gluejs-cache' + path.sep,
+    include: []
   };
 }
 
 API.prototype.include = function(filepath) {
   if(!filepath) return this;
-  var self = this,
-      paths = (Array.isArray(filepath) ? filepath : [ filepath ]),
-      base = this.options.basepath || process.cwd();
-
-  paths.forEach(function(p) {
-    self.files.add(path.resolve(base, p));
-  });
+  this.options.include.push(filepath);
   return this;
 };
 
 API.prototype.render = function(dest) {
+  var self = this;
   // if the cache is disabled, then use a temp path
   if(!this.options.cache) {
     this.options['cache-path'] = os.tmpDir() + '/gluejs-' + new Date().getTime();
   }
+
+  if(!this.options['cache-method']) {
+    this.options['cache-method'] = 'stat';
+  }
+
+  // LIST
+  // only instantiate the list just before running the code
+  // this avoids issues with the order between `.set('parse', true)` and .include() calls
+  var opts = {
+        'cache-path': this.options['cache-path'],
+        'cache-method': this.options['cache-method'],
+        'cache-hash': Cache.hash(JSON.stringify(this.options))
+      },
+      list = (this.options['parse'] ? new DetectiveList(opts) : new List());
+
+  // --reset-exclude should also reset the pre-processing exclusion
+  if(this.options['reset-exclude']) {
+    list.exclude(null);
+  }
+  // --basepath
+  if(this.options['basepath']) {
+    list.basepath(this.options['basepath']);
+  }
+
+  this.options['include'].map(function(filepath) {
+    list.add(filepath);
+  });
+  // END LIST
 
   if(typeof dest == 'function') {
     var capture = new Capture();
@@ -60,30 +75,28 @@ API.prototype.render = function(dest) {
       dest(null, capture.get());
     });
 
-    packageCommonJs(this.files, this.options, capture, function() {
-      // NOP
+    list.exec(function(err, files) {
+      packageCommonJs({ files: files }, self.options, capture, function() {
+        // NOP
+      });
     });
   } else if(dest.write) {
     // writable stream
-    packageCommonJs(this.files, this.options, dest, function() {
-      // if(dest !== process.stdout) {
-      //   dest.end();
-      // }
+    list.exec(function(err, files) {
+      packageCommonJs({ files: files }, self.options, dest, function() {
+        // if(dest !== process.stdout) {
+        //   dest.end();
+        // }
+      });
     });
   }
 };
 
 // setters
-API.defaults = API.prototype.defaults = function(opts) {};
 API.prototype.set = function(key, value) {
   this.options[key] = value;
   if(key == 'verbose' && value) {
     Minilog.enable();
-  }
-  // --reset-exclude should also reset the pre-processing exclusion
-  // which prevent
-  if(key == 'reset-exclude' && value) {
-    this.files.exclude(null);
   }
   return this;
 };
@@ -135,7 +148,6 @@ API.prototype.remap = function(module, code) {
   return this;
 };
 
-
 API.prototype.exclude = function(path) {
   if(!this.options['exclude']) {
     this.options['exclude'] = [];
@@ -178,9 +190,5 @@ API.middleware = function (opts) {
     glue.render(res);
   };
 };
-
-API.prototype.handler = function(regex, fn) {};
-API.prototype.define = function(module, code) {};
-API.prototype.watch = function(onDone) {};
 
 module.exports = API;
