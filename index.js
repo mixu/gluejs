@@ -183,9 +183,4 @@ API.prototype.handler = function(regex, fn) {};
 API.prototype.define = function(module, code) {};
 API.prototype.watch = function(onDone) {};
 
-// deprecated
-API.prototype.npm = function(name, pathTo) {};
-API.prototype.reqpath = function(value) {};
-API.concat = function(arr, callback) {};
-
 module.exports = API;
