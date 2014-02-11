@@ -28,12 +28,13 @@
   "dependencies": {
     "readable-stream": "1.1.9",
     "minimatch": "~0.2.12",
-    "minitask": "~0.1.2",
+    "minitask": "~0.2.0",
     "optimist": "~0.5.2",
     "bytes": "~0.2.1",
     "minilog": "~2.0.3",
     "progress": "~1.1.2",
-    "browser-resolve": "~1.2.2"
+    "browser-resolve": "~1.2.2",
+    "detective": "~2.4.0"
   },
   "devDependencies": {
     "mocha": "1.x",

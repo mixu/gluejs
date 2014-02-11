@@ -49,6 +49,13 @@ API.prototype.render = function(dest) {
       },
       list = (this.options['parse'] ? new DetectiveList(opts) : new List());
 
+  // set the cache mode to transactional and begin a single cache scope
+  var cache = Cache.instance({
+      method: opts['cache-method'],
+      path: opts['cache-path']
+  });
+  cache.begin();
+
   // --reset-exclude should also reset the pre-processing exclusion
   if(this.options['reset-exclude']) {
     list.exclude(null);
@@ -77,16 +84,14 @@ API.prototype.render = function(dest) {
 
     list.exec(function(err, files) {
       packageCommonJs({ files: files }, self.options, capture, function() {
-        // NOP
+        cache.end();
       });
     });
   } else if(dest.write) {
     // writable stream
     list.exec(function(err, files) {
       packageCommonJs({ files: files }, self.options, dest, function() {
-        // if(dest !== process.stdout) {
-        //   dest.end();
-        // }
+        cache.end();
       });
     });
   }
