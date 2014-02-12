@@ -1,58 +1,72 @@
 #!/usr/bin/env node
 var fs = require('fs'),
+    os = require('os'),
     path = require('path'),
     util = require('util'),
-    detective = require('detective'),
-    resolve = require('resolve');
+    Minilog = require('minilog'),
+    DetectiveList = require('../lib/detective-list.js'),
+    AmdList = require('../lib/amd-list.js'),
+    Cache = require('minitask').Cache;
 
-var List = require('minitask').list;
+var opts = require('optimist')
+    .usage('Usage: $0 --include <file/dir ...>')
+    .options({
+      'amd': { },
+      'include': { },
+      'main': { },
+    })
+    .boolean('amd'),
+    argv = opts.parse(process.argv);
 
-var list = new List();
-list.find(function(filepath, stat, onDone) {
-  // only .js files
-  if(path.extname(filepath) != '.js') {
-    return onDone(null, []);
-  }
+if(!argv['include']) {
+  console.log('Usage: --include <file/dir>');
+  console.log('Options:');
+  console.log('  --amd');
+  console.log('  --main <file>');
+  process.exit(1);
+}
 
-  var basepath = path.dirname(filepath),
-      deps;
-  try {
-    deps = detective(fs.readFileSync(filepath).toString());
-  } catch(e) {
-    // console.log('parse error: ', fullpath, e);
-    return onDone(null, []);
-  }
 
-  if(!deps || deps.length === 0) {
-    return onDone(null, []);
-  }
+Minilog.enable();
 
-  return onDone(null, deps.filter(function(dep) {
-      return !resolve.isCore(dep);
-    }).map(function(dep) {
-      var normalized;
+opts = {
+  'cache-method': 'stat',
+  'cache-path': os.tmpDir() + '/gluejs-' + new Date().getTime()
+};
 
-      try {
-        normalized = resolve.sync(dep, { basedir: basepath });
-      } catch(e) {
-        // console.log('resolve error: ', e, dep, basepath);
-        return undefined;
-      }
-      if(normalized.match(/.*\/node_modules\/.*/)) {
-        return undefined;
-      }
-
-      return path.normalize(normalized);
-    }).filter(Boolean));
-});
-
-var main = process.argv[2],
+// determine main
+var main = argv.main || Array.isArray(argv.include) ? argv.include[0] : argv.include,
     basepath = path.dirname(main);
 
-console.log('Reading file from first argument: ' + main);
+if(argv.amd && main) {
+  // baseDir is required for AMD
+  opts.baseDir = path.dirname(main);
+}
 
-list.add(main);
+var list = (argv.amd ? new AmdList(opts) : new DetectiveList(opts));
+
+var cache = Cache.instance({
+    method: opts['cache-method'],
+    path: opts['cache-path']
+});
+cache.begin();
+
+console.log('Reading files: ');
+(Array.isArray(argv.include) ? argv.include : [ argv.include ]).map(function(filepath) {
+  console.log('  ' + filepath);
+  list.add(filepath);
+});
+
 list.exec(function(err, files) {
+  cache.end();
+  var errs = list.resolveErrors(),
+      failed = {};
+
+  errs.forEach(function(err) {
+    failed[err.dep] = true;
+  });
+
+  console.log(Object.keys(failed));
   console.log('done!');
 
   console.log(files.map(function(file) { return file.name; }));

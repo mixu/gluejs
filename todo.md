@@ -1,24 +1,42 @@
+# What's new in v2.next
+
+gluejs v2.next adds optional dependency parsing support:
+
+- Passing `--parse` enables dependency parsing, which can figure out the full dependency graph given just a single entry point. More accurate exclusions may result in smaller output size but come with a performance cost. Note that parsing dependencies is slow (e.g. the performance is closer to browserify's performance).
+- The caching system has been significantly improved, with some minor performance gains and reduced file handle usage.
+- The [browser field](https://gist.github.com/defunctzombie/4339901) in package.json files is supported via [browser-resolve](https://github.com/defunctzombie/node-browser-resolve)
+
 -----
 
 # Todo
 
-- we should only have a single instance of the global cache (unless a different cache-path is set)
 - add `cache clean`
 - improve the autodetection code so that people don't need to supply a --main argument in default cases (e.g. when there is a index.js or there is just one file in the package)
 
-## use detective
+## use detective and amdetective
+
+Steps:
+
+- implement `--compare`: compares the trees from using the detective strategy vs the default strategy
+- apply compatibility fixes:
+  - allow including directories using the detective strategy
+- apply later stage optimizations:
+  - minimize the list of --replace shimmed modules in each package output based on the real set of dependencies from all files within that package
+  - add core module shimming support
+  - add support for replacing modules with other files (parsed)
+  - add support for excluding dependents of a module
+- amd:
+  - config.js loading
+  - better resolve error reporting
+  - resolve value overrides
+  - use the almond shim (?). Alternative is to just output a bundle of define()s
+
+Benefits
 
 - provides more accurate exclusion information (e.g. modules not connected from the main file can be ignored; files like package.json can often be safely excluded)
 - allows the user to only specify `--main` without any includes
 - allows us to auto-detect node_modules dependencies without explicit include management (making live reload possible / nice)
 - paves way for efficient node core module support
-
-Implementation:
-
-- should work as a preprocessing step
-- first, apply resolution (use cached data if possible)
-- next, add more files to the build if detected
-- next, apply normal filters such as .npmignore and .gitignore
 
 Test cases:
 
@@ -35,6 +53,19 @@ Test cases:
   - in dev, check the upstream folders for changes
   - in production, simply serve the staging area contents
 
+## Inclusion optimization
+
+- Allow coercion of dependencies (e.g. backbone with underscore + plain underscore => one of each):
+  - `--dedupe-modules` should use package.json data to reduce duplication
+  - `--dedupe-force modulename` should force only a single instance of a module, in spite of conflicting package.json data
+
+## Tiny module optimizations
+
+- add support for fully static resolution: given the full set of require() call dependencies, convert them into static lookups
+
+## Implicit global support
+
+- can detect naively via regex
 
 ## Docs todo
 
@@ -79,7 +110,6 @@ But it works fine for automatically rebuilding e.g. when doing development local
 # Tasks
 
 - A better big lib handing system (e.g. --external backbone --external underscore)
-- [browser field](https://gist.github.com/defunctzombie/4339901) support in package.json via [browser-resolve](https://github.com/defunctzombie/node-browser-resolve)
 - Etags support for build results (e.g. shortcutting repeated loads even further)
 - return a meaningful result from middleware if an error occurs
   (e.g. either a status code or perhaps even a div-printing thing)
@@ -139,16 +169,6 @@ Minor, but cool features:
 - choice between throwing, or returning undefined in the require shim
 
 # How do I ...?
-
-## How do I build a single package from a existing Node.js project?
-
-The easiest way is to use the command line tool:
-
-    gluejs --out dist/radar_client.js
-
-This auto-detects the package name and main file, and bundles the content of the current directory and subdirectories as well as any npm modules in them.
-
-You can override this by explictly passing in various options - for example, if you only want to include the content of a single directory.
 
 ## How do I package tests for the browser?
 
