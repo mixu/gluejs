@@ -1,7 +1,7 @@
 var os = require('os'),
     path = require('path'),
     List = require('minitask').list,
-    DetectiveList = require('./lib/detective-list.js'),
+    DetectiveList = require('./lib/list/detective.js'),
     packageCommonJs = require('./lib/runner/package-commonjs'),
     Capture = require('./lib/file-tasks/capture.js'),
     Minilog = require('minilog'),
