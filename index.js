@@ -189,7 +189,7 @@ API.middleware = function (opts) {
     if('GET' !== req.method) return next();
 
     // -- Set content-type
-    res.set('Content-Type', 'application/javascript');
+    res.setHeader('Content-Type', 'application/javascript');
 
     // -- Render file and pipe to response
     glue.render(res);
