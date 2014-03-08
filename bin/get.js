@@ -25,6 +25,7 @@ if(!argv['include']) {
   console.log('Options:');
   console.log('  --amd');
   console.log('  --config');
+  console.log('  --vendor');
   console.log('  --main <file>');
   process.exit(1);
 }
@@ -66,6 +67,24 @@ console.log('Reading files: ');
 
 list.exec(function(err, files) {
   console.log('Processing ' + files.length + ' files.');
+
+  var vendor = require(path.resolve(process.cwd(), argv.vendor));
+  var vendorMap = vendor.paths;
+
+  // resolve relative to --vendor-base
+  Object.keys(vendorMap).forEach(function(name) {
+    var value = vendorMap[name];
+    if (typeof value === 'string' && value.charAt(0) == '.') {
+      vendorMap[name] = path.resolve(argv['vendor-base'], value);
+    }
+  });
+  Object.keys(vendorMap).forEach(function(name) {
+    var value = vendorMap[name];
+    if(!fs.existsSync(value)) {
+      vendorMap[name] = false;
+    }
+  });
+
   runner({ files: files }, {
       main: argv.main,
       basepath: basepath,
@@ -74,10 +93,23 @@ list.exec(function(err, files) {
       'cache-method': opts['cache-method'],
       'cache-path': opts['cache-path'],
       cache: true,
-      jobs: require('os').cpus().length * 2
+      jobs: require('os').cpus().length * 2,
+      vendor: vendorMap,
+      excluded: vendor.excluded,
+      extras: ['underscore'],
+      plugins: {
+        'jade': function(name, filepath) {
+          var jade = require('jade');
+          return "define('" + name + "', ['jade-runtime'], function(jade){ return " +
+            jade.compile(fs.readFileSync(filepath).toString(), { client: true, compileDebug: false }) + "});\n";
+        },
+        'json': function(name, filepath) {
+          return "define('" + name + "', [], function(){ return " +
+            fs.readFileSync(filepath).toString() + "});\n";
+        }
+      }
     }, fs.createWriteStream(path.resolve(process.cwd(), './bundle.js')), function() {
     cache.end();
-    console.log('compiled');
   });
 
 /*
