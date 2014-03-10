@@ -7,17 +7,19 @@ var fs = require('fs'),
     AmdList = require('../lib/list/amd.js'),
     loadAMDConfig = require('../lib/runner/amd/load-config.js'),
     runner = require('../lib/runner/amd'),
-    Cache = require('minitask').Cache;
+    Cache = require('minitask').Cache,
+    nodeResolve = require('resolve');
 
-var opts = require('optimist')
+var optimist = require('optimist')
     .usage('Usage: $0 --include <file/dir ...>')
     .options({
       'amd': { },
+      'cache': { default: true },
       'include': { },
       'main': { },
     })
     .boolean('amd'),
-    argv = opts.parse(process.argv);
+    argv = optimist.parse(process.argv);
 
 if(!argv['include']) {
   console.log('Usage: --include <file/dir>');
@@ -32,9 +34,21 @@ if(!argv['include']) {
 
 Minilog.enable();
 
-opts = {
-  'cache-method': 'stat',
-  'cache-path': os.tmpDir() + '/gluejs-' + new Date().getTime()
+var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
+homePath = (typeof homePath === 'string' ? path.normalize(homePath) : process.cwd());
+
+if(!argv['cache-path']) {
+  argv['cache-path'] = homePath + path.sep + '.gluejs-cache' + path.sep;
+}
+
+// if the cache is disabled, then use a temp path
+if(!argv.cache) {
+  argv['cache-path'] = os.tmpDir() + '/gluejs-' + new Date().getTime();
+}
+
+var opts = {
+  'cache-method': argv['cache-method'] || 'stat',
+  'cache-path': argv['cache-path']
 };
 
 if(!Array.isArray(argv.include)) {
@@ -43,10 +57,10 @@ if(!Array.isArray(argv.include)) {
 
 // determine main
 var main = argv.main || argv.include[0],
-    basepath = argv.basepath || path.dirname(main);
+    basepath = path.resolve(process.cwd(), argv.basepath) || path.dirname(main);
 
 // resolve paths relative to process.cwd
-['list-files', 'out'].forEach(function(key) {
+['list-files', 'out', 'vendor-base'].forEach(function(key) {
   if(argv[key]) {
     argv[key] = path.resolve(process.cwd(), argv[key]);
   }
@@ -72,6 +86,21 @@ if(argv.amd) {
 if(argv.amd && main) {
   // baseDir is required for AMD
   opts.amdresolve.baseDir = basepath;
+}
+
+function findModule(name) {
+  var result = '';
+  try {
+    result = nodeResolve.sync(name, { basedir: process.cwd() });
+  } catch(e) {
+    try {
+      result = nodeResolve.sync(name, { basedir: __dirname });
+    } catch(e) {
+      console.error('Cannot find module ' + name + ' from ' + process.cwd()  + ' or ' + __dirname);
+      throw e;
+    }
+  }
+  return result;
 }
 
 var list = new AmdList(opts);
@@ -108,6 +137,18 @@ list.exec(function(err, files) {
     }
   });
 
+  // prefix: function(name, filepath) {}
+  var plugins = {};
+
+  Object.keys(argv).forEach(function(name) {
+    var matched = (typeof name === 'string' ? name.match(/plugin\-(.*)/) : false);
+    if(matched) {
+      var ext = matched[1];
+      argv[name] = findModule(argv[name]);
+      plugins[ext] = require(argv[name]);
+    }
+  });
+
   runner({ files: files }, {
       main: argv.main,
       basepath: basepath,
@@ -121,17 +162,10 @@ list.exec(function(err, files) {
       exclude: vendor.exclude,
       extras: ['underscore'],
       command: argv.command,
-      plugins: {
-        'jade': function(name, filepath) {
-          var jade = require('jade');
-          return "define('" + name + "', ['jade-runtime'], function(jade){ return " +
-            jade.compile(fs.readFileSync(filepath).toString(), { client: true, compileDebug: false }) + "});\n";
-        },
-        'json': function(name, filepath) {
-          return "define('" + name + "', [], function(){ return " +
-            fs.readFileSync(filepath).toString() + "});\n";
-        }
-      }
+      nomin: vendor.nomin || [],
+      plugins: plugins,
+      // set this so that builds are invalidated as the version changes
+      'gluejs-version': require('../package.json').version
     }, fs.createWriteStream(argv['out']), function(err, processedFiles) {
     if(argv['list-files']) {
       fs.appendFileSync(argv['list-files'], processedFiles.join('\n'));

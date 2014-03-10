@@ -21,7 +21,7 @@ lint:
 	--disable=6 \
 	--max_line_length=120 \
 	--custom_jsdoc_tags=api \
-	--exclude_directories=node_modules,lib/runner/package-commonjs/resources,test \
+	--exclude_directories=node_modules,lib/runner/commonjs/resources,test,lib/require \
 	--max_line_length=120 --disable=0131,300,2,1,6 \
 	-r .
 

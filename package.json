@@ -34,7 +34,10 @@
     "minilog": "~2.0.3",
     "progress": "~1.1.2",
     "browser-resolve": "~1.2.2",
-    "detective": "~2.4.0"
+    "detective": "~2.4.0",
+    "amd-resolve": "~0.1.1",
+    "amdetective": "0.0.1",
+    "resolve": "~0.6.1"
   },
   "devDependencies": {
     "mocha": "1.x",

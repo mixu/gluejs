@@ -151,7 +151,7 @@ if(argv['npm']) {
     'Directly include the file path to module, e.g. --include ./node_modules/foo instead.\n');
 }
 
-// set this so that builds are invalidates as the version changes
+// set this so that builds are invalidated as the version changes
 g.set('gluejs-version', require('../package.json').version);
 
 // -- out
