@@ -4,7 +4,6 @@ var fs = require('fs'),
     path = require('path'),
     util = require('util'),
     Minilog = require('minilog'),
-    DetectiveList = require('../lib/list/detective.js'),
     AmdList = require('../lib/list/amd.js'),
     loadAMDConfig = require('../lib/runner/amd/load-config.js'),
     runner = require('../lib/runner/amd'),
@@ -38,9 +37,33 @@ opts = {
   'cache-path': os.tmpDir() + '/gluejs-' + new Date().getTime()
 };
 
+if(!Array.isArray(argv.include)) {
+  argv.include = [ argv.include ];
+}
+
 // determine main
-var main = argv.main || Array.isArray(argv.include) ? argv.include[0] : argv.include,
-    basepath = path.dirname(main);
+var main = argv.main || argv.include[0],
+    basepath = argv.basepath || path.dirname(main);
+
+// resolve paths relative to process.cwd
+['list-files', 'out'].forEach(function(key) {
+  if(argv[key]) {
+    argv[key] = path.resolve(process.cwd(), argv[key]);
+  }
+});
+
+// resolve paths relative to basepath
+['config', 'vendor'].forEach(function(key) {
+  if(argv[key]) {
+    argv[key] = path.resolve(basepath, argv[key]);
+  }
+});
+
+argv.include = argv.include.map(function(p) {
+  return path.resolve(basepath, p);
+});
+
+// load resources
 
 if(argv.amd) {
   opts.amdresolve = loadAMDConfig(argv.config);
@@ -48,10 +71,10 @@ if(argv.amd) {
 
 if(argv.amd && main) {
   // baseDir is required for AMD
-  opts.amdresolve.baseDir = path.dirname(main);
+  opts.amdresolve.baseDir = basepath;
 }
 
-var list = (argv.amd ? new AmdList(opts) : new DetectiveList(opts));
+var list = new AmdList(opts);
 
 var cache = Cache.instance({
     method: opts['cache-method'],
@@ -60,7 +83,7 @@ var cache = Cache.instance({
 cache.begin();
 
 console.log('Reading files: ');
-(Array.isArray(argv.include) ? argv.include : [ argv.include ]).map(function(filepath) {
+argv.include.forEach(function(filepath) {
   console.log('  ' + filepath);
   list.add(filepath);
 });
@@ -95,8 +118,9 @@ list.exec(function(err, files) {
       cache: true,
       jobs: require('os').cpus().length * 2,
       vendor: vendorMap,
-      excluded: vendor.excluded,
+      exclude: vendor.exclude,
       extras: ['underscore'],
+      command: argv.command,
       plugins: {
         'jade': function(name, filepath) {
           var jade = require('jade');
@@ -108,28 +132,10 @@ list.exec(function(err, files) {
             fs.readFileSync(filepath).toString() + "});\n";
         }
       }
-    }, fs.createWriteStream(path.resolve(process.cwd(), './bundle.js')), function() {
+    }, fs.createWriteStream(argv['out']), function(err, processedFiles) {
+    if(argv['list-files']) {
+      fs.appendFileSync(argv['list-files'], processedFiles.join('\n'));
+    }
     cache.end();
   });
-
-/*
-  console.log(errs.map(function(item) {
-      return item.dep;
-    }).sort());
-*/
-
-  files = files.filter(function(e) {
-    return path.basename(e.name) != 'application.js';
-  });
-
-  /*
-  var inferPackages = require('../lib/list-tasks/infer-packages.js'),
-      filterPackages = require('../lib/list-tasks/filter-packages.js');
-
-  inferPackages(list, { main: main, basepath: basepath });
-  // - for each package, apply excludes (package.json.files, .npmignore, .gitignore)
-  filterPackages(list);
-
-  console.log(util.inspect(list.packages, false, 1, true));
-  */
 });

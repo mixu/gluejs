@@ -1,0 +1,29 @@
+BASIC
+
+  --include <path>  Path to import.
+
+  --out <path>      File to write. Default: stdout
+
+  --basepath <path> Base path for the list of files. Default: process.cwd()
+
+  --main <name>     Name of the main file/module to export. Default: index.js
+
+  --config <path>   Path to AMD config file.
+
+  --vendor <path>   Path to vendor file.
+
+  --vendor-base <path> Basepath for the paths defined in the vendor file.
+
+MINIFICATION / SOURCE TRANSFORMS
+
+  --command <cmd>   Pipe each file through a shell command and capture the
+                    output (e.g. --command "uglifyjs --no-copyright").
+
+REPORTING
+
+  --list-files <path> List included files into a single file. If the file exists,
+                      append to the file. Useful for removing minified files.
+
+  --silent            Disable all output, including the reporter.
+
+  --verbose           More verbose output.
