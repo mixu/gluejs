@@ -34,10 +34,11 @@ All of these options are also available via a Node API (e.g. `require('gluejs')`
         glue = require('gluejs'),
         app = express();
 
-    app.use(express.static(__dirname + '/index.html'));
+    app.use(express.static(__dirname));
 
     app.use('/app.js', glue.middleware({
-      include: [ './lib', './node_modules/microee/' ]
+      basepath: __dirname,
+      include: [ './lib', '../node_modules/jade/' ]
     }));
 
     app.listen(3000);
