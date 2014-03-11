@@ -5,7 +5,8 @@ var os = require('os'),
     packageCommonJs = require('./lib/runner/commonjs/index.js'),
     Capture = require('./lib/file-tasks/capture.js'),
     Minilog = require('minilog'),
-    Cache = require('minitask').Cache;
+    Cache = require('minitask').Cache,
+    log = require('minilog')('api');
 
 var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
 homePath = (typeof homePath === 'string' ? path.normalize(homePath) : process.cwd());
@@ -18,7 +19,10 @@ function API() {
     remap: {},
     cache: true,
     'cache-path': homePath + path.sep + '.gluejs-cache' + path.sep,
-    include: []
+    include: [],
+    _rename: {},
+    // set options here so that the cache hash does not change
+    jobs: require('os').cpus().length * 2
   };
 }
 
@@ -68,33 +72,40 @@ API.prototype.render = function(dest) {
   this.options['include'].map(function(filepath) {
     list.add(filepath);
   });
+
+  list.onRename = function(canonical, normalized) {
+    self.options._rename[normalized] = canonical;
+  };
   // END LIST
 
-  if(typeof dest == 'function') {
-    var capture = new Capture();
+  // console.time('list enum');
 
-    capture.on('error', function(err) {
-      console.error('Error in the capture stream: ', err);
-      console.trace();
-    });
+  list.exec(function(err, files) {
 
-    capture.once('finish', function() {
-      dest(null, capture.get());
-    });
+    // console.timeEnd('list enum');
 
-    list.exec(function(err, files) {
-      packageCommonJs({ files: files }, self.options, capture, function() {
-        cache.end();
+    var capture;
+    if(typeof dest == 'function') {
+      capture = new Capture();
+
+      capture.on('error', function(err) {
+        console.error('Error in the capture stream: ', err);
+        console.trace();
       });
-    });
-  } else if(dest.write) {
-    // writable stream
-    list.exec(function(err, files) {
-      packageCommonJs({ files: files }, self.options, dest, function() {
-        cache.end();
+
+      capture.once('finish', function() {
+        dest(null, capture.get());
       });
+    }
+
+    // console.time('package files');
+    packageCommonJs({ files: files }, self.options, capture ? capture : dest, function() {
+
+      // console.timeEnd('package files');
+
+      cache.end();
     });
-  }
+  });
 };
 
 // setters
@@ -102,6 +113,9 @@ API.prototype.set = function(key, value) {
   this.options[key] = value;
   if(key == 'verbose' && value) {
     Minilog.enable();
+  }
+  if(key == 'jobs') {
+    log.info('Maximum number of parallel tasks:', this.options.jobs);
   }
   return this;
 };
