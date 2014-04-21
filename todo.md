@@ -10,6 +10,19 @@ gluejs v2.next adds optional dependency parsing support:
 
 # Todo
 
+- Parse:
+  - add support for parsing directory --include arguments
+  - disable the automatic excludes like `/dist/` because they mess with things like jquery
+  - transform and command options: parse the resulting file for dependencies
+  - direct file requires like `require('jade/runtime')` should resolve correctly
+
+
+// calculate a hash for the full list of files
+// this can be used to validate etags
+// it is based on the paths, mtimes and sizes of all files (sorted)
+// plus the current set of options passed through a MD5 hash
+// if it matches, just return the cached resource
+
 - add `cache clean`
 - improve the autodetection code so that people don't need to supply a --main argument in default cases (e.g. when there is a index.js or there is just one file in the package)
 
@@ -40,6 +53,8 @@ Benefits
 
 Test cases:
 
+- browser field in package.json remaps a file to a differently named file
+- browser field in package.json remaps a module to a file
 - exclude unused file like package.json
 - include unmentioned file
 - include unmentioned module

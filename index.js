@@ -69,7 +69,9 @@ API.prototype.render = function(dest) {
     list.basepath(this.options['basepath']);
   }
 
-  this.options['include'].map(function(filepath) {
+  var includes = this.options['include'];
+
+  (Array.isArray(includes) ? includes : [ includes ]).map(function(filepath) {
     list.add(filepath);
   });
 
