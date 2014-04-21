@@ -10,6 +10,8 @@
     "handlebars-runtime": "~1.0.12",
     "hbsfy": "~0.1.5",
     "uglify-js": "~2.4.8",
-    "express": "~3.5.0"
+    "express": "~3.5.0",
+    "rimraf": "~2.2.6",
+    "mkdirp": "~0.3.5"
   }
 }
