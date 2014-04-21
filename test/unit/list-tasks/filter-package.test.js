@@ -1,8 +1,8 @@
 var assert = require('assert'),
     util = require('util');
 
-var infer = require('../../lib/list-tasks/infer-packages.js'),
-    filter = require('../../lib/list-tasks/filter-packages.js');
+var infer = require('../../../lib/list-tasks/infer-packages.js'),
+    filter = require('../../../lib/list-tasks/filter-packages.js');
 
 var cases = {
 

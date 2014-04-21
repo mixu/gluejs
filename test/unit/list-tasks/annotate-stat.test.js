@@ -1,16 +1,26 @@
 var assert = require('assert');
-    util = require('util');
+    util = require('util'),
+    FixtureGen = require('../../lib/fixture-gen.js');
 
-var stat = require('../../lib/list-tasks/annotate-stat.js'),
+var stat = require('../../../lib/list-tasks/annotate-stat.js'),
     List = require('minitask').list;
-
-var list = new List();
-
-list.add(__dirname+'/../fixtures/single-file/');
 
 exports['annotate-stat'] = {
 
+  before: function() {
+    this.fixture = new FixtureGen();
+  },
+
   'can stat the list': function(done) {
+
+    var inDir = this.fixture.dir({
+      'simple.js': 'exports.simple = true;\n'
+    });
+
+    var list = new List();
+
+    list.add(inDir);
+
     list.exec(function(err, files) {
 
       stat({ files: files });

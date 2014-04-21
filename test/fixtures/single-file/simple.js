@@ -1,2 +1,0 @@
-exports.simple = true;
-

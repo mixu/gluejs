@@ -1,7 +1,7 @@
 var assert = require('assert'),
     util = require('util');
 
-var filter = require('../../lib/list-tasks/filter-npm.js');
+var filter = require('../../../lib/list-tasks/filter-npm.js');
 
 var cases = {
   'built-in ignores': {

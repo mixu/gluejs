@@ -1,9 +1,0 @@
-{
-  "main": "lib/index.js",
-  "dependencies": {
-      "l1_dep": "*"
-    },
-  "devDependencies": {
-    "l1_dev_only": "~1.2.3"
-  }
-}

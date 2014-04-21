@@ -1,7 +1,7 @@
 var assert = require('assert'),
     util = require('util');
 
-var infer = require('../../lib/list-tasks/infer-packages.js');
+var infer = require('../../../lib/list-tasks/infer-packages.js');
 
 function pluck(key, obj) {
   var o = { };
