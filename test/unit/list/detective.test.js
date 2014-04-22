@@ -77,9 +77,64 @@ exports['detectiveList tests'] = {
       assert.equal(files[2].name, outDir + '/two.js');
       done();
     });
+  },
 
+  'if the folder is empty, iterate folders until you reach a non-empty folder': function(done) {
+    var outDir = this.fixture.dir({
+      'foo/bar/baz/main.js': 'module.exports = require("./abc/dep");',
+      'foo/bar/baz/abc/dep.js': 'module.exports = "foo";'
+    });
+
+    this.list.add(outDir);
+    this.list.exec(function(err, files) {
+      assert.ok(!err);
+      files.sort(alpha);
+      assert.equal(files.length, 2);
+      assert.equal(files[0].name, outDir + '/foo/bar/baz/abc/dep.js');
+      assert.equal(files[1].name, outDir + '/foo/bar/baz/main.js');
+      done();
+    });
+
+  },
+
+  'can resolve modules that are peers': function(done) {
+    var outDir = this.fixture.dir({
+      'one.js': 'module.exports = require("backbone");',
+      'two.js': 'module.exports = require("underscore");',
+      'node_modules/backbone.js': 'require("underscore"); module.exports = "backbone";',
+      'node_modules/underscore.js': 'module.exports = "underscore";',
+    });
+    this.list.add(outDir + '/one.js');
+    this.list.add(outDir + '/two.js');
+    this.list.exec(function(err, files) {
+      assert.ok(!err);
+      assert.equal(files.length, 4);
+      files.sort(alpha);
+      assert.equal(files[0].name, outDir + '/node_modules/backbone.js');
+      assert.equal(files[1].name, outDir + '/node_modules/underscore.js');
+      assert.equal(files[2].name, outDir + '/one.js');
+      assert.equal(files[3].name, outDir + '/two.js');
+      done();
+    });
+  },
+
+  'can resolve modules that are in the node_modules folder of the parent': function() {
+    var outDir = this.fixture.dir({
+      'foo/bar/one.js': 'module.exports = require("backbone");',
+      'foo/bar/node_modules/underscore.js': 'module.exports = "underscore";',
+      'foo/node_modules/other.js': 'module.exports = "other";',
+      'node_modules/backbone.js': 'require("underscore"); module.exports = "backbone";',
+    });
+    this.list.add(outDir + '/foo/bar/one.js');
+    this.list.exec(function(err, files) {
+      assert.ok(!err);
+      assert.equal(files.length, 2);
+      files.sort(alpha);
+      assert.equal(files[0].name, outDir + '/foo/bar/one.js');
+      assert.equal(files[1].name, outDir + '/node_modules/backbone.js');
+      done();
+    });
   }
-
 };
 
 // if this module is the script being run, then run the tests:
