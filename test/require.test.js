@@ -108,6 +108,10 @@ function tests(defaultOpts) {
 
     },
 
+    'can require a path in a different package': function() {
+      // TODO
+    },
+
     'try to use the previous require function for unknown modules': function() {
       var code = createCode({
         type: defaultOpts.type,
