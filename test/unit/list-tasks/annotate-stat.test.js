@@ -1,4 +1,4 @@
-var assert = require('assert');
+var assert = require('assert'),
     util = require('util'),
     FixtureGen = require('../../lib/fixture-gen.js');
 

@@ -27,7 +27,7 @@ function API() {
 }
 
 API.prototype.include = function(filepath) {
-  if(!filepath) return this;
+  if (!filepath) return this;
   this.options.include.push(filepath);
   return this;
 };
@@ -35,11 +35,11 @@ API.prototype.include = function(filepath) {
 API.prototype.render = function(dest) {
   var self = this;
   // if the cache is disabled, then use a temp path
-  if(!this.options.cache) {
+  if (!this.options.cache) {
     this.options['cache-path'] = os.tmpDir() + '/gluejs-' + new Date().getTime();
   }
 
-  if(!this.options['cache-method']) {
+  if (!this.options['cache-method']) {
     this.options['cache-method'] = 'stat';
   }
 
@@ -61,17 +61,17 @@ API.prototype.render = function(dest) {
   cache.begin();
 
   // --reset-exclude should also reset the pre-processing exclusion
-  if(this.options['reset-exclude']) {
+  if (this.options['reset-exclude']) {
     list.exclude(null);
   }
   // --basepath
-  if(this.options['basepath']) {
+  if (this.options['basepath']) {
     list.basepath(this.options['basepath']);
   }
 
   var includes = this.options['include'];
 
-  (Array.isArray(includes) ? includes : [ includes ]).map(function(filepath) {
+  (Array.isArray(includes) ? includes : [includes]).map(function(filepath) {
     list.add(filepath);
   });
 
@@ -87,7 +87,7 @@ API.prototype.render = function(dest) {
     // console.timeEnd('list enum');
 
     var capture;
-    if(typeof dest == 'function') {
+    if (typeof dest == 'function') {
       capture = new Capture();
 
       capture.on('error', function(err) {
@@ -113,10 +113,10 @@ API.prototype.render = function(dest) {
 // setters
 API.prototype.set = function(key, value) {
   this.options[key] = value;
-  if(key == 'verbose' && value) {
+  if (key == 'verbose' && value) {
     Minilog.enable();
   }
-  if(key == 'jobs') {
+  if (key == 'jobs') {
     log.info('Maximum number of parallel tasks:', this.options.jobs);
   }
   return this;
@@ -136,13 +136,13 @@ API.prototype.basepath = function(value) {
 
 // other
 API.prototype.replace = function(module, code) {
-  if(arguments.length == 1 && module === Object(module)) {
+  if (arguments.length == 1 && module === Object(module)) {
     Object.keys(module).forEach(function(k) {
       this.replace(k, module[k]);
     }, this);
   } else {
     // TODO: exclude the module with the same name
-    if(typeof code == 'object') {
+    if (typeof code == 'object') {
       this.options.replaced[module] = JSON.stringify(code);
     } else {
       // function / number / boolean / undefined all convert to string already
@@ -154,12 +154,12 @@ API.prototype.replace = function(module, code) {
 };
 
 API.prototype.remap = function(module, code) {
-  if(arguments.length == 1 && module === Object(module)) {
+  if (arguments.length == 1 && module === Object(module)) {
     Object.keys(module).forEach(function(k) {
       this.remap(k, module[k]);
     }, this);
   } else {
-    if(typeof code == 'object') {
+    if (typeof code == 'object') {
       this.options.remap[module] = JSON.stringify(code);
     } else {
       // function / number / boolean / undefined all convert to string already
@@ -170,7 +170,7 @@ API.prototype.remap = function(module, code) {
 };
 
 API.prototype.exclude = function(path) {
-  if(!this.options['exclude']) {
+  if (!this.options['exclude']) {
     this.options['exclude'] = [];
   }
   this.options['exclude'].push((path instanceof RegExp ? path : new RegExp(path)));
@@ -178,12 +178,12 @@ API.prototype.exclude = function(path) {
 };
 
 // Express Middleware
-API.middleware = function (opts) {
+API.middleware = function(opts) {
 
   // -- Set some sane defaults
   opts = opts || {};
   opts.include = opts.include || './lib';
-  if(!opts.basepath) {
+  if (!opts.basepath) {
     opts.basepath = Array.isArray(opts.include) ? opts.include[0] : opts.include;
   }
   opts.main = opts.main || 'index.js';
@@ -194,15 +194,15 @@ API.middleware = function (opts) {
     .basepath(opts.basepath);
 
   // -- All other options are set by clobbering the glue.options hash
-  Object.keys(opts).forEach(function (key) {
+  Object.keys(opts).forEach(function(key) {
     glue.set(key, opts[key]);
   });
 
   // -- Middleware to return
-  return function (req, res, next) {
+  return function(req, res, next) {
 
     // -- Return all non GET requests
-    if('GET' !== req.method) return next();
+    if ('GET' !== req.method) return next();
 
     // -- Set content-type
     res.setHeader('Content-Type', 'application/javascript');

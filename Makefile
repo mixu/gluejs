@@ -12,18 +12,15 @@ test:
 
 .PHONY: test lint
 
-# Note: use latest gjslint e.g 2.3.13
+
+GJSLINT := --nojsdoc --exclude_directories=node_modules,lib/require,lib/util,test,lib/require --max_line_length=120 --disable=200,201,202,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,230,231,232,233,250,251,252
+
 lint:
+	fixjsstyle $(GJSLINT) -r .
+	gjslint $(GJSLINT) -r .
 	jshint .
-	gjslint \
-	--nojsdoc \
-	--jslint_error=all \
-	--disable=6 \
-	--max_line_length=120 \
-	--custom_jsdoc_tags=api \
-	--exclude_directories=node_modules,lib/runner/commonjs/resources,test,lib/require \
-	--max_line_length=120 --disable=0131,300,2,1,6 \
-	-r .
+
+.PHONY: lint
 
 test-lint:
 	./bin/gluejs \

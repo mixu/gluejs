@@ -92,7 +92,7 @@ exports['runQueue tests'] = {
       'node_modules/aa/node_modules/bb.js': 'module.exports = true;',
       'node_modules/aa/node_modules/cc/differentfile.js': 'module.exports = true;',
       'node_modules/aa/node_modules/cc/package.json': '{ "main": "differentfile.js" }'
-    }
+    };
   },
 
   'when a dependency is not found': function() {
@@ -115,7 +115,8 @@ exports['runQueue tests'] = {
         dependencies: {
           c: '*'
         }
-      };
+      })
+    };
   },
 
   'can specify a single string --command': function() {

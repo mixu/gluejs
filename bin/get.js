@@ -16,12 +16,12 @@ var optimist = require('optimist')
       'amd': { },
       'cache': { default: true },
       'include': { },
-      'main': { },
+      'main': { }
     })
     .boolean('amd'),
     argv = optimist.parse(process.argv);
 
-if(!argv['include']) {
+if (!argv['include']) {
   console.log('Usage: --include <file/dir>');
   console.log('Options:');
   console.log('  --amd');
@@ -37,12 +37,12 @@ Minilog.enable();
 var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
 homePath = (typeof homePath === 'string' ? path.normalize(homePath) : process.cwd());
 
-if(!argv['cache-path']) {
+if (!argv['cache-path']) {
   argv['cache-path'] = homePath + path.sep + '.gluejs-cache' + path.sep;
 }
 
 // if the cache is disabled, then use a temp path
-if(!argv.cache) {
+if (!argv.cache) {
   argv['cache-path'] = os.tmpDir() + '/gluejs-' + new Date().getTime();
 }
 
@@ -51,8 +51,8 @@ var opts = {
   'cache-path': argv['cache-path']
 };
 
-if(!Array.isArray(argv.include)) {
-  argv.include = [ argv.include ];
+if (!Array.isArray(argv.include)) {
+  argv.include = [argv.include];
 }
 
 // determine main
@@ -61,14 +61,14 @@ var main = argv.main || argv.include[0],
 
 // resolve paths relative to process.cwd
 ['list-files', 'out', 'vendor-base'].forEach(function(key) {
-  if(argv[key]) {
+  if (argv[key]) {
     argv[key] = path.resolve(process.cwd(), argv[key]);
   }
 });
 
 // resolve paths relative to basepath
 ['config', 'vendor'].forEach(function(key) {
-  if(argv[key]) {
+  if (argv[key]) {
     argv[key] = path.resolve(basepath, argv[key]);
   }
 });
@@ -79,11 +79,11 @@ argv.include = argv.include.map(function(p) {
 
 // load resources
 
-if(argv.amd) {
+if (argv.amd) {
   opts.amdresolve = loadAMDConfig(argv.config);
 }
 
-if(argv.amd && main) {
+if (argv.amd && main) {
   // baseDir is required for AMD
   opts.amdresolve.baseDir = basepath;
 }
@@ -92,11 +92,11 @@ function findModule(name) {
   var result = '';
   try {
     result = nodeResolve.sync(name, { basedir: process.cwd() });
-  } catch(e) {
+  } catch (e) {
     try {
       result = nodeResolve.sync(name, { basedir: __dirname });
-    } catch(e) {
-      console.error('Cannot find module ' + name + ' from ' + process.cwd()  + ' or ' + __dirname);
+    } catch (e) {
+      console.error('Cannot find module ' + name + ' from ' + process.cwd() + ' or ' + __dirname);
       throw e;
     }
   }
@@ -132,7 +132,7 @@ list.exec(function(err, files) {
   });
   Object.keys(vendorMap).forEach(function(name) {
     var value = vendorMap[name];
-    if(!fs.existsSync(value)) {
+    if (!fs.existsSync(value)) {
       vendorMap[name] = false;
     }
   });
@@ -142,7 +142,7 @@ list.exec(function(err, files) {
 
   Object.keys(argv).forEach(function(name) {
     var matched = (typeof name === 'string' ? name.match(/plugin\-(.*)/) : false);
-    if(matched) {
+    if (matched) {
       var ext = matched[1];
       argv[name] = findModule(argv[name]);
       plugins[ext] = require(argv[name]);
@@ -167,7 +167,7 @@ list.exec(function(err, files) {
       // set this so that builds are invalidated as the version changes
       'gluejs-version': require('../package.json').version
     }, fs.createWriteStream(argv['out']), function(err, processedFiles) {
-    if(argv['list-files']) {
+    if (argv['list-files']) {
       fs.appendFileSync(argv['list-files'], processedFiles.join('\n'));
     }
     cache.end();

@@ -190,7 +190,7 @@ function tests(defaultOpts) {
 
       var sandbox2 = box();
 
-      code += "result = require('foobar');"
+      code += "result = require('foobar');";
 
       // console.log(code);
 
