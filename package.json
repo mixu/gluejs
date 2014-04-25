@@ -37,7 +37,8 @@
     "detective": "~2.4.0",
     "amd-resolve": "~0.1.1",
     "amdetective": "0.0.1",
-    "resolve": "~0.6.1"
+    "resolve": "~0.6.1",
+    "miniq": "0.0.1"
   },
   "devDependencies": {
     "mocha": "1.x",

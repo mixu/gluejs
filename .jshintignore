@@ -1,5 +1,6 @@
 node_modules/
 test/node_modules
-test/tmp
-lib/runner/commonjs/resources
-test/command-integration
+lib/util/amd-vendor-wrap.js
+lib/util/amd-vendor-wrap-global.js
+lib/require/*.min.js
+test/integration/command-integration/*

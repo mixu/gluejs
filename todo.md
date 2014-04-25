@@ -14,6 +14,17 @@ gluejs v2.next adds optional dependency parsing support:
   - disable the automatic excludes like `/dist/` because they mess with things like jquery
   - transform and command options: parse the resulting file for dependencies
   - direct file requires like `require('jade/runtime')` should resolve correctly
+- get rid of the two different ways of substituting a module, only use remap for substituting a module which will only be loaded when requested rather than immediately
+- test using multiple transforms (CLI and middleware)
+- test using multiple commands (CLI and middleware)
+- warn for unfulfilled requires
+- implement:
+  - --no-externals (for extra loading)
+  - --only-externals (for a base package)
+  - --include-external
+  - --exclude-external
+  - --allow-empty
+  - --ignore and --ignore-external (replaces with empty file)
 
 
 // calculate a hash for the full list of files
@@ -24,6 +35,86 @@ gluejs v2.next adds optional dependency parsing support:
 
 - add `cache clean`
 - improve the autodetection code so that people don't need to supply a --main argument in default cases (e.g. when there is a index.js or there is just one file in the package)
+
+## New architecture
+
+Cleaner separation between Map and Reduce phases.
+
+During the Map phase, a number of tasks are applied to each file.
+
+The tasks take one input, run it through transforms, and write a file into cache. If nothing needs to be done, then a simple direct-read tuple is created.
+
+The Map phase uses a shared queue which supports incremental task queueing.
+
+During the reduce phase, the list of metadata tuples is converted into a set of packages using package inference. Then, the underlying data for each metadata tuple is read in serial order and written to the final output. On read, the final wrapping is done, utilizing the inferred packages.
+
+If any tasks require the package metadata, then they must be performed during the reduce phase. In theory one could add another map phase after packages have been inferred.
+
+    -- check for full build match --
+
+    [ Initialize queue ]
+      [ ADD ]
+        [ Check that file has not been processed ]
+        -- check for cached input files given current config --
+          [ Read any cached result deps ]
+        [ Apply user exclusions ]
+        [ If not --parse, apply default exclusions ]
+        [ Match tasks ]
+        [ If transformations, add parse-result-and-update-deps task ]
+          [ Push deps to queue when done ]
+            { filename: path-to-file, content: path-to-file, deps: [ "str", "str2" ], tasks: [ { name: 'wrap-cjs', ... } ] }
+
+    [ Start running the queue ]
+      [ Once done ]
+        [ Check queue for more, assign if under parallelism limit ]
+
+    { filename: path-to-file, content: path-to-file, deps: [ "str", "str2" ] }
+    { filename: "original-path-to-file", content: path-to-result-file, deps: [ "str", "str2" ] }
+
+    -- generate joinable list --
+
+    [ Infer packages ]
+    [ Infer package deps ]
+      - for --parse: just collect
+      - for --no-parse: guess (e.g. modules in folders at higher levels, and one-level-removed child node_modules)
+
+    [ Update reporter size during read ]
+    [ Wrap file during read (w/ full meta?) ]
+
+
+    {
+      id: ..,
+      main: "original-name",
+      basepath: ...,
+      files: [ ... ],
+      deps: { "name": "target" }
+    }
+
+    [ Join files ]
+
+    -- generate full build --
+
+Current wrappers:
+
+- size report
+- UMD
+- commonJS
+- JSON
+
+Additional wrapping:
+
+- shimmed global export
+- pre-wrap additional module detection
+
+Probably best add support for purely joining files:
+
+  [
+    {
+      name: path-to-file,
+      deps: [ "str", "str2" ]
+    }
+  ]
+
 
 ## use detective and amdetective
 
@@ -103,21 +194,6 @@ TODO
 
 - setting basepath to ./node_modules/foo causes the root to be empty rather than being based inside the package directory. E.g. you need to do require('foo') to get the result rather than require('./index.js');
 - replace('foo', 'window.foo') applies to all subdependencies indiscriminately. Need a better syntax to control this. Old behavior was to only replace top level dependencies.
-
-## --watch
-
-TODO
-
-Watch files for changes
-
-.watch(function(err, text){ ...}): renders and adds file watchers on the files.
-
-Note that this API is a bit clunky:
-
-there is no way to unwatch a file other than terminate the program
-on each watched file change, a console.log() message is shown
-the API uses fs.watchFile(), so you do not get notification of newly added files in directories; watches are registered on the files that were used on the first render
-But it works fine for automatically rebuilding e.g. when doing development locally.
 
 # Tasks
 
