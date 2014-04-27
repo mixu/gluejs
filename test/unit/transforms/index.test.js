@@ -149,8 +149,23 @@ exports['runQueue tests'] = {
 
   'cannot add files which match the npm filter': function() {
 
-  }
+  },
 
+  'can use --no-externals': function() {
+
+  },
+
+  'can use --only-externals': function() {
+
+  },
+
+  'can --ignore a file': function() {
+
+  },
+
+  'can --ignore-external': function() {
+
+  },
 
 };
 

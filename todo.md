@@ -18,13 +18,6 @@ gluejs v2.next adds optional dependency parsing support:
 - test using multiple transforms (CLI and middleware)
 - test using multiple commands (CLI and middleware)
 - warn for unfulfilled requires
-- implement:
-  - --no-externals (for extra loading)
-  - --only-externals (for a base package)
-  - --include-external
-  - --exclude-external
-  - --allow-empty
-  - --ignore and --ignore-external (replaces with empty file)
 
 
 // calculate a hash for the full list of files
@@ -35,6 +28,136 @@ gluejs v2.next adds optional dependency parsing support:
 
 - add `cache clean`
 - improve the autodetection code so that people don't need to supply a --main argument in default cases (e.g. when there is a index.js or there is just one file in the package)
+
+## More features
+
+- implement `--compare`: compares the trees from using the detective strategy vs the default strategy
+
+### Better externals
+
+*Better externals handling*: Sometimes you want to have granular control over what external modules are included in your build. The following options let you do that:
+
+`--external <name>`: specifies that that module should not be bundled but instead looked up from the global context. For example, `--external underscore` specifies that the underscore module should not be included in the build result. Any references to underscore will be ignored.
+
+`--remap <name>=<expression>`: specifies that `require(name)` should return whatever the value of the expression is. This is useful for remapping external modules. For example you might want to load jQuery externally from `window.$` using `--remap jquery=window.$`.
+
+`--no-externals`: this option prevents any modules from under `node_modules` from being included.
+
+`--include-external <name>`: this option adds an external back after `--no-externals` (whitelist approach).
+
+`--only-externals`: this option only bundles modules under `node_modules`.
+
+### Middleware enhancements
+
+*Short form syntax*:
+
+    app.use('/js/main.js', glue('./client/index.js'));
+
+    app.use('/js/deps.js', glue([ 'backbone', 'underscore']);
+
+Another example:
+
+    app.use('/js/deps.js', glue('./client/', { 'only-externals': true }));
+    // e.g. /js/foo.js => bundle containing ./client/foo.js
+    app.use('/js/', glue('./client/', { 'no-externals': true }));
+
+*Preheat cache*: pre-emptively run the first build when the server starts.
+
+*Middleware error messages*: the Express middleware now returns a piece of code which prints an error both in the console and as HTML when the files in the build have syntax errors.
+
+Requires `debug` to be true.
+
+*Middleware etags support*: if the module bundle has not changed, then the Express middleware will completely skip rebuilding the file.
+
+### Shimming non-commonJS libraries that export globals
+
+*Interoperability with libraries that export globals*.
+
+Two options:
+
+- use `--remap` and remap the global, include two files instead of one file
+- append `module.exports = global`, using Command:
+
+`--shim { file: "", name: "", global: "", deps: "" }`.
+
+This wraps the file in a way that the global variable is available as `require(name)`.
+
+### Misc
+
+*Ignoring files*. `--ignore file` replaces the file with an empty file in the build.
+
+*Mocking out dependencies for testing*: This is probably more useful when used via the Express middleware, but `--external name=path` allows specific externals to be replaced, which can be used for testing:
+
+    // example
+
+Might be nice to make this even easier to use from tests... via REST API?
+
+## Inclusion optimization
+
+- Allow coercion of dependencies (e.g. backbone with underscore + plain underscore => one of each):
+  - `--dedupe-force modulename` should force only a single instance of a module, in spite of conflicting package.json data
+
+
+### Replacing modules or individual files
+
+*Substituting a module*. To replace a module with a different module in gluejs, use the `remap` option:
+
+    remap: { "underscore": "require('lodash')" }
+
+via the command line, this would be written as `--remap underscore="require('lodash')"`.
+
+*Substituting a file*. The `browser` field in package.json is a new addition which allows CommonJS bundlers to replace files which are not compatible with the browser with alternatives provided by the module. You can use this to replace files in your build, and it can also be used by 3rd party modules which support both the browser and Node.
+
+You can replace the whole package with a specific file:
+
+    "browser": "dist/browser.js"
+
+or you can override individual modules and files in `package.json`:
+
+    "browser": {
+      "fs": "level-fs",
+      "./lib/filters.js": "./lib/filters-client.js"
+    },
+
+This will replace `./lib/filters.js` with `./lib/filters-client.js` in the build result.
+
+### Core variable and core module shimming
+
+- detect core modules and core variables
+- load appropriate shims
+
+### Optimistic rebuilding
+
+- Continuous rebuild via watcher
+  - file changes
+    - rebuild every n milliseconds, return results in a non-blocking manner
+  - dir content changes
+    - trigger full rebuild
+
+# Tasks
+
+- better metadata fetching from package.json
+  - it should be possible to pre-filter the packages (before infer packages),
+    so that devDependencies are not included in the processing
+  - version numbers should be fetched
+- ability to remap paths
+  - e.g. add a file to the root from outside the root, with a different virtual filename
+  - e.g. swap out the content a directory for the content of another one (shimming)
+
+# Evaluation
+
+- empirically based packaging / dynamic loading **
+- Source maps support
+- Mocking out dependencies during testing/runtime **
+- RequireJS to CommonJS conversion
+- Easier conventions for adding a module both on the client and server side, e.g. only a node_modules entry => client side
+
+# Internals
+
+Minor, but cool features:
+
+- build non-JS resources, for example compile Jade and Handlebars templates
+- choice between throwing, or returning undefined in the require shim
 
 ## New architecture
 
@@ -52,18 +175,21 @@ If any tasks require the package metadata, then they must be performed during th
 
     -- check for full build match --
 
-    [ Initialize queue ]
-      [ ADD ]
-        [ Check that file has not been processed ]
-        -- check for cached input files given current config --
-          [ Read any cached result deps ]
-        [ Apply user exclusions ]
-        [ If not --parse, apply default exclusions ]
-        [ Match tasks ]
-        [ If transformations, add parse-result-and-update-deps task ]
-          [ Push deps to queue when done ]
-            { filename: path-to-file, content: path-to-file, deps: [ "str", "str2" ], tasks: [ { name: 'wrap-cjs', ... } ] }
+Transform queue (transforms/index.js):
 
+    [ Initialize queue ]
+    [ Add new file ]
+      [ Check that file has not been processed ]
+      [ Check for cached results, and return if done ]
+      [ Apply user and other exclusions ]
+      [ Queue task ]
+    [ Task run]
+      [ Match tasks ]
+      [ If no tasks, just run the parse-result-and-update-deps ]
+        [ Push deps to queue when done ]
+      [ If transformations, append parse-result-and-update-deps task ]
+      [ Run transforms ]
+        [ Push deps to queue when done ]
     [ Start running the queue ]
       [ Once done ]
         [ Check queue for more, assign if under parallelism limit ]
@@ -72,6 +198,15 @@ If any tasks require the package metadata, then they must be performed during th
     { filename: "original-path-to-file", content: path-to-result-file, deps: [ "str", "str2" ] }
 
     -- generate joinable list --
+
+TODO:
+
+- report number of cache hits from the transforms
+- progress bar support:
+  - emit progress events (e.g. as each file is processed)
+  - emit progress done event
+
+Package generator queue (commonjs2/index.js):
 
     [ Infer packages ]
     [ Infer package deps ]
@@ -94,6 +229,13 @@ If any tasks require the package metadata, then they must be performed during th
 
     -- generate full build --
 
+TODO:
+
+- replaced/remapped support
+- progress bar support:
+  - emit progress events (e.g. as each file is processed)
+  - emit progress done event
+
 Current wrappers:
 
 - size report
@@ -106,21 +248,10 @@ Additional wrapping:
 - shimmed global export
 - pre-wrap additional module detection
 
-Probably best add support for purely joining files:
-
-  [
-    {
-      name: path-to-file,
-      deps: [ "str", "str2" ]
-    }
-  ]
-
-
 ## use detective and amdetective
 
 Steps:
 
-- implement `--compare`: compares the trees from using the detective strategy vs the default strategy
 - apply later stage optimizations:
   - minimize the list of --replace shimmed modules in each package output based on the real set of dependencies from all files within that package
   - add core module shimming support
@@ -156,12 +287,6 @@ Test cases:
   - in dev, check the upstream folders for changes
   - in production, simply serve the staging area contents
 
-## Inclusion optimization
-
-- Allow coercion of dependencies (e.g. backbone with underscore + plain underscore => one of each):
-  - `--dedupe-modules` should use package.json data to reduce duplication
-  - `--dedupe-force modulename` should force only a single instance of a module, in spite of conflicting package.json data
-
 ## Tiny module optimizations
 
 - add support for fully static resolution: given the full set of require() call dependencies, convert them into static lookups
@@ -194,67 +319,6 @@ TODO
 
 - setting basepath to ./node_modules/foo causes the root to be empty rather than being based inside the package directory. E.g. you need to do require('foo') to get the result rather than require('./index.js');
 - replace('foo', 'window.foo') applies to all subdependencies indiscriminately. Need a better syntax to control this. Old behavior was to only replace top level dependencies.
-
-# Tasks
-
-- A better big lib handing system (e.g. --external backbone --external underscore)
-- Etags support for build results (e.g. shortcutting repeated loads even further)
-- return a meaningful result from middleware if an error occurs
-  (e.g. either a status code or perhaps even a div-printing thing)
-- better metadata fetching from package.json
-  - it should be possible to pre-filter the packages (before infer packages),
-    so that devDependencies are not included in the processing
-  - version numbers should be fetched
-- ability to remap paths
-  - e.g. add a file to the root from outside the root, with a different virtual filename
-  - e.g. swap out the content a directory for the content of another one (shimming)
-
-# Evaluation
-
-- empirically based packaging / dynamic loading **
-- Source maps support
-- Fix issues with interrupted cached data
-- Remapping cross environment dependencies / dependency injection
-- Mocking out dependencies during testing/runtime **
-- RequireJS to CommonJS conversion
-- Easier conventions for adding a module both on the client and server side, e.g. only a node_modules entry => client side
-
-# Internals
-
-Phases:
-
-- acquire file paths (e.g. via calls to .include and .npm)
-    => result is a tree { files: [] } (under basepath)
-    => note that nothing is excluded here
-- filter file paths (e.g. remove excluded, remove .npmignore and so on)
-- attach tasks
-- run tasks
-- squash result (or save to a directory)
-
-File tasks:
-
-- run-shell (e.g. run uglify)
-- wrap-commonjs-web (e.g. wrap inside a function call)
-- wrap-commonjs-web-sourceurl
-- wrap-commonjs-amd (e.g. take commonJS files, resolve their direct dependencies, wrap into an AMD module)
-- wrap-amd-commonjs-web (e.g. take a AMD file, look at the dependency declaration, convert that to a string, wrap into a web-commonjs module)
-
-New features:
-
-- vastly better conventions and support for writing dual-platform (browser + server) code that has some functions replaced with platform-specific equivalents
-- Mocha test server and conventions to make it easy to repackage and run your Mocha tests inside a browser
-- static file serving and Connect middleware
-- better AMD interoperability: hook into AMD if that's the system being used; optionally export a `require()` implementation
-
-Minor, but cool features:
-
-- interoperate with libraries that use globals by binding variables under window.*
-- continous rebuild via watcher
-- build non-JS resources, for example compile Jade and Handlebars templates
-- sourceURL support
-- custom build task support
-- better support for .npmignore files and filtering in general
-- choice between throwing, or returning undefined in the require shim
 
 # How do I ...?
 
