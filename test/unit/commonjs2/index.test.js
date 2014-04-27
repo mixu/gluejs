@@ -22,7 +22,7 @@ exports['package generator tests'] = {
     var outFile = this.fixture.filename({ ext: '.js' }),
         file = fs.createWriteStream(outFile);
     var outDir = this.fixture.dir({
-      'index.js': 'module.exports = true;'
+      'index.js': 'module.exports = "Index";'
     });
 
     runner({
@@ -37,12 +37,51 @@ exports['package generator tests'] = {
           renames: []
         }
       ],
-      out: file
+      out: file,
+      umd: true
     }, function(err, result) {
-      console.log(fs.readFileSync(outFile).toString());
-
+      var result = require(outFile);
+      assert.deepEqual(result,  'Index');
       done();
     });
+  },
+
+  'can package additional files': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = require("./second.js");',
+      'second.js': 'module.exports = "Second";'
+    });
+    runner({
+      basepath: outDir,
+      cache: this.cache,
+      list: [
+         {
+          filename: outDir + '/index.js',
+          content: outDir + '/index.js',
+          rawDeps: [ './second.js' ],
+          deps: [ outDir + '/second.js' ],
+          renames: []
+        },
+        {
+          filename: outDir + '/second.js',
+          content: outDir + '/second.js',
+          rawDeps: [ ],
+          deps: [ ],
+          renames: []
+        }
+      ],
+      out: file,
+      umd: true
+    }, function(err, result) {
+      var result = require(outFile);
+      // console.log(fs.readFileSync(outFile).toString());
+      assert.deepEqual(result,  'Second');
+      done();
+    });
+
+
   }
 
 };

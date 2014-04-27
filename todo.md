@@ -19,6 +19,8 @@ gluejs v2.next adds optional dependency parsing support:
 - test using multiple commands (CLI and middleware)
 - warn for unfulfilled requires
 
+- Test against parse errors causing issues, such as caching the incorrect set of dependencies.
+- Return proper error messages for parse errors when using the middleware
 
 // calculate a hash for the full list of files
 // this can be used to validate etags

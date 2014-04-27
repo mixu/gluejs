@@ -1,8 +1,7 @@
 var os = require('os'),
     path = require('path'),
-    List = require('minitask').list,
-    DetectiveList = require('./lib/list/detective.js'),
-    packageCommonJs = require('./lib/runner/commonjs/index.js'),
+    runTasks = require('./lib/runner/transforms/index.js'),
+    packageCommonJs = require('./lib/runner/commonjs2/index.js'),
     Capture = require('./lib/file-tasks/capture.js'),
     Minilog = require('minilog'),
     Cache = require('minitask').Cache,
@@ -20,7 +19,6 @@ function API() {
     cache: true,
     'cache-path': homePath + path.sep + '.gluejs-cache' + path.sep,
     include: [],
-    _rename: {},
     // set options here so that the cache hash does not change
     jobs: require('os').cpus().length * 2
   };
@@ -43,49 +41,31 @@ API.prototype.render = function(dest) {
     this.options['cache-method'] = 'stat';
   }
 
-  // LIST
-  // only instantiate the list just before running the code
-  // this avoids issues with the order between `.set('parse', true)` and .include() calls
-  var opts = {
-        'cache-path': this.options['cache-path'],
-        'cache-method': this.options['cache-method'],
-        'cache-hash': Cache.hash(JSON.stringify(this.options))
-      },
-      list = (this.options['parse'] ? new DetectiveList(opts) : new List());
-
-  // set the cache mode to transactional and begin a single cache scope
+  // Create the shared cache instance
+  var cacheHash = Cache.hash(JSON.stringify(this.options));
   var cache = Cache.instance({
-      method: opts['cache-method'],
-      path: opts['cache-path']
+    method: this.options['cache-method'],
+    path: this.options['cache-path']
   });
   cache.begin();
 
-  // --reset-exclude should also reset the pre-processing exclusion
-  if (this.options['reset-exclude']) {
-    list.exclude(null);
-  }
-  // --basepath
-  if (this.options['basepath']) {
-    list.basepath(this.options['basepath']);
-  }
+  // run any tasks and parse dependencies (mapper)
+  runTasks({
+    cache: cache,
+    include: this.options.include
 
-  var includes = this.options['include'];
+    // TODO
+    // --reset-exclude should also reset the pre-processing exclusion
+    // if (this.options['reset-exclude']) {
+    //   list.exclude(null);
+    // }
 
-  (Array.isArray(includes) ? includes : [includes]).map(function(filepath) {
-    list.add(filepath);
-  });
+    // list.onRename = function(canonical, normalized) {
+    //   self.options._rename[normalized] = canonical;
+    // };
 
-  list.onRename = function(canonical, normalized) {
-    self.options._rename[normalized] = canonical;
-  };
-  // END LIST
-
-  // console.time('list enum');
-
-  list.exec(function(err, files) {
-
-    // console.timeEnd('list enum');
-
+  }, function(err, results) {
+    // create a stream capturer if we want the result as callback result
     var capture;
     if (typeof dest == 'function') {
       capture = new Capture();
@@ -100,11 +80,13 @@ API.prototype.render = function(dest) {
       });
     }
 
-    // console.time('package files');
-    packageCommonJs({ files: files }, self.options, capture ? capture : dest, function() {
-
-      // console.timeEnd('package files');
-
+    // take the results and package them as a single file (reducer)
+    packageCommonJs({
+      cache: cache,
+      list: results,
+      out: capture ? capture : dest,
+      basepath: self.options['basepath']
+    }, function(err, results) {
       cache.end();
     });
   });

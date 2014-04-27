@@ -75,10 +75,37 @@ exports['runQueue tests'] = {
     var outDir = this.fixture.dir({
       'index.js': 'module.exports = require("foo");',
       'node_modules/foo/package.json': '{ "main": "main.js" }',
-      'node_modules/foo.js': 'module.exports = true;',
+      'node_modules/foo/main.js': 'module.exports = require("./lib/sub");',
       'node_modules/foo/lib/sub.js': 'module.exports = true;'
     });
-    done();
+    runner({
+        include: [ outDir + '/index.js' ],
+        cache: this.cache
+      }, function(err, results) {
+        assert.ok(!err);
+        // console.log(results);
+        assert.equal(results.length, 3);
+        assert.deepEqual(results, [
+        {
+          filename: outDir + '/index.js',
+          content: outDir + '/index.js',
+          rawDeps: [ 'foo' ],
+          deps: [ outDir + '/node_modules/foo/main.js' ],
+          renames: [] },
+        { filename: outDir + '/node_modules/foo/main.js',
+          content: outDir + '/node_modules/foo/main.js',
+          rawDeps: [ './lib/sub' ],
+          deps: [ outDir + '/node_modules/foo/lib/sub.js' ],
+          renames: [] },
+        { filename: outDir + '/node_modules/foo/lib/sub.js',
+          content: outDir + '/node_modules/foo/lib/sub.js',
+          rawDeps: [],
+          deps: [],
+          renames: [] }
+        ]);
+
+        done();
+    });
   },
 
   'can resolve core deps': function(done) {
@@ -86,13 +113,44 @@ exports['runQueue tests'] = {
   },
 
   'can resolve sub-sub dependencies': function(done) {
-    var spec = {
-      'index.js': 'module.exports = true;',
-      'node_modules/aa/index.js': 'module.exports = true;',
-      'node_modules/aa/node_modules/bb.js': 'module.exports = true;',
-      'node_modules/aa/node_modules/cc/differentfile.js': 'module.exports = true;',
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = require("aa");',
+      'node_modules/aa/index.js': 'module.exports = require("bb");',
+      'node_modules/aa/node_modules/bb.js': 'module.exports = require("cc");',
+      'node_modules/aa/node_modules/cc/differentfile.js': 'module.exports = "Hello from C";',
       'node_modules/aa/node_modules/cc/package.json': '{ "main": "differentfile.js" }'
-    };
+    });
+    runner({
+        include: [ outDir + '/index.js' ],
+        cache: this.cache
+      }, function(err, results) {
+        assert.ok(!err);
+        // console.log(results);
+        assert.equal(results.length, 4);
+        assert.deepEqual(results, [
+           { filename: outDir + '/index.js',
+              content: outDir + '/index.js',
+              rawDeps: [ 'aa' ],
+              deps: [ outDir + '/node_modules/aa/index.js' ],
+              renames: [] },
+            { filename: outDir + '/node_modules/aa/index.js',
+              content: outDir + '/node_modules/aa/index.js',
+              rawDeps: [ 'bb' ],
+              deps: [ outDir + '/node_modules/aa/node_modules/bb.js' ],
+              renames: [] },
+            { filename: outDir + '/node_modules/aa/node_modules/bb.js',
+              content: outDir + '/node_modules/aa/node_modules/bb.js',
+              rawDeps: [ 'cc' ],
+              deps: [ outDir + '/node_modules/aa/node_modules/cc/differentfile.js' ],
+              renames: [] },
+            { filename: outDir + '/node_modules/aa/node_modules/cc/differentfile.js',
+              content: outDir + '/node_modules/aa/node_modules/cc/differentfile.js',
+              rawDeps: [],
+              deps: [],
+              renames: [] }
+        ]);
+        done();
+    });
   },
 
   'when a dependency is not found': function() {
