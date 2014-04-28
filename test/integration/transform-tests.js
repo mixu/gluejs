@@ -142,6 +142,49 @@ module.exports = {
       .render(file);
   },
 
+  '--command: parse the resulting file for dependencies': function(done) {
+    // jade
+    var outDir = this.fixture.dir({
+      'foo.bar': 'AAAA',
+      'index.js': 'module.exports = require("./foo.bar");',
+      'node_modules/bar.js': 'module.exports = "Hello from Bar";'
+    });
+
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+
+    file.once('close', function() {
+      var name = new Date().getTime();
+      var result = require(outFile);
+      // use standard require
+      var result = result();
+      assert.deepEqual(result, 'Hello from Bar');
+      done();
+    });
+
+    // There are way too many internals exposed here ... must encapsulate these better.
+
+    new Glue()
+      .basepath(outDir)
+      .include('./index.js')
+      .set('cache', false)
+      .set('require', false)
+      .set('command', [
+        function(filename) {
+          if(path.extname(filename) != '.bar') {
+            return;
+          }
+          return function(input) {
+            return 'module.exports = require("bar");';
+          };
+        }
+      ])
+      .main('foo.bar')
+      .set('umd', true)
+      .render(file);
+  },
+
+
   // transforms should only be strings - if you want
   // to specify things programmatically, use set('command', [ fn ])
 

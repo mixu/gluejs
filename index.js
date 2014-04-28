@@ -1,4 +1,5 @@
 var os = require('os'),
+    fs = require('fs'),
     path = require('path'),
     runTasks = require('./lib/runner/transforms/index.js'),
     packageCommonJs = require('./lib/runner/commonjs2/index.js'),
@@ -41,17 +42,28 @@ API.prototype.render = function(dest) {
     this.options['cache-method'] = 'stat';
   }
 
-  if (!this.options.basepath) {
-    this.options.basepath = Array.isArray(this.options.include) ?
-      this.options.include[0] : this.options.include;
-  } else {
-    // resolve all relative includes
-    this.options.include = (Array.isArray(this.options.include) ?
-      this.options.include : [ this.options.include ]).map(function(filepath) {
-        return path.resolve(self.options.basepath, filepath);
-      });
+  var hasOneInclude = (typeof this.options.include === 'string' ||
+        (Array.isArray(this.options.include) && this.options.include.length == 1)),
+      firstInclude = (typeof this.options.include === 'string' ?
+        this.options.include : this.options.include[0]),
+      firstIncludeStat = (fs.existsSync(firstInclude) ? fs.statSync(firstInclude) : false);
+
+  // set main if there is only one --include and it's a file, use it as the main
+  if (!this.options.main && hasOneInclude && firstIncludeStat && firstIncludeStat.isFile()) {
+    this.options.main = firstInclude;
   }
 
+  // if basepath is not set, use the firstInclude to set it
+  if (!this.options.basepath) {
+    this.options.basepath = (firstIncludeStat && firstIncludeStat.isFile() ?
+      path.dirname(firstInclude) : firstInclude);
+  }
+
+  // resolve all relative includes
+  this.options.include = (Array.isArray(this.options.include) ?
+    this.options.include : [ this.options.include ]).map(function(filepath) {
+      return path.resolve(self.options.basepath, filepath);
+    });
 
   // Create the shared cache instance
   var cacheHash = Cache.hash(JSON.stringify(this.options));

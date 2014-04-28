@@ -26,11 +26,11 @@ module.exports = {
       .render(file);
   },
 
-  'can package additional files': function(done) {
+  'can package additional files (and first include file is assumed to be main)': function(done) {
     var outFile = this.fixture.filename({ ext: '.js' }),
         file = fs.createWriteStream(outFile);
     var outDir = this.fixture.dir({
-      'index.js': 'module.exports = require("./second.js");',
+      'first.js': 'module.exports = require("./second.js");',
       'second.js': 'module.exports = "Second";'
     });
 
@@ -42,7 +42,7 @@ module.exports = {
     });
 
     new Glue()
-    .include(outDir)
+    .include(outDir + '/first.js')
     .set('cachePath', this.cachePath)
     .set('umd', true)
     .render(file);

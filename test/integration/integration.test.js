@@ -38,20 +38,106 @@ exports['integration tests'] = {
 
   },
 
-  'can --exclude files from the build': function() {
+  'can --exclude files from the build': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = require("./second.js");',
+      'second.js': 'module.exports = "Second";'
+    });
 
+    file.once('close', function() {
+      fs.writeFileSync(outFile,
+        'function require(str) { return "extern-" + str; }\n' +
+        fs.readFileSync(outFile));
+
+      var result = require(outFile);
+      // console.log(fs.readFileSync(outFile).toString());
+      assert.deepEqual(result, "extern-./second.js");
+      done();
+    });
+
+    new Glue()
+    .include(outDir)
+    .set('cachePath', this.cachePath)
+    .set('umd', true)
+    .set('exclude', [ './second.js' ])
+    .render(file);
   },
 
-  'can --exclude 3rd party module paths from the build': function() {
+  'can --exclude 3rd party module paths from the build': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = require("foo");',
+      'node_modules/foo/package.json': '{ "main": "main.js" }',
+      'node_modules/foo/main.js': 'module.exports = "Foo";',
+    });
 
+    file.once('close', function() {
+      fs.writeFileSync(outFile,
+        'function require(str) { return "extern-" + str; }\n' +
+        fs.readFileSync(outFile));
+
+      var result = require(outFile);
+      // console.log(fs.readFileSync(outFile).toString());
+      assert.deepEqual(result, "extern-foo");
+      done();
+    });
+
+    new Glue()
+    .include(outDir)
+    .set('cachePath', this.cachePath)
+    .set('umd', true)
+    .set('exclude', [ 'foo' ])
+    .render(file);
   },
 
-  'can --ignore files from the main build': function() {
+  'can --ignore files from the main build': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = require("./second.js");',
+      'second.js': 'module.exports = "Second";'
+    });
 
+    file.once('close', function() {
+      var result = require(outFile);
+      // console.log(fs.readFileSync(outFile).toString());
+      assert.deepEqual(result, { });
+      done();
+    });
+
+    new Glue()
+    .include(outDir)
+    .set('cachePath', this.cachePath)
+    .set('umd', true)
+    .set('ignore', [ './second.js' ])
+    .render(file);
   },
 
-  'can --ignore 3rd party modules from the main build': function() {
+  'can --ignore 3rd party modules from the main build': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = require("foo");',
+      'node_modules/foo/package.json': '{ "main": "main.js" }',
+      'node_modules/foo/main.js': 'module.exports = "Foo";',
+    });
 
+    file.once('close', function() {
+      var result = require(outFile);
+      // console.log(fs.readFileSync(outFile).toString());
+      assert.deepEqual(result, { });
+      done();
+    });
+
+    new Glue()
+    .include(outDir)
+    .set('cachePath', this.cachePath)
+    .set('umd', true)
+    .set('ignore', [ 'foo' ])
+    .render(file);
   },
 
   // External module wrangling tests:
@@ -62,205 +148,8 @@ exports['integration tests'] = {
   // - `--include-external` to whitelist an external
   // - `--only-externals` to blacklist the actual files (post parse!)
 
-  'can --remap an external to an expression': function(done) {
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-
-    var outDir = this.fixture.dir({
-      'index.js': 'module.exports = require("external");'
-    });
-
-    file.once('close', function() {
-      fs.writeFileSync(outFile,
-        'function require(str) { return "extern-" + str; }\n' +
-        fs.readFileSync(outFile));
-      var result = require(outFile);
-      assert.deepEqual(result, 'extern-LOOKUP');
-      done();
-    });
-
-    new Glue()
-      .basepath(outDir)
-      .include('./')
-      .set('cachePath', this.cachePath)
-      .set('umd', true)
-      .remap('external', 'require("LOOKUP")')
-      .render(file);
-  },
-
-/*
-  'can use the browser field to replace the main package': function(done) {
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-
-    var outDir = this.fixture.dir({
-      'index.js': 'module.exports = "original";\n',
-      'dist/browser.js': 'module.exports = "browser";\n',
-      'package.json': JSON.stringify({
-        browser: 'dist/browser.js'
-      })
-    });
-
-    file.once('close', function() {
-      var result = require(outFile);
-      assert.deepEqual(result, 'browser');
-      done();
-    });
-
-    new Glue()
-      .basepath(outDir)
-      .include('./index.js')
-      .set('cachePath', this.cachePath)
-      .set('umd', true)
-      .render(file);
-  },
-
-*/
-
-  'can use the browser field to replace a 3rd party module': function(done) {
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-
-    var outDir = this.fixture.dir({
-      'index.js': 'module.exports = require("foo");\n',
-      'node_modules/foo/index.js': 'module.exports = "foo-index";\n',
-      'node_modules/foo/dist/browser.js': 'module.exports = "foo-browser";\n',
-      'node_modules/foo/package.json': JSON.stringify({
-        main: 'index.js',
-        browser: 'dist/browser.js'
-      })
-    });
-
-    file.once('close', function() {
-      var result = require(outFile);
-      assert.deepEqual(result, 'foo-browser');
-      done();
-    });
-
-    new Glue()
-      .basepath(outDir)
-      .include('./')
-      .set('cachePath', this.cachePath)
-      .set('umd', true)
-      .render(file);
-  },
-
-  'can use the browser field to replace files in the main package': function(done) {
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-
-    var outDir = this.fixture.dir({
-      'index.js': 'module.exports = require("./lib/filters");\n',
-      'lib/filters.js': 'module.exports = "lib-filters"',
-      'lib/filters-client.js': 'module.exports = "lib-filters-client"',
-      'package.json': JSON.stringify({
-        browser: {
-          './lib/filters.js': "./lib/filters-client.js"
-        }
-      })
-    });
-    file.once('close', function() {
-      var result = require(outFile);
-      assert.deepEqual(result, 'lib-filters-client');
-      done();
-    });
-
-    new Glue()
-      .basepath(outDir)
-      .include('./')
-      .set('cachePath', this.cachePath)
-      .set('umd', true)
-      .render(file);
-  },
-
-  'can use the browser field to replace files in 3rd party': function(done) {
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-
-    var outDir = this.fixture.dir({
-      'index.js': 'module.exports = require("foo");\n',
-      'node_modules/foo/lib/filters.js': 'module.exports = "lib-filters"',
-      'node_modules/foo/lib/filters-client.js': 'module.exports = "lib-filters-client"',
-      'node_modules/foo/foobar.js': 'module.exports = require("./lib/filters");',
-      'node_modules/foo/package.json': JSON.stringify({
-        main: "foobar.js", // looks like setting main AND replacing it is not supported...
-        browser: {
-          './lib/filters.js': "./lib/filters-client.js"
-        }
-      })
-    });
-    file.once('close', function() {
-      var result = require(outFile);
-      assert.deepEqual(result, 'lib-filters-client');
-      done();
-    });
-
-    new Glue()
-      .basepath(outDir)
-      .include('./')
-      .set('cachePath', this.cachePath)
-      .set('umd', true)
-      .render(file);
-  },
-
-/*
-  'can use the browser field to replace modules in the main package': function(done) {
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-
-    var outDir = this.fixture.dir({
-      'index.js': 'module.exports = require("x");\n',
-      'package.json': JSON.stringify({
-        browser: {
-          'x': 'browser-x'
-        }
-      }),
-      'node_modules/x.js': 'module.exports = "hi-from-x";\n',
-      'node_modules/browser-x.js': 'module.exports = "hi-from-browser-x";\n'
-    });
-    file.once('close', function() {
-      var result = require(outFile);
-      assert.deepEqual(result, 'hi-from-browser-x');
-      done();
-    });
-
-    new Glue()
-      .basepath(outDir)
-      .include('./')
-      .set('cachePath', this.cachePath)
-      .set('umd', true)
-      .render(file);
-  },
-*/
-
-  'can use the browser field to replace modules in 3rd party': function(done) {
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-
-    var outDir = this.fixture.dir({
-      'index.js': 'module.exports = require("bar");\n',
-      'node_modules/bar/index.js': 'module.exports = require("abc");\n',
-      'node_modules/bar/package.json': JSON.stringify({
-        browser: {
-          'abc': 'browser-abc'
-        }
-      }),
-      'node_modules/bar/node_modules/abc/index.js': 'module.exports = "hi-from-abc";\n',
-      'node_modules/bar/node_modules/browser-abc.js': 'module.exports = "hi-from-browser-abc";\n'
-    });
-    file.once('close', function() {
-      var result = require(outFile);
-      assert.deepEqual(result, 'hi-from-browser-abc');
-      done();
-    });
-
-    new Glue()
-      .basepath(outDir)
-      .include('./')
-      .set('cachePath', this.cachePath)
-      .set('umd', true)
-      .render(file);
-  },
+  // TODO NOT IMPLEMENTED: can use the browser field to replace the main package
+  externals: require('./externals-tests.js'),
 
   // try to implement these as exclusions
 
@@ -281,7 +170,7 @@ exports['integration tests'] = {
   },
 
   // Shimming tests:
-  // - Shimming modules which export global variables
+  // - shimmed global export: modules which export global variables
 
   // Output:
   // - outputting source urls
@@ -307,14 +196,62 @@ exports['integration tests'] = {
   // Performance tests
   //
 
+  // AMD tests
+  // - output as AMD
+  // - convert from AMD to CommonJS
+
   // Middleware tests
   // - short form syntax works as expected
   // - cache preheating option
   // - middleware error messages
   // - middleware etags support
+  // - production mode
+  // - mocha test packaging mode (as plugin?)
 
   'can fetch a build using the Express middleware': function() {
+    // first
 
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = require("./second.js");',
+      'second.js': 'module.exports = "Second";'
+    });
+
+
+    var express = require('express'),
+        glue = require('gluejs'),
+        app = express();
+
+    app.use(express.static(__dirname));
+
+    // first: single main file + all deps
+    app.use('/js/main.js', glue.middleware('./client/index.js'));
+
+    // second: two external dependencies
+    app.use('/js/main.js', glue.middleware([ 'foo', 'bar' ]));
+
+    // third: paths plus options
+    app.use('/js/main.js', glue.middleware([ 'foo', 'bar' ], { ignore: 'bar' }));
+
+    // fourth: full invocation
+    app.use('/app.js', glue.middleware({
+      basepath: __dirname + '/../',
+      include: [ './express/lib/index.js', './express/foo/bar.js' ],
+      main: 'express/lib/index.js'
+    }));
+
+    app.use(function(req, res, next){
+      console.log('%s %s', req.method, req.url);
+      next();
+    });
+
+    app.listen(3000);
+    console.log('Listening on port 3000');
+  },
+
+  'when a syntax error occurs, middleware returns errors as expected': function() {
+    // returns error coce
+    // prints to console
+    // appends div (not testable)
   },
 
   'can avoid expensive operations using an etag': function() {

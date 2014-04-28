@@ -1,10 +1,16 @@
-# What's new in v2.next
+# What's new in v3
 
-gluejs v2.next adds optional dependency parsing support:
+gluejs v3.next adds dependency parsing support:
 
 - Passing `--parse` enables dependency parsing, which can figure out the full dependency graph given just a single entry point. More accurate exclusions may result in smaller output size but come with a performance cost. Note that parsing dependencies is slow (e.g. the performance is closer to browserify's performance).
+- Benefits:
+  - provides more accurate exclusion information (e.g. modules not connected from the main file can be ignored; files like package.json can often be safely excluded)
+  - allows the user to only specify `--main` without any includes
+  - allows us to auto-detect node_modules dependencies without explicit include management (making live reload possible / nice)
+  - paves way for efficient node core module support
 - The caching system has been significantly improved, with some minor performance gains and reduced file handle usage.
 - The [browser field](https://gist.github.com/defunctzombie/4339901) in package.json files is supported via [browser-resolve](https://github.com/defunctzombie/node-browser-resolve)
+- `--replace` has been deprecated in favor of `--remap`
 
 -----
 
@@ -12,22 +18,17 @@ gluejs v2.next adds optional dependency parsing support:
 
 - Parse:
   - disable the automatic excludes like `/dist/` because they mess with things like jquery
-  - transform and command options: parse the resulting file for dependencies
   - direct file requires like `require('jade/runtime')` should resolve correctly
 - get rid of the two different ways of substituting a module, only use remap for substituting a module which will only be loaded when requested rather than immediately
-- warn for unfulfilled requires
-
 - Test against parse errors causing issues, such as caching the incorrect set of dependencies.
 - Return proper error messages for parse errors when using the middleware
 
-// calculate a hash for the full list of files
-// this can be used to validate etags
-// it is based on the paths, mtimes and sizes of all files (sorted)
-// plus the current set of options passed through a MD5 hash
-// if it matches, just return the cached resource
+- Etag:
+  - when a build finishes, store a cache entry for the full build (using all the options)
+  - allow querying gluejs by the build hash, which will return the full build if it exists in the cache,
+  and otherwise do a rebuild using the given options
 
 - add `cache clean`
-- improve the autodetection code so that people don't need to supply a --main argument in default cases (e.g. when there is a index.js or there is just one file in the package)
 
 ## More features
 
@@ -57,9 +58,9 @@ gluejs v2.next adds optional dependency parsing support:
 
 Another example:
 
-    app.use('/js/deps.js', glue('./client/', { 'only-externals': true }));
+    app.use('/js/deps.js', glue({ include: './client/', 'only-externals': true }));
     // e.g. /js/foo.js => bundle containing ./client/foo.js
-    app.use('/js/', glue('./client/', { 'no-externals': true }));
+    app.use('/js/', glue({ include: './client/', 'no-externals': true }));
 
 *Preheat cache*: pre-emptively run the first build when the server starts.
 
@@ -68,6 +69,22 @@ Another example:
 Requires `debug` to be true.
 
 *Middleware etags support*: if the module bundle has not changed, then the Express middleware will completely skip rebuilding the file.
+
+*Switching between development and production modes*:
+
+- allow using the same code paths for production and dev
+- use a specific staging area folder
+  - in dev, check the upstream folders for changes
+  - in production, simply serve the staging area contents
+
+Example:
+
+    if (development) {
+      app.use();
+    } else {
+      glue.package();
+      app.use(express.static(outDir));
+    }
 
 ### Shimming non-commonJS libraries that export globals
 
@@ -134,16 +151,6 @@ This will replace `./lib/filters.js` with `./lib/filters-client.js` in the build
   - dir content changes
     - trigger full rebuild
 
-# Tasks
-
-- better metadata fetching from package.json
-  - it should be possible to pre-filter the packages (before infer packages),
-    so that devDependencies are not included in the processing
-  - version numbers should be fetched
-- ability to remap paths
-  - e.g. add a file to the root from outside the root, with a different virtual filename
-  - e.g. swap out the content a directory for the content of another one (shimming)
-
 # Evaluation
 
 - empirically based packaging / dynamic loading **
@@ -151,13 +158,6 @@ This will replace `./lib/filters.js` with `./lib/filters-client.js` in the build
 - Mocking out dependencies during testing/runtime **
 - RequireJS to CommonJS conversion
 - Easier conventions for adding a module both on the client and server side, e.g. only a node_modules entry => client side
-
-# Internals
-
-Minor, but cool features:
-
-- build non-JS resources, for example compile Jade and Handlebars templates
-- choice between throwing, or returning undefined in the require shim
 
 ## New architecture
 
@@ -236,18 +236,6 @@ TODO:
   - emit progress events (e.g. as each file is processed)
   - emit progress done event
 
-Current wrappers:
-
-- size report
-- UMD
-- commonJS
-- JSON
-
-Additional wrapping:
-
-- shimmed global export
-- pre-wrap additional module detection
-
 ## use detective and amdetective
 
 Steps:
@@ -255,37 +243,19 @@ Steps:
 - apply later stage optimizations:
   - minimize the list of --replace shimmed modules in each package output based on the real set of dependencies from all files within that package
   - add core module shimming support
-  - add support for replacing modules with other files (parsed)
-  - add support for excluding dependents of a module
 - amd:
   - config.js loading
   - better resolve error reporting
   - resolve value overrides
   - use the almond shim (?). Alternative is to just output a bundle of define()s
 
-Benefits
-
-- provides more accurate exclusion information (e.g. modules not connected from the main file can be ignored; files like package.json can often be safely excluded)
-- allows the user to only specify `--main` without any includes
-- allows us to auto-detect node_modules dependencies without explicit include management (making live reload possible / nice)
-- paves way for efficient node core module support
-
 Test cases:
 
-- browser field in package.json remaps a file to a differently named file
-- browser field in package.json remaps a module to a file
 - exclude unused file like package.json
 - include unmentioned file
 - include unmentioned module
 - apply .npmignore last
 - perf test: load large directory a couple of hundred times and ensure caching works
-
-## Production / dev
-
-- allow using the same code paths for production and dev
-- use a specific staging area folder
-  - in dev, check the upstream folders for changes
-  - in production, simply serve the staging area contents
 
 ## Tiny module optimizations
 
@@ -327,44 +297,3 @@ TODO
 There is a builtin Mocha test server task, which takes a set of tests as input and creates a server specifically for running one or more tests.
 
 If you're not using Mocha, you can still use the API to create a package and serve it (with test-framework wrapping).
-
-## How do I write dual-platform (browser + server) code using gluejs?
-
-You have probably already been targeting both platforms - by writing code that can run in either environment. However, this is just one part of dual-platform coding.
-
-Let me expand your horizon. All code falls into three categories:
-
-- Code that works anywhere
-- Code that is native on one platform, and needs to be shimmed / emulated / translated into remote procedure calls on the other
-- Code that can only run on one platform
-
-You've been writing code that works anywhere: where you explicitly avoid using API's that are not cross platform, or where you use 3rd party modules to hide the native APIs.
-
-The second category: code that is native to one platform (node / browser), and shimmed on the other is what gluejs v2's conventions are targeting. This is the basic idea:
-
-- Think of a single file (module) as a set of exports. The core file needs to be code that works anywhere - for example, data validation code in a Model usually doesn't depend on any external native APIs.
-- Take the second category code - code that is native on one platform and shimmed on another - and split it into it's own file. Now have that file require the reusable core, and extend that core.
-
-Here is an example core file `./lib/common/user.js`:
-
-    function User(age) { this.age = age; }
-
-    User.prototype.validate = function() {
-      return this.age < 200 && this.age > 0;
-    };
-
-    module.exports = User;
-
-and a shim file that extends that core `./lib/user.js`:
-
-    var fs = require('fs'),
-        User = require('./common/user.js');
-
-    User.prototype.save = function() {
-      fs.writeFileSync('~/userdata.js', JSON.stringify({ age: this.age }));
-    };
-
-    module.exports = User;
-
-
-

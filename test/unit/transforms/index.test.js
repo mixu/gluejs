@@ -177,26 +177,6 @@ exports['runQueue tests'] = {
     };
   },
 
-  'can specify a single string --command': function() {
-
-  },
-
-  'can specify an array of --commands': function() {
-
-  },
-
-  'can specify a single string --transform': function() {
-
-  },
-
-  'can specify an array of string transforms': function() {
-
-  },
-
-  'can specify a --transform function': function() {
-
-  },
-
   'running the same operation twice should hit the cache': function() {
 
   },
