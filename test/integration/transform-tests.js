@@ -4,6 +4,9 @@ var assert = require('assert'),
 
 var Glue = require('gluejs');
 
+var path = require('path'),
+    spawn = require('../../lib/file-tasks/spawn.js');
+
 module.exports = {
   'can specify a single string --command': function(done) {
     var outFile = this.fixture.filename({ ext: '.js' }),

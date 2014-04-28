@@ -101,7 +101,8 @@ API.prototype.render = function(dest) {
       basepath: self.options['basepath'],
       main: self.options['main'],
       export: self.options['export'],
-      umd: self.options['umd']
+      umd: self.options['umd'],
+      remap: self.options.remap,
     }, function(err, results) {
       cache.end();
     });
