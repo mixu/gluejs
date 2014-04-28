@@ -15,8 +15,6 @@ gluejs v2.next adds optional dependency parsing support:
   - transform and command options: parse the resulting file for dependencies
   - direct file requires like `require('jade/runtime')` should resolve correctly
 - get rid of the two different ways of substituting a module, only use remap for substituting a module which will only be loaded when requested rather than immediately
-- test using multiple transforms (CLI and middleware)
-- test using multiple commands (CLI and middleware)
 - warn for unfulfilled requires
 
 - Test against parse errors causing issues, such as caching the incorrect set of dependencies.
@@ -88,7 +86,7 @@ This wraps the file in a way that the global variable is available as `require(n
 
 *Ignoring files*. `--ignore file` replaces the file with an empty file in the build.
 
-*Mocking out dependencies for testing*: This is probably more useful when used via the Express middleware, but `--external name=path` allows specific externals to be replaced, which can be used for testing:
+*Mocking out dependencies for testing*: This is probably more useful when used via the Express middleware, but `--remap name=path` allows specific externals to be replaced, which can be used for testing:
 
     // example
 

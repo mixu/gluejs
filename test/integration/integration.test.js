@@ -26,20 +26,274 @@ exports['integration tests'] = {
   // Command / transform tests:
   // - `--command` with various options
   // - `--transform` with various options
+  transform: require('./transform-tests.js'),
 
-  // Renaming and shimming tests:
-  // - Shimming modules which export global variables
-  // - `--remap`
+  // File inclusion/exclusion
+  // - multiple `--includes`
+  // - `--exclude` should work
+  // - `--ignore` should work
+
+  'can --include multiple files': function() {
+
+  },
+
+  'can --include multiple folders': function() {
+
+  },
+
+  'can --exclude files from the build': function() {
+
+  },
+
+  'can --exclude 3rd party module paths from the build': function() {
+
+  },
+
+  'can --ignore files from the main build': function() {
+
+  },
+
+  'can --ignore 3rd party modules from the main build': function() {
+
+  },
+
+  // External module wrangling tests:
+  // - `--remap` to remap an external to an expression
   // - making use of the `browser` field in package.json to replace files and modules
+  // - `--external` to force a external to not be included
+  // - `--no-externals` to exclude all externals
+  // - `--include-external` to whitelist an external
+  // - `--only-externals` to blacklist the actual files (post parse!)
 
-  // Build splitting
-  // - `--no-externals` / `--only-externals`
+  'can --remap an external to an expression': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = require("external");'
+    });
+
+    file.once('close', function() {
+      fs.writeFileSync(outFile,
+        'function require(str) { return "extern-" + str; }\n' +
+        fs.readFileSync(outFile));
+      var result = require(outFile);
+      assert.deepEqual(result, 'extern-LOOKUP');
+      done();
+    });
+
+    new Glue()
+      .basepath(outDir)
+      .include('./')
+      .set('cachePath', this.cachePath)
+      .set('umd', true)
+      .remap('external', 'LOOKUP')
+      .render(file);
+  },
+
+  'can use the browser field to replace the main package': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = "original";\n',
+      'dist/browser.js': 'module.exports = "browser";\n',
+      'package.json': JSON.stringify({
+        browser: 'dist/browser.js'
+      })
+    });
+
+    file.once('close', function() {
+      var result = require(outFile);
+      assert.deepEqual(result, 'browser');
+      done();
+    });
+
+    new Glue()
+      .basepath(outDir)
+      .include('./')
+      .set('cachePath', this.cachePath)
+      .set('umd', true)
+      .render(file);
+  },
+
+  'can use the browser field to replace a 3rd party module': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = require("foo");\n',
+      'node_modules/foo/index.js': 'module.exports = "foo-index";\n',
+      'node_modules/foo/dist/browser.js': 'module.exports = "foo-browser";\n',
+      'node_modules/foo/package.json': JSON.stringify({
+        main: 'index.js',
+        browser: 'dist/browser.js'
+      })
+    });
+
+    file.once('close', function() {
+      var result = require(outFile);
+      assert.deepEqual(result, 'foo-browser');
+      done();
+    });
+
+    new Glue()
+      .basepath(outDir)
+      .include('./')
+      .set('cachePath', this.cachePath)
+      .set('umd', true)
+      .render(file);
+  },
+
+  'can use the browser field to replace files in the main package': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = require("./lib/filters");\n',
+      'lib/filters.js': 'module.exports = "lib-filters"',
+      'lib/filters-client.js': 'module.exports = "lib-filters-client"',
+      'package.json': JSON.stringify({
+        browser: {
+          './lib/filters.js': "./lib/filters-client.js"
+        }
+      })
+    });
+    file.once('close', function() {
+      var result = require(outFile);
+      assert.deepEqual(result, 'lib-filters-client');
+      done();
+    });
+
+    new Glue()
+      .basepath(outDir)
+      .include('./')
+      .set('cachePath', this.cachePath)
+      .set('umd', true)
+      .render(file);
+  },
+
+  'can use the browser field to replace files in 3rd party': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = require("foo");\n',
+      'node_modules/foo/lib/filters.js': 'module.exports = "lib-filters"',
+      'node_modules/foo/lib/filters-client.js': 'module.exports = "lib-filters-client"',
+      'node_modules/foo/package.json': JSON.stringify({
+        main: "lib/filters.js",
+        browser: {
+          './lib/filters.js': "./lib/filters-client.js"
+        }
+      })
+    });
+    file.once('close', function() {
+      var result = require(outFile);
+      assert.deepEqual(result, 'lib-filters-client');
+      done();
+    });
+
+    new Glue()
+      .basepath(outDir)
+      .include('./')
+      .set('cachePath', this.cachePath)
+      .set('umd', true)
+      .render(file);
+  },
+
+  'can use the browser field to replace modules in the main package': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = require("x");\n',
+      'package.json': JSON.stringify({
+        browser: {
+          'x': 'browser-x'
+        }
+      }),
+      'node_modules/x.js': 'module.exports = "hi-from-x";\n',
+      'node_modules/browser-x.js': 'module.exports = "hi-from-browser-x";\n'
+      }
+    });
+    file.once('close', function() {
+      var result = require(outFile);
+      assert.deepEqual(result, 'hi-from-browser-x');
+      done();
+    });
+
+    new Glue()
+      .basepath(outDir)
+      .include('./')
+      .set('cachePath', this.cachePath)
+      .set('umd', true)
+      .render(file);
+  },
+
+  'can use the browser field to replace modules in 3rd party': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = require("bar");\n',
+      'node_modules/bar/index.js': 'module.exports = require("abc");\n',
+      'node_modules/bar/package.json': JSON.stringify({
+        browser: {
+          'abc': 'browser-abc'
+        }
+      }),
+      'node_modules/bar/node_modules/abc/index.js': 'module.exports = "hi-from-abc";\n',
+      'node_modules/bar/node_modules/browser-abc.js': 'module.exports = "hi-from-browser-abc";\n'
+      }
+    });
+    file.once('close', function() {
+      var result = require(outFile);
+      assert.deepEqual(result, 'hi-from-browser-abc');
+      done();
+    });
+
+    new Glue()
+      .basepath(outDir)
+      .include('./')
+      .set('cachePath', this.cachePath)
+      .set('umd', true)
+      .render(file);
+  },
+
+  // try to implement these as exclusions
+
+  'can use --external to exclude externals at the main package': function() {
+
+  },
+
+  'can use --no-externals to exclude all externals': function() {
+
+  },
+
+  'can use --include-external to whitelist an external': function() {
+
+  },
+
+  'can use --only-externals to blacklist the actual files (post parse!)': function() {
+
+  },
+
+  // Shimming tests:
+  // - Shimming modules which export global variables
 
   // Output:
-  // - Source URLs and source maps
-  //  - adding in source urls
-  //  - generating external source maps
-  // - `--global-require`
+  // - outputting source urls
+  // - outputting external source maps (???)
+  // - making the global require available via `--global-require`
+
+  'can add --source-url\'s': function() {
+
+  },
+
+  'can --global-require to export the require implementation': function() {
+
+  },
 
   // Node core shimming:
   // - core variable insertion
@@ -58,231 +312,17 @@ exports['integration tests'] = {
   // - middleware error messages
   // - middleware etags support
 
-
-  'can specify a single string --command': function(done) {
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-
-    var outDir = this.fixture.dir({
-      'index.js': 'module.exports = "Index";'
-    });
-
-    file.once('close', function() {
-      var result = require(outFile);
-      assert.deepEqual(result,  'BAR');
-      done();
-    });
-
-    new Glue()
-      .basepath(outDir)
-      .include('./')
-      .set('cachePath', this.cachePath)
-      .set('command', 'bash -c "echo \'module.exports = \"BAR\";\'"')
-      .set('umd', true)
-      .render(file);
-  },
-
-  'can specify an array of string --commands': function(done) {
-    // commandline: coffee and uglifyjs
-    var inDir = this.fixture.dir({
-      'index.coffee': [
-        "square = (x) -> x * x",
-        "module.exports = square",
-        ""
-      ],
-    });
-
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-
-    file.once('close', function() {
-      var name = new Date().getTime();
-      // console.log(fs.readFileSync(outFile).toString());
-      // use standard require
-      var result = require(outFile);
-      assert.deepEqual(result(3), 9);
-      assert.deepEqual(result(5), 25);
-      done();
-    });
-
-    new Glue()
-      .basepath(inDir)
-      .include('./')
-      .set('cache', false)
-      .set('command', [
-        __dirname + '/../node_modules/coffee-script/bin/coffee --compile --stdio',
-        __dirname + '/../node_modules/.bin/uglifyjs',
-      ])
-      .main('index.coffee')
-      .export('module.exports')
-      .render(file);
+  'can fetch a build using the Express middleware': function() {
 
   },
 
-  'can specify an array of function --commands': function(done) {
-    // jade
-    var outDir = this.fixture.dir({
-      'foo.jade': [
-        "h1",
-        "  | Hello",
-        "  = ' ' + name"
-      ],
-      'index.js': 'module.exports = require("./foo.jade");'
-    });
+  'can avoid expensive operations using an etag': function() {
 
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-
-    file.once('close', function() {
-      var name = new Date().getTime();
-      var result = require(outFile);
-      // use standard require
-      var result = result({ name: name });
-      assert.deepEqual(result, '<h1>Hello '+name+'</h1>');
-      done();
-    });
-
-    // There are way too many internals exposed here ... must encapsulate these better.
-
-    new Glue()
-      .basepath(outDir)
-      .include('./index.js')
-      .set('cache', false)
-      .set('require', false)
-      .set('command', [
-        function(filename) {
-          if(path.extname(filename) != '.jade') {
-            return;
-          }
-          return function() {
-            return spawn({
-              name: filename, // full path
-              task: __dirname + '/../node_modules/.bin/jade --client --no-debug'
-            });
-          };
-        },
-        // NOTE: run the uglify beautify on the jade output (not on the partial produced by the
-        // CJS wrapper...
-        function(filename) {
-          if(path.extname(filename) != '.jade') {
-            return;
-          }
-          return function() {
-            return spawn({
-              name: filename, // full path
-              task: __dirname + '/../node_modules/.bin/uglifyjs --no-copyright --beautify'
-            });
-          };
-        },
-        // wrapper:
-        // var jade = require("jade").runtime; module.exports = <input>;
-        function(filename) {
-          if(path.extname(filename) != '.jade') {
-            return;
-          }
-          return function(input) {
-            // workaround for the fact that these things reside in a temp directory
-            // and so do not have jade in their immediate path
-            return 'var jade = require("' + __dirname + '/../node_modules/jade/runtime'+ '");\n' +
-                   'module.exports = ' + (input.length === 0 ? '{}' : input);
-          };
-        }
-      ])
-      .main('foo.jade')
-      .export('module.exports')
-      .render(file);
   },
 
-  // transforms should only be strings - if you want
-  // to specify things programmatically, use set('command', [ fn ])
-
-  'can specify a single string --transform': function(done) {
-    var inDir = this.fixture.dir({
-      'robot.html': 'I am a robot',
-      'test.brfs.js': [
-        "var fs = require('fs');",
-        "var html = fs.readFileSync(__dirname + '/robot.html');",
-        "module.exports = html;",
-        ""
-      ],
-    });
-
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-
-    file.once('close', function() {
-      var name = new Date().getTime();
-      // console.log(fs.readFileSync(outFile).toString());
-      // use standard require
-      var result = require(outFile);
-      assert.deepEqual(result, 'I am a robot');
-      done();
-    });
-
-    new Glue()
-      .basepath(inDir)
-      .include('./test.brfs.js')
-      .set('cache', false)
-      .set('require', false)
-      .set('transform', 'brfs')
-      .main('test.brfs.js')
-      .export('module.exports')
-      .render(file);
-  },
-
-  'can specify an array of string transforms': function(done) {
-    // coffeify plus run brfs
-    var inDir = this.fixture.dir({
-      'robot.html': 'I am a robot',
-      'test.coffee': [
-        "square = (x) -> x * x",
-        "module.exports = { square: square, robot: require('fs').readFileSync(__dirname + '/robot.html') }",
-        ""
-      ],
-    });
-
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-
-    file.once('close', function() {
-      var name = new Date().getTime();
-      // console.log(fs.readFileSync(outFile).toString());
-      // use standard require
-      var result = require(outFile);
-      assert.deepEqual(result.square(3), 9);
-      assert.deepEqual(result.square(5), 25);
-      assert.deepEqual(result.robot, 'I am a robot');
-      done();
-    });
-
-    new Glue()
-      .basepath(inDir)
-      .include('./test.coffee')
-      .set('cache', false)
-      .set('transform', [ 'coffeeify', 'brfs' ])
-      .main('test.coffee')
-      .export('module.exports')
-      .render(file);
-  },
+  // Other
 
   'can build a basic module with an external dependency and uglify': function() {
-
-  },
-
-  'can --exclude files from the build': function() {
-
-  },
-
-  'can --rename a module': function() {
-    // to a different file
-    // to an external
-  },
-
-  'can add --source-url\'s': function() {
-
-  },
-
-  'can --global-require to export the require implementation': function() {
 
   },
 
@@ -291,14 +331,6 @@ exports['integration tests'] = {
   },
 
   'can build with --no-parse': function() {
-
-  },
-
-  'can fetch a build using the Express middleware': function() {
-
-  },
-
-  'can avoid expensive operations using an etag': function() {
 
   }
 
