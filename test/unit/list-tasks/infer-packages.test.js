@@ -2,14 +2,21 @@ var assert = require('assert'),
     util = require('util');
 
 var infer = require('../../../lib/list-tasks/infer-packages.js'),
-    List = require('minitask').list,
-    FixtureGen = require('../../lib/fixture-gen.js');
+    FixtureGen = require('../../lib/fixture-gen.js'),
+    Cache = require('minitask').Cache,
+    runTasks = require('../../../lib/runner/transforms/index.js');
+
 
 function pluck(key, obj) {
   var o = { };
   o[key] = obj[key];
   return o;
 }
+
+var cache = Cache.instance({
+    method: 'stat',
+    path: require('os').tmpDir() + '/gluejs-' + new Date().getTime()
+});
 
 var fixtureGen = new FixtureGen();
 
@@ -20,32 +27,30 @@ function byName(a, b) {
 function fixtureDir(spec, onDone) {
   // set up fixture
   var outDir = fixtureGen.dir(spec);
-  var list = new List();
-  list.add(outDir);
-  list.exec(function(err, files) {
-    files = files.filter(function(item) {
-      return item.stat.isFile();
-    }).sort(byName);
-    onDone(outDir, { files: files });
+
+  runTasks({
+    include: outDir,
+    cache: cache
+  }, function(err, results) {
+    if (err) {
+      throw err;
+    }
+    onDone(outDir, results);
+  })
+}
+
+function assertHasFilenames(actual, expected) {
+  expected.forEach(function(filepath) {
+    assert.ok(actual.some(function(obj) {
+      return obj.filename === filepath
+    }), 'a file named ' + expected + ' should exist in the output '+ JSON.stringify(actual));
   });
 }
 
-// strip out the .stat items since we don't check the stat values in the assertions
-function removeStat(list) {
-  list.files = list.files.map(function(item) {
-    delete item.stat;
-    return item;
-  }).sort(byName);
-
-  list.packages = list.packages.map(function(item) {
-    delete item.stat;
-    item.files = item.files.map(function(sub) {
-      delete sub.stat;
-      return sub;
-    }).sort(byName);
-    return item;
+function assertPartialDeepEqual(actual, expected) {
+  Object.keys(expected).forEach(function(key) {
+    assert.deepEqual(actual[key], expected[key]);
   });
-  return list;
 }
 
 exports['infer-packages'] = {
@@ -53,17 +58,16 @@ exports['infer-packages'] = {
   'can infer a single-file package': function(done) {
     fixtureDir({
       'simple.js': 'module.exports = true;'
-    }, function(outDir, list) {
-      infer(list, { basepath: outDir });
-      list = removeStat(list);
-      // console.log(util.inspect(list, null, 10, true));
-      assert.equal(list.packages.length, 1);
+    }, function(outDir, files) {
+      var packages = infer(files, { basepath: outDir });
+      // console.log(util.inspect(packages, null, 10, true));
+      assert.equal(packages.length, 1);
       // the root (or base) package should be anonymous (=> name is given by the user)
-      assert.ok(typeof list.packages[0].name == 'undefined');
-      assert.equal(list.packages[0].basepath, outDir);
-      assert.ok(typeof list.packages[0].main == 'undefined');
+      assert.ok(typeof packages[0].name == 'undefined');
+      assert.equal(packages[0].basepath, outDir);
+      assert.ok(typeof packages[0].main == 'undefined');
       // the package files should be correct
-      assert.deepEqual(list.packages[0].files, [ { name: outDir + '/simple.js' } ]);
+      assertHasFilenames(packages[0].files, [ outDir + '/simple.js']);
       done();
     });
   },
@@ -72,63 +76,50 @@ exports['infer-packages'] = {
     fixtureDir({
       'index.js': 'module.exports = true;',
       'node_modules/foo.js': 'module.exports = true;'
-    }, function(outDir, list) {
-      infer(list, { basepath: outDir });
-      list = removeStat(list);
-      // console.log(util.inspect(list, null, 10, true));
-      assert.equal(list.packages.length, 2);
+    }, function(outDir, files) {
+      var packages = infer(files, { basepath: outDir });
+      // console.log(util.inspect(packages, null, 10, true));
+      assert.equal(packages.length, 2);
       // the root (or base) package should be anonymous (=> name is given by the user)
-      assert.ok(typeof list.packages[0].name == 'undefined');
+      assert.ok(typeof packages[0].name == 'undefined');
       // the package files should be correct
-      assert.deepEqual(list.packages[0].files, [ { name: outDir + '/index.js' } ]);
-      assert.deepEqual(list.packages[0].dependenciesById, { foo: 1 });
+      assertHasFilenames(packages[0].files, [ outDir + '/index.js']);
+//      assert.deepEqual(packages[0].dependenciesById, { foo: 1 });
 
       // foo package
-      assert.equal(list.packages[1].name, 'foo');
-      assert.equal(list.packages[1].basepath, outDir + '/node_modules/');
-      assert.equal(list.packages[1].main, 'foo.js');
-      assert.deepEqual(list.packages[1].files, [ { name: outDir + '/node_modules/foo.js' } ]);
-      assert.deepEqual(list.packages[1].dependenciesById, { });
+      assert.equal(packages[1].name, 'foo');
+      assert.equal(packages[1].basepath, outDir + '/node_modules/');
+      assert.equal(packages[1].main, 'foo.js');
+      assertHasFilenames(packages[1].files, [ outDir + '/node_modules/foo.js' ]);
+//      assert.deepEqual(packages[1].dependenciesById, { });
       done();
     });
   },
 
   'can infer two packages from module-folder': function(done) {
-    var list = {
-      files: [
-      ].map(function(file) { return { name: file }; }),
-      fakeFS: {
-        existsSync: function(name) {
-          return list.files.some(function(item) {
-            return item.name == name;
-          });
-        },
-      }
-    };
     fixtureDir({
       'index.js': 'module.exports = true;',
       'node_modules/foo/index.js': 'module.exports = true;',
       'node_modules/foo/lib/sub.js': 'module.exports = true;'
-    }, function(outDir, list) {
-      infer(list, { basepath: outDir });
-      list = removeStat(list);
-      // console.log(util.inspect(list, null, 10, true));
-      assert.equal(list.packages.length, 2);
+    }, function(outDir, files) {
+      var packages = infer(files, { basepath: outDir });
+      // console.log(util.inspect(packages, null, 10, true));
+      assert.equal(packages.length, 2);
       // the root (or base) package should be anonymous (=> name is given by the user)
-      assert.ok(typeof list.packages[0].name == 'undefined');
+      assert.ok(typeof packages[0].name == 'undefined');
       // the package files should be correct
-      assert.deepEqual(list.packages[0].files, [ { name: outDir + '/index.js' } ]);
-      assert.deepEqual(list.packages[0].dependenciesById, { foo: 1 });
+      assertHasFilenames(packages[0].files, [ outDir + '/index.js']);
+//      assert.deepEqual(packages[0].dependenciesById, { foo: 1 });
 
       // foo package
-      assert.equal(list.packages[1].name, 'foo');
-      assert.equal(list.packages[1].basepath, outDir + '/node_modules/foo/');
-      assert.equal(list.packages[1].main, 'index.js');
-      assert.deepEqual(list.packages[1].files, [
-        { name: outDir + '/node_modules/foo/index.js'  },
-        { name: outDir + '/node_modules/foo/lib/sub.js' }
-        ]);
-      assert.deepEqual(list.packages[1].dependenciesById, { });
+      assert.equal(packages[1].name, 'foo');
+      assert.equal(packages[1].basepath, outDir + '/node_modules/foo/');
+      assert.equal(packages[1].main, 'index.js');
+      assertHasFilenames(packages[1].files, [
+        outDir + '/node_modules/foo/index.js',
+        outDir + '/node_modules/foo/lib/sub.js'
+      ]);
+//      assert.deepEqual(packages[1].dependenciesById, { });
       done();
     });
   },
@@ -139,26 +130,25 @@ exports['infer-packages'] = {
       'node_modules/foo/main.js': 'module.exports = true;',
       'node_modules/foo/lib/sub.js': 'module.exports = true;',
       'node_modules/foo/package.json': '{ "main": "main.js" }'
-    }, function(outDir, list) {
-      infer(list, { basepath: outDir });
-      list = removeStat(list);
-      // console.log(util.inspect(list, null, 10, true));
-      assert.equal(list.packages.length, 2);
+    }, function(outDir, files) {
+      var packages = infer(files, { basepath: outDir });
+      // console.log(util.inspect(packages, null, 10, true));
+      assert.equal(packages.length, 2);
       // the root (or base) package should be anonymous (=> name is given by the user)
-      assert.ok(typeof list.packages[0].name == 'undefined');
+      assert.ok(typeof packages[0].name == 'undefined');
       // the package files should be correct
-      assert.deepEqual(list.packages[0].files, [ { name: outDir + '/index.js' } ]);
-      assert.deepEqual(list.packages[0].dependenciesById, { foo: 1 });
+      assertHasFilenames(packages[0].files, [ outDir + '/index.js']);
+//      assert.deepEqual(packages[0].dependenciesById, { foo: 1 });
 
       // foo package
-      assert.equal(list.packages[1].name, 'foo');
-      assert.equal(list.packages[1].basepath, outDir + '/node_modules/foo/');
-      assert.equal(list.packages[1].main, 'main.js');
-      assert.deepEqual(list.packages[1].files, [
-        { name: outDir + '/node_modules/foo/main.js' },
-        { name: outDir + '/node_modules/foo/package.json' } ,
-        { name: outDir + '/node_modules/foo/lib/sub.js' } ].sort(byName));
-      assert.deepEqual(list.packages[1].dependenciesById, { });
+      assert.equal(packages[1].name, 'foo');
+      assert.equal(packages[1].basepath, outDir + '/node_modules/foo/');
+      assert.equal(packages[1].main, 'main.js');
+      assertHasFilenames(packages[1].files, [
+        outDir + '/node_modules/foo/main.js',
+        outDir + '/node_modules/foo/package.json',
+        outDir + '/node_modules/foo/lib/sub.js' ]);
+//      assert.deepEqual(packages[1].dependenciesById, { });
       done();
     });
   },
@@ -170,38 +160,48 @@ exports['infer-packages'] = {
       'node_modules/aa/node_modules/bb.js': 'module.exports = true;',
       'node_modules/aa/node_modules/cc/differentfile.js': 'module.exports = true;',
       'node_modules/aa/node_modules/cc/package.json': '{ "main": "differentfile.js" }'
-    }, function(outDir, list) {
-      infer(list, { basepath: outDir });
-      list = removeStat(list);
-      // console.log(util.inspect(list.packages, null, 10, true));
+    }, function(outDir, files) {
+      var packages = infer(files, { basepath: outDir });
+      // console.log(util.inspect(packages, null, 10, true));
 
-      assert.equal(list.packages.length, 4);
-      assert.deepEqual(list.packages,
-        [
-        { files: [ { name: outDir + '/index.js' } ],
-          basepath: outDir,
-          main: 'index.js',
-          dependenciesById: { aa: 1 } },
-        { name: 'aa',
-          uid: 1,
-          basepath: outDir + '/node_modules/aa/',
-          main: 'index.js',
-          files: [ { name: outDir + '/node_modules/aa/index.js' } ],
-          dependenciesById: { bb: 2, cc: 3 } },
-        { name: 'bb',
-          uid: 2,
-          basepath: outDir + '/node_modules/aa/node_modules/',
-          main: 'bb.js',
-          files: [ { name: outDir + '/node_modules/aa/node_modules/bb.js' } ],
-          dependenciesById: {} },
-        { name: 'cc',
-          uid: 3,
-          basepath: outDir + '/node_modules/aa/node_modules/cc/',
-          main: 'differentfile.js',
-          files:
-           [ { name: outDir + '/node_modules/aa/node_modules/cc/differentfile.js' },
-             { name: outDir + '/node_modules/aa/node_modules/cc/package.json' } ],
-          dependenciesById: {} } ]);
+      assert.equal(packages.length, 4);
+
+      assertPartialDeepEqual(packages[0], {
+        basepath: outDir,
+        main: 'index.js',
+//        dependenciesById: { aa: 1 }
+      });
+      assertHasFilenames(packages[0].files, [ outDir + '/index.js' ]);
+
+      assertPartialDeepEqual(packages[1], {
+        name: 'aa',
+        uid: 1,
+        basepath: outDir + '/node_modules/aa/',
+        main: 'index.js',
+//        dependenciesById: { bb: 2, cc: 3 }
+      });
+      assertHasFilenames(packages[1].files, [ outDir + '/node_modules/aa/index.js' ]);
+
+      assertPartialDeepEqual(packages[2],{
+        name: 'bb',
+        uid: 2,
+        basepath: outDir + '/node_modules/aa/node_modules/',
+        main: 'bb.js',
+//        dependenciesById: {}
+      });
+      assertHasFilenames(packages[2].files,
+        [ outDir + '/node_modules/aa/node_modules/bb.js' ]);
+
+      assertPartialDeepEqual(packages[3], {
+        name: 'cc',
+        uid: 3,
+        basepath: outDir + '/node_modules/aa/node_modules/cc/',
+        main: 'differentfile.js',
+//        dependenciesById: {}
+      });
+      assertHasFilenames(packages[3].files, [
+        outDir + '/node_modules/aa/node_modules/cc/differentfile.js',
+        outDir + '/node_modules/aa/node_modules/cc/package.json']);
       done();
     });
   },
@@ -210,23 +210,26 @@ exports['infer-packages'] = {
     fixtureDir({
       'a/index.js': 'module.exports = true;',
       'a/node_modules/b.json': '{}'
-    }, function(outDir, list) {
-      infer(list, { basepath: outDir });
-      list = removeStat(list);
-      // console.log(util.inspect(list, null, 10, true));
-      assert.equal(list.packages.length, 2);
-      assert.deepEqual(list.packages,
-       [
-        { files: [ { name: outDir + '/a/index.js' } ],
-         basepath: outDir,
-         main: 'index.js',
-         dependenciesById: { b: 1 } },
-        { name: 'b',
-         uid: 1,
-         basepath: outDir + '/a/node_modules/',
-         main: 'b.json',
-         files: [ { name: outDir + '/a/node_modules/b.json' } ],
-         dependenciesById: {} } ]);
+    }, function(outDir, files) {
+      var packages = infer(files, { basepath: outDir });
+      // console.log(util.inspect(packages, null, 10, true));
+      assert.equal(packages.length, 2);
+
+      assertPartialDeepEqual(packages[0], {
+        basepath: outDir,
+        main: 'index.js',
+//        dependenciesById: { b: 1 }
+      });
+      assertHasFilenames(packages[0].files, [ outDir + '/a/index.js']);
+      assertPartialDeepEqual(packages[1], {
+        name: 'b',
+        uid: 1,
+        basepath: outDir + '/a/node_modules/',
+        main: 'b.json',
+//        dependenciesById: {}
+      });
+      assertHasFilenames(packages[1].files, [ outDir + '/a/node_modules/b.json' ]);
+
       done();
     });
   },
@@ -236,24 +239,26 @@ exports['infer-packages'] = {
       'a/index.js': 'module.exports = true;',
       'a/node_modules/b/alt.js': 'module.exports = true;',
       'a/node_modules/b/package.json': '{ "main": "alt" }',
-    }, function(outDir, list) {
-      infer(list, { basepath: outDir });
-      list = removeStat(list);
-      // console.log(util.inspect(list, null, 10, true));
-      assert.equal(list.packages.length, 2);
-      assert.deepEqual(list.packages, [
-       { files: [ { name: outDir + '/a/index.js' } ],
-         basepath: outDir,
-         main: 'index.js',
-         dependenciesById: { b: 1 } },
-       { name: 'b',
-         uid: 1,
-         basepath: outDir + '/a/node_modules/b/',
-         main: 'alt.js',
-         files:
-          [ { name: outDir + '/a/node_modules/b/alt.js' },
-            { name: outDir + '/a/node_modules/b/package.json' } ],
-         dependenciesById: {} } ]);
+    }, function(outDir, files) {
+      var packages = infer(files, { basepath: outDir });
+      // console.log(util.inspect(packages, null, 10, true));
+      assert.equal(packages.length, 2);
+
+      assertPartialDeepEqual(packages[0], {
+        basepath: outDir,
+        main: 'index.js',
+//        dependenciesById: { b: 1 }
+      });
+      assertHasFilenames(packages[0].files, [ outDir + '/a/index.js']);
+      assertPartialDeepEqual(packages[1],{ name: 'b',
+        uid: 1,
+        basepath: outDir + '/a/node_modules/b/',
+        main: 'alt.js',
+//        dependenciesById: {}
+      });
+      assertHasFilenames(packages[1].files,
+        [ outDir + '/a/node_modules/b/alt.js',
+          outDir + '/a/node_modules/b/package.json' ]);
       done();
     });
   },
@@ -263,24 +268,27 @@ exports['infer-packages'] = {
       'a/index.js': 'module.exports = true;',
       'a/node_modules/b/lib/index.js': 'module.exports = true;',
       'a/node_modules/b/package.json': '{ "main" : "./lib" }'
-    }, function(outDir, list) {
-      infer(list, { basepath: outDir });
-      list = removeStat(list);
-      // console.log(util.inspect(list, null, 10, true));
-      assert.equal(list.packages.length, 2);
-      assert.deepEqual(list.packages,  [ {
-        files: [ { name: outDir + '/a/index.js' } ],
+    }, function(outDir, files) {
+      var packages = infer(files, { basepath: outDir });
+      // console.log(util.inspect(packages, null, 10, true));
+      assert.equal(packages.length, 2);
+
+      assertPartialDeepEqual(packages[0], {
         basepath: outDir,
         main: 'index.js',
-        dependenciesById: { b: 1 } },
-       { name: 'b',
-         uid: 1,
-         basepath: outDir + '/a/node_modules/b/',
-         main: 'lib/index.js',
-         files:
-          [ { name: outDir + '/a/node_modules/b/package.json' },
-            { name: outDir + '/a/node_modules/b/lib/index.js' } ].sort(byName),
-         dependenciesById: {} } ]);
+//        dependenciesById: { b: 1 }
+      });
+      assertHasFilenames(packages[0].files, [ outDir + '/a/index.js']);
+      assertPartialDeepEqual(packages[1], {
+        name: 'b',
+        uid: 1,
+        basepath: outDir + '/a/node_modules/b/',
+        main: 'lib/index.js',
+//        dependenciesById: {}
+      });
+      assertHasFilenames(packages[1].files,
+        [ outDir + '/a/node_modules/b/package.json',
+          outDir + '/a/node_modules/b/lib/index.js' ]);
       done();
     });
   },
@@ -290,25 +298,27 @@ exports['infer-packages'] = {
       'a/index.js': 'module.exports = true;',
       'a/node_modules/b/url.js': 'module.exports = true;',
       'a/node_modules/b/package.json': ' { "main": "./foo/../url.js" }'
-    }, function(outDir, list) {
-      infer(list, { basepath: outDir });
-      list = removeStat(list);
-      // console.log(util.inspect(list, null, 10, true));
-      assert.equal(list.packages.length, 2);
-      assert.deepEqual(list.packages,  [
-        {
-         files: [ { name: outDir + '/a/index.js' } ],
-         basepath: outDir,
-         main: 'index.js',
-         dependenciesById: { b: 1 } },
-       { name: 'b',
-         uid: 1,
-         basepath: outDir + '/a/node_modules/b/',
-         main: 'url.js',
-         files:
-          [ { name: outDir + '/a/node_modules/b/url.js' },
-            { name: outDir + '/a/node_modules/b/package.json' } ].sort(byName),
-         dependenciesById: {} } ]);
+    }, function(outDir, files) {
+      var packages = infer(files, { basepath: outDir });
+      // console.log(util.inspect(packages, null, 10, true));
+      assert.equal(packages.length, 2);
+
+      assertPartialDeepEqual(packages[0], {
+        basepath: outDir,
+        main: 'index.js',
+//        dependenciesById: { b: 1 }
+      });
+      assertHasFilenames(packages[0].files, [ outDir + '/a/index.js']);
+      assertPartialDeepEqual(packages[1], {
+        name: 'b',
+        uid: 1,
+        basepath: outDir + '/a/node_modules/b/',
+        main: 'url.js',
+//        dependenciesById: {}
+      });
+      assertHasFilenames(packages[1].files,
+        [ outDir + '/a/node_modules/b/url.js',
+          outDir + '/a/node_modules/b/package.json' ]);
       done();
     });
   },
@@ -331,26 +341,29 @@ exports['infer-packages'] = {
         }
       }),
       // 'a/node_modules/c.js': 'module.exports = true;'
-    }, function(outDir, list) {
-      infer(list, { basepath: outDir + '/a/'  });
-      list = removeStat(list);
-      // console.log(util.inspect(list, null, 10, true));
-      assert.equal(list.packages.length, 2);
-      assert.deepEqual(list.packages,  [
-       { files:
-          [ { name: outDir + '/a/index.js' },
-            { name: outDir + '/a/package.json' } ].sort(byName),
-         basepath: outDir + '/a/',
-         main: 'index.js',
-         dependenciesById: { b: 1, d: null } },
-       { name: 'b',
-         uid: 1,
-         basepath: outDir + '/a/node_modules/b/',
-         main: 'url.js',
-         files:
-          [ { name: outDir + '/a/node_modules/b/url.js' },
-            { name: outDir + '/a/node_modules/b/package.json' } ].sort(byName),
-         dependenciesById: { c: null } } ]);
+    }, function(outDir, files) {
+      var packages = infer(files, { basepath: outDir + '/a/' });
+      // console.log(util.inspect(packages, null, 10, true));
+      assert.equal(packages.length, 2);
+
+      assertPartialDeepEqual(packages[0], {
+        basepath: outDir + '/a/',
+        main: 'index.js',
+//        dependenciesById: { b: 1, d: null }
+      });
+      assertHasFilenames(packages[0].files,
+        [ outDir + '/a/index.js',
+          outDir + '/a/package.json' ]);
+      assertPartialDeepEqual(packages[1], {
+        name: 'b',
+        uid: 1,
+        basepath: outDir + '/a/node_modules/b/',
+        main: 'url.js',
+//        dependenciesById: { c: null }
+      });
+      assertHasFilenames(packages[1].files,
+        [ outDir + '/a/node_modules/b/url.js',
+          outDir + '/a/node_modules/b/package.json']);
       done();
     });
   }

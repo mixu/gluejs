@@ -3,19 +3,98 @@ var assert = require('assert'),
     fs = require('fs');
 
 var Minilog = require('minilog');
-var FixtureGen = require('../../lib/fixture-gen.js'),
+var FixtureGen = require('../lib/fixture-gen.js'),
     Cache = require('minitask').Cache,
-    runner = require('../../../lib/runner/commonjs2/index.js');
+    Glue = require('gluejs');
 
 exports['package generator tests'] = {
 
   before: function() {
     this.fixture = new FixtureGen();
     Minilog.enable();
-    this.cache = Cache.instance({
-        method: 'stat',
-        path: require('os').tmpDir() + '/gluejs-' + new Date().getTime()
+    this.cachePath = require('os').tmpDir() + '/gluejs-' + new Date().getTime();
+  },
+
+  'can package a single file': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = "Index";'
     });
+
+    file.once('close', function() {
+      var result = require(outFile);
+      // console.log(fs.readFileSync(outFile).toString());
+      assert.deepEqual(result, "Index");
+      done();
+    });
+
+    new Glue()
+      .include(outDir)
+      .set('cachePath', this.cachePath)
+      .set('umd', true)
+      .render(file);
+  },
+
+  'can package additional files': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = require("./second.js");',
+      'second.js': 'module.exports = "Second";'
+    });
+
+    file.once('close', function() {
+      var result = require(outFile);
+      // console.log(fs.readFileSync(outFile).toString());
+      assert.deepEqual(result,  'Second');
+      done();
+    });
+
+    new Glue()
+    .include(outDir)
+    .set('cachePath', this.cachePath)
+    .set('umd', true)
+    .render(file);
+  },
+
+  'can specify a single string --command': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = "Index";'
+    });
+
+    file.once('close', function() {
+      var result = require(outFile);
+      assert.deepEqual(result,  'BAR');
+      done();
+    });
+
+    new Glue()
+      .basepath(outDir)
+      .include('./')
+      .set('cachePath', this.cachePath)
+      .set('command', 'bash -c "echo \'module.exports = \"BAR\";\'"')
+      .set('umd', true)
+      .render(file);
+  },
+
+  'can specify an array of --commands': function() {
+
+  },
+
+  'can specify a single string --transform': function() {
+
+  },
+
+  'can specify an array of string transforms': function() {
+
+  },
+
+  'can specify a --transform function': function() {
+
   },
 
   'can build a basic module with an external dependency and uglify': function() {
@@ -47,26 +126,27 @@ exports['package generator tests'] = {
 
   },
 
-  'can build a JSON file': function() {
+  'can build a JSON file': function(done) {
     var outFile = this.fixture.filename({ ext: '.js' }),
         file = fs.createWriteStream(outFile);
 
-    var inDir = this.fixture.dir({
+    var outDir = this.fixture.dir({
       'index.js': 'module.exports = require("./foo.json");\n',
       'foo.json': '{ "foo": "bar" }\n'
     });
 
     file.once('close', function() {
       var result = require(outFile);
+      // console.log(fs.readFileSync(outFile).toString());
       assert.deepEqual(result,  { foo: "bar" });
       done();
     });
 
     new Glue()
-      .basepath(inDir)
+      .basepath(outDir)
       .include('./')
-      .set('cache', false)
-      .export('module.exports')
+      .set('cachePath', this.cachePath)
+      .set('umd', true)
       .render(file);
   },
 
@@ -83,3 +163,18 @@ exports['package generator tests'] = {
   }
 
 };
+
+// if this module is the script being run, then run the tests:
+if (module == require.main) {
+  var mocha = require('child_process').spawn('mocha', [
+    '--colors', '--ui', 'exports', '--reporter', 'spec', __filename
+  ]);
+  mocha.stderr.on('data', function (data) {
+    if (/^execvp\(\)/.test(data)) {
+     console.log('Failed to start child process. You need mocha: `npm install -g mocha`');
+    }
+  });
+  mocha.stdout.pipe(process.stdout);
+  mocha.stderr.pipe(process.stderr);
+}
+

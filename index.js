@@ -41,6 +41,18 @@ API.prototype.render = function(dest) {
     this.options['cache-method'] = 'stat';
   }
 
+  if (!this.options.basepath) {
+    this.options.basepath = Array.isArray(this.options.include) ?
+      this.options.include[0] : this.options.include;
+  } else {
+    // resolve all relative includes
+    this.options.include = (Array.isArray(this.options.include) ?
+      this.options.include : [ this.options.include ]).map(function(filepath) {
+        return path.resolve(self.options.basepath, filepath);
+      });
+  }
+
+
   // Create the shared cache instance
   var cacheHash = Cache.hash(JSON.stringify(this.options));
   var cache = Cache.instance({
@@ -52,8 +64,8 @@ API.prototype.render = function(dest) {
   // run any tasks and parse dependencies (mapper)
   runTasks({
     cache: cache,
-    include: this.options.include
-
+    include: this.options.include,
+    command: this.options.command
     // TODO
     // --reset-exclude should also reset the pre-processing exclusion
     // if (this.options['reset-exclude']) {
@@ -64,7 +76,7 @@ API.prototype.render = function(dest) {
     //   self.options._rename[normalized] = canonical;
     // };
 
-  }, function(err, results) {
+  }, function(err, files) {
     // create a stream capturer if we want the result as callback result
     var capture;
     if (typeof dest == 'function') {
@@ -80,12 +92,13 @@ API.prototype.render = function(dest) {
       });
     }
 
-    // take the results and package them as a single file (reducer)
+    // take the files and package them as a single file (reducer)
     packageCommonJs({
       cache: cache,
-      list: results,
+      files: files,
       out: capture ? capture : dest,
-      basepath: self.options['basepath']
+      basepath: self.options['basepath'],
+      umd: self.options['umd']
     }, function(err, results) {
       cache.end();
     });

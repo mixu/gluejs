@@ -28,7 +28,7 @@ exports['package generator tests'] = {
     runner({
       basepath: outDir,
       cache: this.cache,
-      list: [
+      files: [
         {
           filename: outDir + '/index.js',
           content: outDir + '/index.js',
@@ -56,7 +56,7 @@ exports['package generator tests'] = {
     runner({
       basepath: outDir,
       cache: this.cache,
-      list: [
+      files: [
          {
           filename: outDir + '/index.js',
           content: outDir + '/index.js',
