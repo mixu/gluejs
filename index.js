@@ -65,7 +65,8 @@ API.prototype.render = function(dest) {
   runTasks({
     cache: cache,
     include: this.options.include,
-    command: this.options.command
+    command: this.options.command,
+    transform: this.options.transform
     // TODO
     // --reset-exclude should also reset the pre-processing exclusion
     // if (this.options['reset-exclude']) {
@@ -98,6 +99,8 @@ API.prototype.render = function(dest) {
       files: files,
       out: capture ? capture : dest,
       basepath: self.options['basepath'],
+      main: self.options['main'],
+      export: self.options['export'],
       umd: self.options['umd']
     }, function(err, results) {
       cache.end();
