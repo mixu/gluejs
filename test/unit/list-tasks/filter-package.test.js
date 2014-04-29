@@ -2,191 +2,183 @@ var assert = require('assert'),
     util = require('util');
 
 var infer = require('../../../lib/list-tasks/infer-packages.js'),
-    filter = require('../../../lib/list-tasks/filter-packages.js');
+    filter = require('../../../lib/list-tasks/filter-packages.js'),
+    FixtureGen = require('../../lib/fixture-gen.js'),
+    Cache = require('minitask').Cache,
+    runTasks = require('../../../lib/runner/transforms/index.js');
 
-var cases = {
+var cache = Cache.instance({
+    method: 'stat',
+    path: require('os').tmpDir() + '/gluejs-' + new Date().getTime()
+});
 
-  'package.json whitelist' : { files: [
-      '/a/excludeme.js',
-      '/a/included_file.js',
-      '/a/included_file.foobar',
-      '/a/package.json',
-      '/a/excluded_directory/aaa.js',
-      '/a/included_directory/bbb.js',
-      '/a/included_directory/ccc/ddd.js'
-    ],
-    fakeFS: {
-      existsSync: function(name) {
-        return !!(name == '/a/package.json');
-      },
+var fixtureGen = new FixtureGen();
+
+function fixtureDir(outDir, include, onDone) {
+  // set up fixture
+  runTasks({
+    include: include,
+    cache: cache
+  }, function(err, results) {
+    if (err) {
+      throw err;
+    }
+    onDone(outDir, results);
+  })
+}
+
+exports['filter-package'] = {
+
+  'can exclude via package.json whitelist': function(done) {
+    var outDir = fixtureGen.dir({
+      '/a/excludeme.js': 'module.exports = true;',
+      '/a/included_file.js': 'module.exports = true;',
+      '/a/included_file.foobar': 'abc',
       '/a/package.json': JSON.stringify({
         files: [
-          '/a/included_directory',
-          '/a/included_file.js',
-          '/a/included_file.foobar'
+          'included_directory',
+          'included_file.js',
+          'included_file.foobar'
         ]
-      })
-    }
+      }),
+      '/a/excluded_directory/aaa.js': 'module.exports = true;',
+      '/a/included_directory/bbb.js': 'module.exports = true;',
+      '/a/included_directory/ccc/ddd.js': 'module.exports = true;'
+    });
+    fixtureDir(outDir, outDir,
+      function(outDir, files) {
+      // first, infer the package structure
+      var packages = infer(files);
+      // console.log(util.inspect(packages, null, 10, true));
+      assert.equal(files.length, 7);
+      // now apply the filter
+      packages = filter(packages);
+      // console.log(util.inspect(packages, null, 10, true));
+      assert.deepEqual(packages[0].files, [
+      { filename: outDir + '/a/included_file.js',
+         content: outDir + '/a/included_file.js',
+         rawDeps: [],
+         deps: [],
+         renames: [] },
+       { filename: outDir + '/a/included_file.foobar',
+         content: outDir + '/a/included_file.foobar',
+         rawDeps: [],
+         deps: [],
+         renames: [] },
+
+      // TODO: not sure if /a/included_directory/ccc/ddd.js should be here as well...
+       { filename: outDir + '/a/included_directory/bbb.js',
+         content: outDir + '/a/included_directory/bbb.js',
+         rawDeps: [],
+         deps: [],
+         renames: [] } ]);
+      done();
+    });
   },
 
-  'npmignore blacklist': {
-    files: [
-      '/a/excludeme.js',
-      '/a/foo.excludeme',
-      '/a/included_file.js',
-      '/a/included_file.foobar',
-      '/a/.npmignore',
-      '/a/included_directory/bbb.js',
-      '/a/included_directory/excluded_sub/ddd.js',
-      '/a/examples/file',
-      '/a/exclude/file',
-      '/a/test/file',
-      '/a/docs/file',
-      '/a/glob/file'
-    ],
-    // to be honest, the way in which glob matching works in npm is quite nutty
-    // https://github.com/isaacs/fstream-ignore/blob/master/ignore.js
-    // e.g. trying multiple variants of the same path, recursively against the same rule
-    //
-    // My goal here is to 1) use the same underlying expression compiler (isaacs/minimatch)
-    // and 2) to test that the most common cases are covered.
-    fakeFS: {
-      '/a/.npmignore':
+  'can exclude via .npmignore': function(done) {
+    var outDir = fixtureGen.dir({
+      '/a/excludeme.js': 'module.exports = true;',
+      '/a/foo.excludeme': 'module.exports = true;',
+      '/a/included_file.js': 'module.exports = true;',
+      '/a/included_file.foobar': 'module.exports = true;',
+      // to be honest, the way in which glob matching works in npm is quite nutty
+      // https://github.com/isaacs/fstream-ignore/blob/master/ignore.js
+      // e.g. trying multiple variants of the same path, recursively against the same rule
+      //
+      // My goal here is to 1) use the same underlying expression compiler (isaacs/minimatch)
+      // and 2) to test that the most common cases are covered.
+      '/a/.npmignore': [
         // should strip comments
-        '# Comment\n' +
+        '# Comment',
         // specific file
-        '/a/excludeme.js\n' +
+        'excludeme.js',
         // specific extension
-        '*.excludeme\n'+
+        '*.excludeme',
         // specific directory (all four permutations)
-        'test\n' +
-        '/exclude\n' +
-        'docs/\n' +
-        '/examples/\n' +
+        'test',
+        '/exclude',
+        'docs/',
+        '/examples/',
         // glob "dir/*"
-        'glob/*\n' +
+        'glob/*',
         // glob "dir/*/**"
-        'included_directory/*/**\n'
-    }
+        'included_directory/*/**',
+        ''
+      ],
+      '/a/included_directory/bbb.js': 'module.exports = true;',
+      '/a/included_directory/excluded_sub/ddd.js': 'module.exports = true;',
+      '/a/examples/file': 'module.exports = true;',
+      '/a/exclude/file': 'module.exports = true;',
+      '/a/test/file': 'module.exports = true;',
+      '/a/docs/file': 'module.exports = true;',
+      '/a/glob/file': 'module.exports = true;'
+    });
+    fixtureDir(outDir, outDir, function(outDir, files) {
+      // first, infer the package structure
+      var packages = infer(files);
+      // now apply the filter
+      packages = filter(packages);
+      // console.log(util.inspect(packages, null, 10, true));
+      assert.deepEqual(packages[0].files,  [
+       { filename: outDir + '/a/.npmignore',
+         content: outDir + '/a/.npmignore',
+         rawDeps: [],
+         deps: [],
+         renames: [] },
+       { filename: outDir + '/a/included_file.js',
+         content: outDir + '/a/included_file.js',
+         rawDeps: [],
+         deps: [],
+         renames: [] },
+       { filename: outDir + '/a/included_file.foobar',
+         content: outDir + '/a/included_file.foobar',
+         rawDeps: [],
+         deps: [],
+         renames: [] },
+       { filename: outDir + '/a/included_directory/bbb.js',
+         content: outDir + '/a/included_directory/bbb.js',
+         rawDeps: [],
+         deps: [],
+         renames: [] } ]);
+      done();
+    });
   },
 
-  'package.json devDependencies': {
-    files: [
-      '/a/index.js',
-      '/a/node_modules/bar/index.js',
-      '/a/node_modules/bar/package.json',
-      '/a/node_modules/bar/node_modules/include_me.js',
-      '/a/node_modules/bar/node_modules/exclude_me.js',
-      '/a/node_modules/bar/node_modules/include/second.js',
-      '/a/node_modules/bar/node_modules/exclude/second.js',
-      '/a/node_modules/bar/node_modules/exclude/node_modules/subdependency.js',
-    ],
-    fakeFS: {
-      existsSync: function(name) {
-        return !!(name == '/a/node_modules/bar/package.json');
-      },
+/*
+  'packages listed in package.json as devDependencies are ignored': function(done) {
+    var outDir = fixtureGen.dir({
+      '/a/index.js': 'module.exports = true;',
+      '/a/node_modules/bar/index.js': 'module.exports = true;',
       '/a/node_modules/bar/package.json': JSON.stringify({
         devDependencies: {
           exclude_me: '*',
           exclude: '*'
         }
-      })
-    }
-  }
-};
-
-Object.keys(cases).forEach(function(name) {
-  cases[name].files = cases[name].files.map(function(file) { return { name: file }; });
-});
-
-exports['filter-package'] = {
-
-  before: function() {
-    var self = this;
-
-    function mock(filename) {
-      if(self.fakeFS[filename]) {
-        return self.fakeFS[filename];
-      }
-      console.log('fs.readFileSync', filename);
-      return '{}';
-    }
-
-    infer._setFS({
-      existsSync: function(filename) {
-        return self.fakeFS.existsSync(filename);
-      },
-      readFileSync: mock
+      }),
+      '/a/node_modules/bar/node_modules/include_me.js': 'module.exports = true;',
+      '/a/node_modules/bar/node_modules/exclude_me.js': 'module.exports = true;',
+      '/a/node_modules/bar/node_modules/include/second.js': 'module.exports = true;',
+      '/a/node_modules/bar/node_modules/exclude/second.js': 'module.exports = true;',
+      '/a/node_modules/bar/node_modules/exclude/node_modules/subdependency.js': 'module.exports = true;'
     });
-
-    filter._setFS({
-      readFileSync: mock
+    fixtureDir(outDir, outDir, function(outDir, files) {
+      // first, infer the package structure
+      var packages = infer(files);
+      // now apply the filter
+      packages = filter(packages);
+      console.log(util.inspect(packages, null, 10, true));
+      assert.deepEqual(packages[0].files, [
+       { name: '/a/index.js' },
+       { name: '/a/node_modules/bar/index.js' },
+       { name: '/a/node_modules/bar/package.json' },
+       { name: '/a/node_modules/bar/node_modules/include_me.js' },
+       { name: '/a/node_modules/bar/node_modules/include/second.js' }
+      ]);
+      // base package, bar, include and include_me = 4 packages
+      assert.equal(packages.length, 4);
+      done();
     });
-  },
-
-  'can exclude via package.json whitelist': function() {
-    var list = cases['package.json whitelist'];
-    this.fakeFS = list.fakeFS;
-    // first, infer the package structure
-    infer(list);
-    // now apply the filter
-    filter(list);
-    // console.log(util.inspect(list, null, 10, true));
-    assert.deepEqual(list.files, [
-      { name: '/a/included_file.js' },
-      { name: '/a/included_file.foobar' },
-      { name: '/a/included_directory/bbb.js' },
-      { name: '/a/included_directory/ccc/ddd.js' },
-    ]);
-  },
-
-  'can exclude via .npmignore': function() {
-    var list = cases['npmignore blacklist'];
-    this.fakeFS = list.fakeFS;
-    // first, infer the package structure
-    infer(list);
-    // now apply the filter
-    filter(list);
-    // console.log(util.inspect(list, null, 10, true));
-    assert.deepEqual(list.files, [
-      { name: '/a/included_file.js' },
-      { name: '/a/included_file.foobar' },
-      { name: '/a/.npmignore' },
-      { name: '/a/included_directory/bbb.js' }
-    ]);
-
-  },
-
-  'packages listed in package.json as devDependencies are ignored': function() {
-    var list = cases['package.json devDependencies'];
-    this.fakeFS = list.fakeFS;
-    // first, infer the package structure
-    infer(list);
-    // now apply the filter
-    filter(list);
-    // console.log(util.inspect(list, null, 10, true));
-    assert.deepEqual(list.files, [
-     { name: '/a/index.js' },
-     { name: '/a/node_modules/bar/index.js' },
-     { name: '/a/node_modules/bar/package.json' },
-     { name: '/a/node_modules/bar/node_modules/include_me.js' },
-     { name: '/a/node_modules/bar/node_modules/include/second.js' }
-    ]);
-    // base package, bar, include and include_me = 4 packages
-    assert.equal(list.packages.length, 4);
-  }
-
-/*
-  'test minimatch': function() {
-    var minimatch = require("minimatch");
-    var expr = 'a/*' + '/**';
-    console.log(minimatch('a/b', expr, { matchBase: true, dot: true, flipNegate: true }));
-    console.log(minimatch('a/exlc/c', expr, { matchBase: true, dot: true, flipNegate: true }));
-    console.log(minimatch('a/exlc/two/c', expr, { matchBase: true, dot: true, flipNegate: true }));
-    expr = 'a/';
-    console.log(minimatch('a/b', expr, { matchBase: true, dot: true, flipNegate: true }));
-    console.log(minimatch('a/exlc/c', expr, { matchBase: true, dot: true, flipNegate: true }));
-    console.log(minimatch('a/exlc/two/c', expr, { matchBase: true, dot: true, flipNegate: true }));
   }
 */
 };

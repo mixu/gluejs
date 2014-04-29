@@ -27,7 +27,7 @@
   "main": "index.js",
   "dependencies": {
     "readable-stream": "1.1.9",
-    "minimatch": "~0.2.12",
+    "minimatch": "0.2.12",
     "minitask": "~0.2.0",
     "optimist": "~0.5.2",
     "bytes": "~0.2.1",

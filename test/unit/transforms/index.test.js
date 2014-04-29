@@ -18,7 +18,7 @@ exports['runQueue tests'] = {
 
   },
 
-  'can run a single file': function(done) {
+  'can add and resolve a single file': function(done) {
     var outDir = this.fixture.dir({
       'index.js': 'module.exports = true;'
     });
@@ -40,7 +40,7 @@ exports['runQueue tests'] = {
     });
   },
 
-  'can resolve additional files': function(done) {
+  'can add and resolve additional files': function(done) {
     var outDir = this.fixture.dir({
       'index.js': 'module.exports = require("./second.js");',
       'second.js': 'module.exports = true;'
@@ -71,6 +71,166 @@ exports['runQueue tests'] = {
     });
   },
 
+  'can add and resolve a folder': function(done) {
+    var outDir = this.fixture.dir({
+      'one.js': 'module.exports = "bar";',
+      'two.js': 'module.exports = require("./sub/dep");',
+      'sub/dep.js': 'module.exports = "foo";'
+    });
+
+    runner({
+      include: [ outDir ],
+      cache: this.cache
+    }, function(err, results) {
+      assert.ok(!err);
+      assert.equal(results.length, 3);
+      // console.log(results);
+      assert.deepEqual(results[0], {
+        filename: outDir + '/one.js',
+        content: outDir + '/one.js',
+        rawDeps: [],
+        deps: [],
+        renames: []
+      });
+      assert.deepEqual(results[1], {
+        filename: outDir + '/sub/dep.js',
+        content: outDir + '/sub/dep.js',
+        rawDeps: [],
+        deps: [],
+        renames: []
+      });
+      assert.deepEqual(results[2], {
+        filename: outDir + '/two.js',
+        content: outDir + '/two.js',
+        rawDeps: [ './sub/dep' ],
+        deps: [ outDir + '/sub/dep.js' ],
+        renames: []
+      });
+      done();
+    });
+  },
+
+  'if the folder is empty, iterate folders until you reach a non-empty folder': function(done) {
+    var outDir = this.fixture.dir({
+      'foo/bar/baz/main.js': 'module.exports = "first";',
+      'foo/bar/baz/abc/dep.js': 'module.exports = "foo";'
+    });
+
+    runner({
+      include: outDir,
+      cache: this.cache
+    }, function(err, results) {
+      assert.ok(!err);
+      // console.log(results);
+      assert.equal(results.length, 2);
+      assert.deepEqual(results[0], {
+        filename: outDir + '/foo/bar/baz/abc/dep.js',
+        content: outDir + '/foo/bar/baz/abc/dep.js',
+        rawDeps: [],
+        deps: [],
+        renames: []
+      });
+      assert.deepEqual(results[1], {
+        filename: outDir + '/foo/bar/baz/main.js',
+        content: outDir + '/foo/bar/baz/main.js',
+        rawDeps: [],
+        deps: [],
+        renames: []
+      });
+      done();
+    });
+  },
+
+  'can resolve modules that are peers': function(done) {
+    var outDir = this.fixture.dir({
+      'one.js': 'module.exports = require("backbone");',
+      'two.js': 'module.exports = require("underscore");',
+      'node_modules/backbone.js': 'require("underscore"); module.exports = "backbone";',
+      'node_modules/underscore.js': 'module.exports = "underscore";',
+    });
+
+    runner({
+      include: [
+        outDir + '/one.js',
+        outDir + '/two.js'
+      ],
+      cache: this.cache
+    }, function(err, results) {
+      assert.ok(!err);
+      assert.equal(results.length, 4);
+      // console.log(results);
+      assert.deepEqual(results[0],  {
+        filename: outDir + '/node_modules/backbone.js',
+        content: outDir + '/node_modules/backbone.js',
+        rawDeps: [ 'underscore' ],
+        deps: [ outDir + '/node_modules/underscore.js' ],
+        renames: []
+      });
+      assert.deepEqual(results[1], {
+        filename: outDir + '/node_modules/underscore.js',
+        content: outDir + '/node_modules/underscore.js',
+        rawDeps: [],
+        deps: [],
+        renames: []
+      });
+      assert.deepEqual(results[2], {
+        filename: outDir + '/one.js',
+        content: outDir + '/one.js',
+        rawDeps: [ 'backbone' ],
+        deps: [ outDir + '/node_modules/backbone.js' ],
+        renames: []
+      });
+      assert.deepEqual(results[3], {
+        filename: outDir + '/two.js',
+        content: outDir + '/two.js',
+        rawDeps: [ 'underscore' ],
+        deps: [ outDir + '/node_modules/underscore.js' ],
+        renames: []
+      });
+      done();
+    });
+  },
+
+  'can resolve modules that are in the node_modules folder of the parent': function(done) {
+    var outDir = this.fixture.dir({
+      'foo/bar/one.js': 'module.exports = require("backbone");',
+      'foo/bar/node_modules/backbone.js': 'require("underscore"); module.exports = "backbone";',
+      'foo/node_modules/other.js': 'module.exports = "other";',
+      'node_modules/underscore.js': 'module.exports = "underscore";',
+    });
+
+    runner({
+      include: outDir + '/foo/bar/one.js',
+      cache: this.cache
+    }, function(err, results) {
+      assert.ok(!err);
+      assert.equal(results.length, 3);
+      // console.log(results);
+      assert.deepEqual(results[0], {
+        filename: outDir + '/foo/bar/node_modules/backbone.js',
+        content: outDir + '/foo/bar/node_modules/backbone.js',
+        rawDeps: [ 'underscore' ],
+        deps: [ outDir + '/node_modules/underscore.js' ],
+        renames: []
+      });
+      assert.deepEqual(results[1], {
+        filename: outDir + '/foo/bar/one.js',
+        content: outDir + '/foo/bar/one.js',
+        rawDeps: [ 'backbone' ],
+        deps: [ outDir + '/foo/bar/node_modules/backbone.js' ],
+        renames: []
+      });
+      assert.deepEqual(results[2], {
+        filename: outDir + '/node_modules/underscore.js',
+        content: outDir + '/node_modules/underscore.js',
+        rawDeps: [],
+        deps: [],
+        renames: []
+      });
+      done();
+    });
+  },
+
   'can resolve external deps': function(done) {
     var outDir = this.fixture.dir({
       'index.js': 'module.exports = require("foo");',
@@ -92,15 +252,15 @@ exports['runQueue tests'] = {
           rawDeps: [ 'foo' ],
           deps: [ outDir + '/node_modules/foo/main.js' ],
           renames: [] },
-        { filename: outDir + '/node_modules/foo/main.js',
-          content: outDir + '/node_modules/foo/main.js',
-          rawDeps: [ './lib/sub' ],
-          deps: [ outDir + '/node_modules/foo/lib/sub.js' ],
-          renames: [] },
         { filename: outDir + '/node_modules/foo/lib/sub.js',
           content: outDir + '/node_modules/foo/lib/sub.js',
           rawDeps: [],
           deps: [],
+          renames: [] },
+        { filename: outDir + '/node_modules/foo/main.js',
+          content: outDir + '/node_modules/foo/main.js',
+          rawDeps: [ './lib/sub' ],
+          deps: [ outDir + '/node_modules/foo/lib/sub.js' ],
           renames: [] }
         ]);
 

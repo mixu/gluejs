@@ -6,23 +6,12 @@ var infer = require('../../../lib/list-tasks/infer-packages.js'),
     Cache = require('minitask').Cache,
     runTasks = require('../../../lib/runner/transforms/index.js');
 
-
-function pluck(key, obj) {
-  var o = { };
-  o[key] = obj[key];
-  return o;
-}
-
 var cache = Cache.instance({
     method: 'stat',
     path: require('os').tmpDir() + '/gluejs-' + new Date().getTime()
 });
 
 var fixtureGen = new FixtureGen();
-
-function byName(a, b) {
-  return a.name.localeCompare(b.name);
-}
 
 function fixtureDir(spec, onDone) {
   // set up fixture
@@ -65,7 +54,7 @@ exports['infer-packages'] = {
       // the root (or base) package should be anonymous (=> name is given by the user)
       assert.ok(typeof packages[0].name == 'undefined');
       assert.equal(packages[0].basepath, outDir);
-      assert.ok(typeof packages[0].main == 'undefined');
+      assert.equal(packages[0].main, 'simple.js');
       // the package files should be correct
       assertHasFilenames(packages[0].files, [ outDir + '/simple.js']);
       done();
@@ -217,7 +206,7 @@ exports['infer-packages'] = {
 
       assertPartialDeepEqual(packages[0], {
         basepath: outDir,
-        main: 'index.js',
+        main: 'a/index.js',
 //        dependenciesById: { b: 1 }
       });
       assertHasFilenames(packages[0].files, [ outDir + '/a/index.js']);
@@ -246,7 +235,7 @@ exports['infer-packages'] = {
 
       assertPartialDeepEqual(packages[0], {
         basepath: outDir,
-        main: 'index.js',
+        main: 'a/index.js',
 //        dependenciesById: { b: 1 }
       });
       assertHasFilenames(packages[0].files, [ outDir + '/a/index.js']);
@@ -275,7 +264,7 @@ exports['infer-packages'] = {
 
       assertPartialDeepEqual(packages[0], {
         basepath: outDir,
-        main: 'index.js',
+        main: 'a/index.js',
 //        dependenciesById: { b: 1 }
       });
       assertHasFilenames(packages[0].files, [ outDir + '/a/index.js']);
@@ -305,7 +294,7 @@ exports['infer-packages'] = {
 
       assertPartialDeepEqual(packages[0], {
         basepath: outDir,
-        main: 'index.js',
+        main: 'a/index.js',
 //        dependenciesById: { b: 1 }
       });
       assertHasFilenames(packages[0].files, [ outDir + '/a/index.js']);
