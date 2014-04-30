@@ -7,6 +7,9 @@ var FixtureGen = require('../lib/fixture-gen.js'),
     Cache = require('minitask').Cache,
     Glue = require('gluejs');
 
+var express = require('express'),
+    request = require('request');
+
 exports['integration tests'] = {
 
   before: function() {
@@ -29,116 +32,7 @@ exports['integration tests'] = {
   // - multiple `--includes`
   // - `--exclude` should work
   // - `--ignore` should work
-
-  'can --include multiple files': function() {
-
-  },
-
-  'can --include multiple folders': function() {
-
-  },
-
-  'can --exclude files from the build': function(done) {
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-    var outDir = this.fixture.dir({
-      'index.js': 'module.exports = require("./second.js");',
-      'second.js': 'module.exports = "Second";'
-    });
-
-    file.once('close', function() {
-      fs.writeFileSync(outFile,
-        'function require(str) { return "extern-" + str; }\n' +
-        fs.readFileSync(outFile));
-
-      var result = require(outFile);
-      // console.log(fs.readFileSync(outFile).toString());
-      assert.deepEqual(result, "extern-./second.js");
-      done();
-    });
-
-    new Glue()
-    .include(outDir)
-    .set('cachePath', this.cachePath)
-    .set('umd', true)
-    .set('exclude', [ './second.js' ])
-    .render(file);
-  },
-
-  'can --exclude 3rd party module paths from the build': function(done) {
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-    var outDir = this.fixture.dir({
-      'index.js': 'module.exports = require("foo");',
-      'node_modules/foo/package.json': '{ "main": "main.js" }',
-      'node_modules/foo/main.js': 'module.exports = "Foo";',
-    });
-
-    file.once('close', function() {
-      fs.writeFileSync(outFile,
-        'function require(str) { return "extern-" + str; }\n' +
-        fs.readFileSync(outFile));
-
-      var result = require(outFile);
-      // console.log(fs.readFileSync(outFile).toString());
-      assert.deepEqual(result, "extern-foo");
-      done();
-    });
-
-    new Glue()
-    .include(outDir)
-    .set('cachePath', this.cachePath)
-    .set('umd', true)
-    .set('exclude', [ 'foo' ])
-    .render(file);
-  },
-
-  'can --ignore files from the main build': function(done) {
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-    var outDir = this.fixture.dir({
-      'index.js': 'module.exports = require("./second.js");',
-      'second.js': 'module.exports = "Second";'
-    });
-
-    file.once('close', function() {
-      var result = require(outFile);
-      // console.log(fs.readFileSync(outFile).toString());
-      assert.deepEqual(result, { });
-      done();
-    });
-
-    new Glue()
-    .include(outDir)
-    .set('cachePath', this.cachePath)
-    .set('umd', true)
-    .set('ignore', [ './second.js' ])
-    .render(file);
-  },
-
-  'can --ignore 3rd party modules from the main build': function(done) {
-    var outFile = this.fixture.filename({ ext: '.js' }),
-        file = fs.createWriteStream(outFile);
-    var outDir = this.fixture.dir({
-      'index.js': 'module.exports = require("foo");',
-      'node_modules/foo/package.json': '{ "main": "main.js" }',
-      'node_modules/foo/main.js': 'module.exports = "Foo";',
-    });
-
-    file.once('close', function() {
-      var result = require(outFile);
-      // console.log(fs.readFileSync(outFile).toString());
-      assert.deepEqual(result, { });
-      done();
-    });
-
-    new Glue()
-    .include(outDir)
-    .set('cachePath', this.cachePath)
-    .set('umd', true)
-    .set('ignore', [ 'foo' ])
-    .render(file);
-  },
+  exclude: require('./exclude-tests.js'),
 
   // External module wrangling tests:
   // - `--remap` to remap an external to an expression
@@ -172,6 +66,10 @@ exports['integration tests'] = {
   // Shimming tests:
   // - shimmed global export: modules which export global variables
 
+  'can --shim an external file in place of a name at the top level': function() {
+
+  },
+
   // Output:
   // - outputting source urls
   // - outputting external source maps (???)
@@ -189,12 +87,21 @@ exports['integration tests'] = {
   // - core variable insertion
   // - loading core module replacements
 
+  'can use --detect-globals to add global variable definitions': function() {
+
+  },
+
+  'can use --builtins to load node core module replacements': function() {
+
+  },
+
   // Reporter tests
   // - progress
   // - file size reporter
 
   // Performance tests
-  //
+  // - run the same build twice, check the number of cached items
+  // - run the same build, with syntax error, twice, check cached items
 
   // AMD tests
   // - output as AMD
@@ -208,53 +115,117 @@ exports['integration tests'] = {
   // - production mode
   // - mocha test packaging mode (as plugin?)
 
-  'can fetch a build using the Express middleware': function() {
-    // first
+  'middleware': {
 
-    var outDir = this.fixture.dir({
-      'index.js': 'module.exports = require("./second.js");',
-      'second.js': 'module.exports = "Second";'
-    });
+    before: function(done) {
+      // create fixtures
+      var outDir = this.fixture.dir({
+        // one main file with deps
+        'first/index.js': 'module.exports = require("dep");',
+        'first/node_modules/dep/index.js': 'module.exports = "Dep";',
+        'first/node_modules/dep2/index.js': 'module.exports = "Dep2";',
+        'third/lib/index.js': 'module.exports = true;',
+        'third/foo/bar.js': 'module.exports = true;',
+        'syntax/index.js': 'module.exports = require("foo");',
+        'syntax/err.js': '}syntax error['
+      });
+      // initialize routes
+      var app = express();
+      // first: single main file + all deps
+      app.use('/js/first.js', Glue.middleware(outDir + '/first/index.js', { umd: true}));
+      // second: two external dependencies
+      app.use('/js/second.js', Glue.middleware([ 'dep', 'dep2' ], {
+        umd: true,
+        basepath: outDir + '/first',
+        'global-require': true
+      }));
+      // third: full invocation
+      app.use('/js/third.js', Glue.middleware({
+        umd: true,
+        basepath: outDir + '/third',
+        include: [ './lib/index.js', './foo/bar.js' ],
+        main: 'lib/index.js'
+      }));
+      // syntax error
+      app.use('/js/syntax.js', Glue.middleware(outDir + '/syntax/index.js', { umd: true }));
 
+      app.use(function(req, res, next){
+        console.log('%s %s', req.method, req.url);
+        next();
+      });
 
-    var express = require('express'),
-        glue = require('gluejs'),
-        app = express();
+      this.app = app;
+      this.server = app.listen(3000, done);
+    },
 
-    app.use(express.static(__dirname));
+    after: function(done) {
+      this.server.close(done);
+    },
 
-    // first: single main file + all deps
-    app.use('/js/main.js', glue.middleware('./client/index.js'));
+    'can specify a middleware build with a single file target': function(done) {
+      var outFile = this.fixture.filename({ ext: '.js' });
+      request.get('http://localhost:3000/js/first.js',
+        function(err, res, body) {
+          assert.equal(res.statusCode, 200);
+          fs.writeFileSync(outFile, body);
+          var result = require(outFile);
+          console.log(body);
+          assert.deepEqual(result, "Dep");
+          done();
+        });
+    },
 
-    // second: two external dependencies
-    app.use('/js/main.js', glue.middleware([ 'foo', 'bar' ]));
+    'can specify a build with two external modules as targets': function(done) {
+      var outFile = this.fixture.filename({ ext: '.js' });
+      request.get('http://localhost:3000/js/second.js',
+        function(err, res, body) {
+          assert.equal(res.statusCode, 200);
+          fs.writeFileSync(outFile,
+            body +
+            '\n\nmodule.exports = require;'
+            );
+          var result = require(outFile);
+          // console.log(fs.readFileSync(outFile).toString());
+          assert.deepEqual(result('dep'), "Dep");
+          assert.deepEqual(result('dep2'), "Dep2");
+          done();
+        });
+    },
 
-    // third: paths plus options
-    app.use('/js/main.js', glue.middleware([ 'foo', 'bar' ], { ignore: 'bar' }));
+    'can specify a build with full options': function(done) {
+      var outFile = this.fixture.filename({ ext: '.js' });
+      request.get('http://localhost:3000/js/third.js',
+        function(err, res, body) {
+          assert.equal(res.statusCode, 200);
+          fs.writeFileSync(outFile,
+            body +
+            '\n\nmodule.exports = require;'
+            );
+          var result = require(outFile);
+          // console.log(fs.readFileSync(outFile).toString());
+          assert.deepEqual(result('dep'), "Dep");
+          assert.deepEqual(result('dep2'), "Dep2");
+          done();
+        });
+    },
 
-    // fourth: full invocation
-    app.use('/app.js', glue.middleware({
-      basepath: __dirname + '/../',
-      include: [ './express/lib/index.js', './express/foo/bar.js' ],
-      main: 'express/lib/index.js'
-    }));
+    'when a syntax error occurs, middleware returns errors as expected': function(done) {
+      var outFile = this.fixture.filename({ ext: '.js' });
+      request.get('http://localhost:3000/js/third.js',
+        function(err, res, body) {
+          // returns error coce
+          assert.equal(res.statusCode, 500);
+          // prints to console
+          // appends div (not testable)
+          fs.writeFileSync(outFile);
+          console.log(fs.readFileSync(outFile).toString());
+          done();
+        });
+    },
 
-    app.use(function(req, res, next){
-      console.log('%s %s', req.method, req.url);
-      next();
-    });
+    'can avoid expensive operations using an etag': function() {
 
-    app.listen(3000);
-    console.log('Listening on port 3000');
-  },
-
-  'when a syntax error occurs, middleware returns errors as expected': function() {
-    // returns error coce
-    // prints to console
-    // appends div (not testable)
-  },
-
-  'can avoid expensive operations using an etag': function() {
+    }
 
   },
 

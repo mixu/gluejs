@@ -46,7 +46,7 @@ module.exports = {
         fs.readFileSync(outFile));
       var result = require(outFile);
       assert.deepEqual(result.first, 'extern-FIRST');
-      assert.deepEqual(result.first, 'extern-SECOND');
+      assert.deepEqual(result.second, 'extern-SECOND');
       done();
     });
 

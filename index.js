@@ -6,7 +6,8 @@ var os = require('os'),
     Capture = require('./lib/file-tasks/capture.js'),
     Minilog = require('minilog'),
     Cache = require('minitask').Cache,
-    log = require('minilog')('api');
+    log = require('minilog')('api'),
+    ProgressBar = require('progress');
 
 var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
 homePath = (typeof homePath === 'string' ? path.normalize(homePath) : process.cwd());
@@ -20,6 +21,7 @@ function API() {
     cache: true,
     'cache-path': homePath + path.sep + '.gluejs-cache' + path.sep,
     include: [],
+    exclude: [],
     // set options here so that the cache hash does not change
     jobs: require('os').cpus().length * 2
   };
@@ -42,28 +44,35 @@ API.prototype.render = function(dest) {
     this.options['cache-method'] = 'stat';
   }
 
-  var hasOneInclude = (typeof this.options.include === 'string' ||
-        (Array.isArray(this.options.include) && this.options.include.length == 1)),
-      firstInclude = (typeof this.options.include === 'string' ?
+  var firstInclude = (typeof this.options.include === 'string' ?
         this.options.include : this.options.include[0]),
       firstIncludeStat = (fs.existsSync(firstInclude) ? fs.statSync(firstInclude) : false);
-
-  // set main if there is only one --include and it's a file, use it as the main
-  if (!this.options.main && hasOneInclude && firstIncludeStat && firstIncludeStat.isFile()) {
-    this.options.main = firstInclude;
-  }
 
   // if basepath is not set, use the firstInclude to set it
   if (!this.options.basepath) {
     this.options.basepath = (firstIncludeStat && firstIncludeStat.isFile() ?
       path.dirname(firstInclude) : firstInclude);
   }
+  // set main the first include is a file, use it as the main
+  // otherwise, warn?
+  if (!this.options.main && firstIncludeStat && firstIncludeStat.isFile()) {
+    this.options.main = path.relative(this.options.basepath, firstInclude);
+  }
+
+  function resolve(to, from) {
+    return (Array.isArray(from) ? from : [ from ]).map(function(relpath) {
+      // skip non-relative paths (this keeps external module names plain)
+      return (relpath.charAt(0) == '.' ? path.resolve(to, relpath) : relpath);
+    });
+  }
+
+  // resolve relative ignores
+  if (this.options.ignore) {
+    this.options.ignore = resolve(this.options.basepath, this.options.ignore);
+  }
 
   // resolve all relative includes
-  this.options.include = (Array.isArray(this.options.include) ?
-    this.options.include : [ this.options.include ]).map(function(filepath) {
-      return path.resolve(self.options.basepath, filepath);
-    });
+  this.options.include = resolve(this.options.basepath, this.options.include);
 
   // Create the shared cache instance
   var cacheHash = Cache.hash(JSON.stringify(this.options));
@@ -73,12 +82,18 @@ API.prototype.render = function(dest) {
   });
   cache.begin();
 
+  // console.log('Build options', this.options);
+
+  // reporters
+  var progress = { total: 0, complete: 0, hit: 0, miss: 0 };
   // run any tasks and parse dependencies (mapper)
-  runTasks({
+  var runner = runTasks({
     cache: cache,
     include: this.options.include,
     command: this.options.command,
-    transform: this.options.transform
+    transform: this.options.transform,
+    exclude: this.options.exclude,
+    ignore: this.options.ignore
     // TODO
     // --reset-exclude should also reset the pre-processing exclusion
     // if (this.options['reset-exclude']) {
@@ -90,6 +105,11 @@ API.prototype.render = function(dest) {
     // };
 
   }, function(err, files) {
+    // tj's progress can make the process hang (!) if the total count is off due to exclusions
+    if (progress && progress.rl && progress.rl.close) {
+      progress.rl.close();
+    }
+
     // create a stream capturer if we want the result as callback result
     var capture;
     if (typeof dest == 'function') {
@@ -110,15 +130,51 @@ API.prototype.render = function(dest) {
       cache: cache,
       files: files,
       out: capture ? capture : dest,
-      basepath: self.options['basepath'],
-      main: self.options['main'],
+      basepath: self.options.basepath,
+      main: self.options.main,
       export: self.options['export'],
-      umd: self.options['umd'],
+      umd: self.options.umd,
       remap: self.options.remap,
     }, function(err, results) {
       cache.end();
     });
   });
+
+  runner.on('add', function(filename) {
+    progress.total += 1;
+  });
+  runner.on('hit', function(filename) {
+    progress.complete++;
+    progress.hits++;
+  });
+  runner.on('miss', function(filename) {
+    progress.complete++;
+  });
+  runner.once('done', function() {
+    console.log(progress.complete + ' of ' + progress.total +
+        ' (cache hits: ' + progress.hit + ')');
+  });
+
+  if (process.stderr.isTTY || this.options.progress) {
+    // progress = new ProgressBar('[:bar] :current / :total :percent :etas', {
+    //   complete: '=', incomplete: ' ', width: 20, total: 1
+    // });
+    var pending = [];
+    runner.on('hit', function(filename) {
+      process.stderr.clearLine();
+      process.stderr.cursorTo(0);
+      process.stderr.write(progress.complete + ' of ' + progress.total +
+        ' (cache hits: ' + progress.hit + ')');
+      // progress.tick();
+    });
+    runner.on('miss', function(filename) {
+      process.stderr.clearLine();
+      process.stderr.cursorTo(0);
+      process.stderr.write(progress.complete + ' of ' + progress.total +
+        ' (cache hits: ' + progress.hit + ')');
+      // progress.tick();
+    });
+  }
 };
 
 // setters
@@ -126,6 +182,9 @@ API.prototype.set = function(key, value) {
   this.options[key] = value;
   if (key == 'verbose' && value) {
     Minilog.enable();
+  }
+  if (key == 'exclude' && value) {
+    this.options['exclude'].push((value instanceof RegExp ? value: new RegExp(value)));
   }
   if (key == 'jobs') {
     log.info('Maximum number of parallel tasks:', this.options.jobs);
@@ -181,28 +240,27 @@ API.prototype.remap = function(module, code) {
 };
 
 API.prototype.exclude = function(path) {
-  if (!this.options['exclude']) {
-    this.options['exclude'] = [];
-  }
-  this.options['exclude'].push((path instanceof RegExp ? path : new RegExp(path)));
+  this.set('exclude', path);
   return this;
 };
 
 // Express Middleware
 API.middleware = function(opts) {
-
+  // allow .middleware(str|arr, opts)
+  if (arguments.length === 2) {
+    var args = Array.prototype.slice.call(arguments);
+    opts = args[1];
+    opts.include = args[0];
+  } else if (typeof opts === 'string' || Array.isArray(opts)) {
+    opts = { include: opts };
+  }
   // -- Set some sane defaults
   opts = opts || {};
   opts.include = opts.include || './lib';
-  if (!opts.basepath) {
-    opts.basepath = Array.isArray(opts.include) ? opts.include[0] : opts.include;
-  }
-  opts.main = opts.main || 'index.js';
 
   // -- Create an instance of the API to use
   var glue = new API()
-    .include(opts.include)
-    .basepath(opts.basepath);
+    .include(opts.include);
 
   // -- All other options are set by clobbering the glue.options hash
   Object.keys(opts).forEach(function(key) {

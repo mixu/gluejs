@@ -10,7 +10,8 @@ gluejs v3.next adds dependency parsing support:
   - paves way for efficient node core module support
 - The caching system has been significantly improved, with some minor performance gains and reduced file handle usage.
 - The [browser field](https://gist.github.com/defunctzombie/4339901) in package.json files is supported via [browser-resolve](https://github.com/defunctzombie/node-browser-resolve)
-- `--replace` has been deprecated in favor of `--remap`
+- `--replace` has been deprecated in favor of `--remap`. modules will only be loaded when requested, not earlier.
+- direct file requires like `require('jade/runtime')` should now resolve correctly
 
 -----
 
@@ -18,8 +19,6 @@ gluejs v3.next adds dependency parsing support:
 
 - Parse:
   - disable the automatic excludes like `/dist/` because they mess with things like jquery
-  - direct file requires like `require('jade/runtime')` should resolve correctly
-- get rid of the two different ways of substituting a module, only use remap for substituting a module which will only be loaded when requested rather than immediately
 - Test against parse errors causing issues, such as caching the incorrect set of dependencies.
 - Return proper error messages for parse errors when using the middleware
 
@@ -199,9 +198,23 @@ Transform queue (transforms/index.js):
 
     -- generate joinable list --
 
+Queue tasks:
+
+- Enable doing things like:
+  - files
+    - exclude
+    - replace (content)
+    - ignore
+    - rename
+  - modules
+    - exclude
+    - ignore
+    - replace
+
+in a generic way by defining a bunch of callbacks, rather than doing these each in ugly and ad-hoc ways.
+
 TODO:
 
-- report number of cache hits from the transforms
 - progress bar support:
   - emit progress events (e.g. as each file is processed)
   - emit progress done event
@@ -231,7 +244,6 @@ Package generator queue (commonjs2/index.js):
 
 TODO:
 
-- replaced/remapped support
 - progress bar support:
   - emit progress events (e.g. as each file is processed)
   - emit progress done event
@@ -251,9 +263,6 @@ Steps:
 
 Test cases:
 
-- exclude unused file like package.json
-- include unmentioned file
-- include unmentioned module
 - apply .npmignore last
 - perf test: load large directory a couple of hundred times and ensure caching works
 

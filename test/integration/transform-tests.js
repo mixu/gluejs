@@ -34,7 +34,8 @@ module.exports = {
   'can specify an array of string --commands': function(done) {
     // commandline: coffee and uglifyjs
     var inDir = this.fixture.dir({
-      'index.coffee': [
+      // .js so that --command is applied
+      'index.coffee.js': [
         "square = (x) -> x * x",
         "module.exports = square",
         ""
@@ -155,9 +156,9 @@ module.exports = {
 
     file.once('close', function() {
       var name = new Date().getTime();
+      console.log(fs.readFileSync(outFile).toString());
       var result = require(outFile);
       // use standard require
-      var result = result();
       assert.deepEqual(result, 'Hello from Bar');
       done();
     });
@@ -168,7 +169,6 @@ module.exports = {
       .basepath(outDir)
       .include('./index.js')
       .set('cache', false)
-      .set('require', false)
       .set('command', [
         function(filename) {
           if(path.extname(filename) != '.bar') {
