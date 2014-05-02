@@ -62,6 +62,42 @@ module.exports = {
       .render(file);
   },
 
+  'modules with --remapped names should not be included in the build': function(done) {
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+
+    var outDir = this.fixture.dir({
+      'index.js': 'module.exports = { first: require("first"), second: require("second") };',
+      'node_modules/first.js': 'module.exports = "First";',
+      'node_modules/second/index.js': 'module.exports = require("sub");',
+      'node_modules/second/node_modules/sub.js': 'module.exports = "Second";',
+    });
+
+    var added = [];
+
+    file.once('close', function() {
+      console.log(added);
+      assert.equal(added.length, 1);
+      assert.deepEqual(added, [ outDir + '/index.js' ]);
+      done();
+    });
+
+    new Glue()
+      .on('add', function(filename) {
+        added.push(filename);
+      })
+      .basepath(outDir)
+      .include('./')
+      .set('cachePath', this.cachePath)
+      .set('umd', true)
+      .remap({
+        first: '"FOO"',
+        second: '"BAR"'
+      })
+      .render(file);
+
+  },
+
 /*
   'can use the browser field to replace the main package': function(done) {
     var outFile = this.fixture.filename({ ext: '.js' }),

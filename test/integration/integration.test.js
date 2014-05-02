@@ -7,14 +7,14 @@ var FixtureGen = require('../lib/fixture-gen.js'),
     Cache = require('minitask').Cache,
     Glue = require('gluejs');
 
-var express = require('express'),
-    request = require('request');
-
 exports['integration tests'] = {
 
   before: function() {
     this.fixture = new FixtureGen();
     Minilog.enable();
+
+    Minilog.suggest.defaultResult = false;
+    Minilog.suggest.clear().allow(/.*/, 'info');
     this.cachePath = require('os').tmpDir() + '/gluejs-' + new Date().getTime();
   },
 
@@ -103,137 +103,59 @@ exports['integration tests'] = {
   // - run the same build twice, check the number of cached items
   // - run the same build, with syntax error, twice, check cached items
 
+  perf: {
+
+    'running the same build twice will make use of the cache': function() {
+
+    },
+
+    'changing options not passed into the runner still invalidate the cache': function() {
+      // e.g. --command or no --command
+    },
+
+    'when a syntax error occurs, the build is not cached': function() {
+
+    }
+  },
+
   // AMD tests
   // - output as AMD
   // - convert from AMD to CommonJS
 
   // Middleware tests
   // - short form syntax works as expected
-  // - cache preheating option
   // - middleware error messages
-  // - middleware etags support
+  middleware: require('./middleware-tests.js'),
+
+  // TODO:
+  // -- can specify a build with two external modules as targets
   // - production mode
+  // - middleware etags support
   // - mocha test packaging mode (as plugin?)
+  // - cache preheating option
 
-  'middleware': {
+  'production mode': function() {
+/*
+    app.use('/js/third.js', Glue.middleware({
+      umd: true,
+      basepath: outDir + '/third',
+      include: [ './lib/index.js', './foo/bar.js' ],
+      main: 'lib/index.js'
 
-    before: function(done) {
-      // create fixtures
-      var outDir = this.fixture.dir({
-        // one main file with deps
-        'first/index.js': 'module.exports = require("dep");',
-        'first/node_modules/dep/index.js': 'module.exports = "Dep";',
-        'first/node_modules/dep2/index.js': 'module.exports = "Dep2";',
-        'third/lib/index.js': 'module.exports = true;',
-        'third/foo/bar.js': 'module.exports = true;',
-        'syntax/index.js': 'module.exports = require("foo");',
-        'syntax/err.js': '}syntax error['
-      });
-      // initialize routes
-      var app = express();
-      // first: single main file + all deps
-      app.use('/js/first.js', Glue.middleware(outDir + '/first/index.js', { umd: true}));
-      // second: two external dependencies
-      app.use('/js/second.js', Glue.middleware([ 'dep', 'dep2' ], {
-        umd: true,
-        basepath: outDir + '/first',
-        'global-require': true
-      }));
-      // third: full invocation
-      app.use('/js/third.js', Glue.middleware({
-        umd: true,
-        basepath: outDir + '/third',
-        include: [ './lib/index.js', './foo/bar.js' ],
-        main: 'lib/index.js'
-      }));
-      // syntax error
-      app.use('/js/syntax.js', Glue.middleware(outDir + '/syntax/index.js', { umd: true }));
+      staticFolder: (DEBUG_MODE ? false : __dirname + '/precompiled/' )
+    }));
+*/
+  },
 
-      app.use(function(req, res, next){
-        console.log('%s %s', req.method, req.url);
-        next();
-      });
+  'can avoid expensive operations using an etag': function() {
+    // generate build
 
-      this.app = app;
-      this.server = app.listen(3000, done);
-    },
+    // ask for the same build again, sending the necessary headers
 
-    after: function(done) {
-      this.server.close(done);
-    },
-
-    'can specify a middleware build with a single file target': function(done) {
-      var outFile = this.fixture.filename({ ext: '.js' });
-      request.get('http://localhost:3000/js/first.js',
-        function(err, res, body) {
-          assert.equal(res.statusCode, 200);
-          fs.writeFileSync(outFile, body);
-          var result = require(outFile);
-          console.log(body);
-          assert.deepEqual(result, "Dep");
-          done();
-        });
-    },
-
-    'can specify a build with two external modules as targets': function(done) {
-      var outFile = this.fixture.filename({ ext: '.js' });
-      request.get('http://localhost:3000/js/second.js',
-        function(err, res, body) {
-          assert.equal(res.statusCode, 200);
-          fs.writeFileSync(outFile,
-            body +
-            '\n\nmodule.exports = require;'
-            );
-          var result = require(outFile);
-          // console.log(fs.readFileSync(outFile).toString());
-          assert.deepEqual(result('dep'), "Dep");
-          assert.deepEqual(result('dep2'), "Dep2");
-          done();
-        });
-    },
-
-    'can specify a build with full options': function(done) {
-      var outFile = this.fixture.filename({ ext: '.js' });
-      request.get('http://localhost:3000/js/third.js',
-        function(err, res, body) {
-          assert.equal(res.statusCode, 200);
-          fs.writeFileSync(outFile,
-            body +
-            '\n\nmodule.exports = require;'
-            );
-          var result = require(outFile);
-          // console.log(fs.readFileSync(outFile).toString());
-          assert.deepEqual(result('dep'), "Dep");
-          assert.deepEqual(result('dep2'), "Dep2");
-          done();
-        });
-    },
-
-    'when a syntax error occurs, middleware returns errors as expected': function(done) {
-      var outFile = this.fixture.filename({ ext: '.js' });
-      request.get('http://localhost:3000/js/third.js',
-        function(err, res, body) {
-          // returns error coce
-          assert.equal(res.statusCode, 500);
-          // prints to console
-          // appends div (not testable)
-          fs.writeFileSync(outFile);
-          console.log(fs.readFileSync(outFile).toString());
-          done();
-        });
-    },
-
-    'can avoid expensive operations using an etag': function() {
-
-    }
-
+    // the full build should be returned from cache
   },
 
   // Other
-
-  'can build a basic module with an external dependency and uglify': function() {
-
-  },
 
   'can write a --umd bundle': function() {
 

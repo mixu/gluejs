@@ -168,5 +168,10 @@ module.exports = {
     .set('umd', true)
     .set('ignore', [ 'foo' ])
     .render(file);
+  },
+
+  '--ignore works even for bad third party module references like require("jade/runtime")': function(done) {
+    done();
   }
+
 };

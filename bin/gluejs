@@ -16,6 +16,7 @@ var opts = require('optimist')
       'global': { },
       'global-require': { },
       'include': { },
+      'ignore': { },
       'jobs': { },
       'main': { 'default': 'index.js' },
       'out': { },
@@ -72,7 +73,9 @@ if(argv['verbose']) {
 // --command
 // --transform
 // --jobs
-[ 'exclude', 'amd', 'umd', 'cache-method', 'command', 'transform', 'jobs' ].forEach(function(key) {
+// --ignore
+[ 'exclude', 'amd', 'umd', 'cache-method', 'command', 'transform', 'jobs',
+  'ignore' ].forEach(function(key) {
   if(argv[key]) {
     g.set(key, argv[key]);
   }
@@ -88,36 +91,33 @@ g.export(argv['global']);
 g.basepath(argv['basepath']);
 
 // --main
-g.main(argv['main'])
+g.main(argv['main']);
 
-// --replace
-if(argv['replace']) {
-  // allow --replace foo=bar,baz=abc or --replace foo=bar --replace bar=abc
-  if(Array.isArray(argv['replace'])) {
-    argv['replace'].forEach(function(item) {
+// --remap
+['replace', 'remap'].forEach(function(key) {
+  if (!argv[key]) {
+    return;
+  }
+  if (key == 'replace') {
+    log.warn('The "--replace" option has been deprecated, please use "--remap" instead.');
+  }
+  // allow --remap foo=bar,baz=abc or --remap foo=bar --remap bar=abc
+  if(Array.isArray(argv[key])) {
+    argv[key].forEach(function(item) {
       var pos = item.indexOf('='),
           name = item.substring(0, pos),
           value = item.substring(pos+1);
-      g.replace(name, value);
+      g.remap(name, value);
     });
   } else {
-    argv['replace'].split(',').forEach(function(item) {
+    argv[key].split(',').forEach(function(item) {
       var pos = item.indexOf('='),
           name = item.substring(0, pos),
           value = item.substring(pos+1);
-      g.replace(name, value);
+      g.remap(name, value);
     });
   }
-
-}
-if(argv['remap']) {
-  (Array.isArray(argv['remap']) ? argv['remap'] : [argv['remap']]).forEach(function(item) {
-    var pos = item.indexOf('='),
-        name = item.substring(0, pos),
-        value = item.substring(pos+1);
-    g.remap(name, value);
-  });
-}
+});
 
 // if not explicitly disabled and output is defined
 if(argv['out']) {

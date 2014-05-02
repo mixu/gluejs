@@ -156,7 +156,7 @@ module.exports = {
 
     file.once('close', function() {
       var name = new Date().getTime();
-      console.log(fs.readFileSync(outFile).toString());
+      // console.log(fs.readFileSync(outFile).toString());
       var result = require(outFile);
       // use standard require
       assert.deepEqual(result, 'Hello from Bar');

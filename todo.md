@@ -12,6 +12,7 @@ gluejs v3.next adds dependency parsing support:
 - The [browser field](https://gist.github.com/defunctzombie/4339901) in package.json files is supported via [browser-resolve](https://github.com/defunctzombie/node-browser-resolve)
 - `--replace` has been deprecated in favor of `--remap`. modules will only be loaded when requested, not earlier.
 - direct file requires like `require('jade/runtime')` should now resolve correctly
+- *Ignoring files*. `--ignore file` replaces the file with an empty file in the build.
 
 -----
 
@@ -92,15 +93,15 @@ Example:
 Two options:
 
 - use `--remap` and remap the global, include two files instead of one file
-- append `module.exports = global`, using Command:
+- append `module.exports = global`, using command:
 
 `--shim { file: "", name: "", global: "", deps: "" }`.
 
 This wraps the file in a way that the global variable is available as `require(name)`.
 
-### Misc
+-> this is basically `--remap name=require(file) --no-parse file --append-text file "module.exports = global;"`
 
-*Ignoring files*. `--ignore file` replaces the file with an empty file in the build.
+### Misc
 
 *Mocking out dependencies for testing*: This is probably more useful when used via the Express middleware, but `--remap name=path` allows specific externals to be replaced, which can be used for testing:
 
@@ -200,18 +201,78 @@ Transform queue (transforms/index.js):
 
 Queue tasks:
 
+- Expression syntax:
+  - files: ./relpath, /abspath/
+    - directories => all files in the directory and all subdirs
+  - modules: name
+- Components:
+  - full path matcher (e.g. exclude.match(filepath))
+  - module name matcher (e.g. exclude.matchPackage(name, parent))
 - Enable doing things like:
   - files
-    - exclude
-    - replace (content)
-    - ignore
-    - rename
+    - applied during the iteration
+      - include (--include)
+      - exclude (--exclude, --remap, --only-externals)
+      - ignore (--ignore)
+      - rename (detecting renames due to browser field)
+    - applied after the iteration
+      - replace (content)
+      - rename
+      - add tasks (--shim, --source-url)
   - modules
-    - exclude
-    - ignore
-    - replace
+    - exclude (--external, --no-externals, --include-external)
+    - ignore (--ignore)
+    - replace (--remap)
+  - package level
+    - --umd
+    - --global-require
 
 in a generic way by defining a bunch of callbacks, rather than doing these each in ugly and ad-hoc ways.
+
+--shim:
+
+--no-externals:
+
+    {
+      expr: '*'
+      type: 'package-filter',
+      task: function() {
+        return false;
+      }
+    }
+
+--only-externals:
+
+    {
+      expr: base + '/**',
+      phase: 'file-filter',
+      task: function() {
+        return false;
+      }
+    }
+
+--ignore:
+
+argv.ignore.toExpr()
+
+    {
+      expr: file paths,
+      phase: 'file-filter',
+      task: function() {
+        // no need to parse the file since it's always an empty file
+        self.addResult(filename, self.ignoreFile, [], [], []);
+        // queue has been updated, finish this task
+        self.emit('miss', filename);
+        return false;
+      }
+    }
+    {
+      expr: packages,
+      phase: 'package-filter',
+      task: function() {
+        return false;
+      }
+    }
 
 TODO:
 
