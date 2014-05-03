@@ -107,10 +107,14 @@ API.prototype._resolveOptions = function() {
 // you can call this method on a build from, say, a fs.watch style tool to optimistically
 // run builds.
 //
-API.prototype.preRender = function(onDone) {
+API.prototype.preRender = function(opts, onDone) {
   var self = this;
 
-  this._resolveOptions();
+  // normally called with one arg, but can skip resolveOptions when going via render()
+  if (arguments.length < 2) {
+    onDone = arguments[0];
+    this._resolveOptions();
+  }
 
   // Create the shared cache instance
   var cache = Cache.instance({
@@ -168,7 +172,7 @@ API.prototype.preRender = function(onDone) {
         ' (cache hits: ' + progress.hit + ')');
   });
 
-  if (process.stderr.isTTY || this.options.progress) {
+  if (this.options.progress && process.stderr.isTTY) {
     // progress = new ProgressBar('[:bar] :current / :total :percent :etas', {
     //   complete: '=', incomplete: ' ', width: 20, total: 1
     // });
@@ -190,6 +194,16 @@ API.prototype.preRender = function(onDone) {
   }
 };
 
+API.prototype.hasETag = function(etag) {
+  this._resolveOptions();
+  var cache = Cache.instance({
+    method: this.options['cache-method'],
+    path: this.options['cache-path']
+  });
+  var cachedResult = cache.data('etag-' + etag);
+  return cachedResult && fs.existsSync(cachedResult);
+};
+
 API.prototype.render = function(dest) {
   var self = this;
 
@@ -197,7 +211,7 @@ API.prototype.render = function(dest) {
   if (typeof dest == 'function') {
     // store the function - makes sure dest is always a writable stream
     var doneFn = dest,
-        onDestEnd = runOnce(function() {
+        onDestEndFn = runOnce(function() {
           doneFn(null, capture.get());
         });
 
@@ -207,19 +221,38 @@ API.prototype.render = function(dest) {
         console.trace();
         doneFn(err, null);
       })
-      .once('finish', onDestEnd)
-      .once('close', onDestEnd);
+      .once('finish', onDestEndFn)
+      .once('close', onDestEndFn);
   }
+  this._resolveOptions();
 
-  // allow the build to be skipped if:
-  // 1) does a build with this etag exist? `etag` option
-  // 2) you be certain that the input files and directories are
-  // all in the same state (e.g. due to a watcher)? `skipBuild` option
-  if (false && this.options.canSkipBuild) {
-    // read from cache
-    // create a stream capturer if we want the result as callback result
-    // emit done
-  }
+  // cache instance
+  var cache = Cache.instance({
+    method: self.options['cache-method'],
+    path: self.options['cache-path']
+  });
+
+  var expectedEndEvents = 1,
+      seenEndEvents = 0;
+
+  // set up the onDone tasks on the destination stream
+  onDestEnd = runOnce(function() {
+    console.log('DEND');
+
+    cache.end();
+    if(++seenEndEvents == expectedEndEvents) {
+      self.emit('done');
+    }
+  });
+  dest.once('finish', onDestEnd)
+      .once('close', onDestEnd)
+      .once('error', function(err) {
+        cache.end();
+        if (err) {
+          self.emit('error', err);
+          return;
+        }
+      });
 
   // otherwise we need to do cache lookups for each invidual file,
   // which will reuse results for any file that has not been changed
@@ -227,15 +260,11 @@ API.prototype.render = function(dest) {
 
   // console.time('preRender');
 
-  this.preRender(function(err, files, runner) {
+  this.preRender(self.options, function(err, files, runner) {
 
     // console.timeEnd('preRender');
     // console.time('render');
 
-    var cache = Cache.instance({
-      method: self.options['cache-method'],
-      path: self.options['cache-path']
-    });
     runner.removeAllListeners();
     if (err) {
       self.emit('error', err);
@@ -243,33 +272,23 @@ API.prototype.render = function(dest) {
       return;
     }
 
-    // set up the onDone tasks on the destination stream
-    var onDestEnd = runOnce(function() {
-      cache.end();
-      // console.timeEnd('render');
-      self.emit('done');
-    });
-    dest.once('finish', onDestEnd)
-        .once('close', onDestEnd)
-        .once('error', function(err) {
-          cache.end();
-          if (err) {
-            self.emit('error', err);
-            return;
-          }
-        });
-
     // calculate a etag for the result
     // best ensure that the files are in sorted order
-    var etag = Cache.hash(JSON.stringify(files));
+    var etag = 'W/' + Cache.hash(JSON.stringify(files));
 
     // does a final build result with this etag exist?
     // if yes, return the cached version
+
+    // TODO: should also support not returning anything at this stage
+
     var cachedResult = cache.data('etag-' + etag);
     if (cachedResult && fs.existsSync(cachedResult)) {
       fs.createReadStream(cachedResult).pipe(dest);
       return; // dest.once('finish') handles the rest
     }
+    // must emit before the destination stream/request has closed
+    // could be moved somewhere better
+    self.emit('etag', etag);
 
     // create a file that caches the result
     cachedResult = cache.filepath();
@@ -277,20 +296,29 @@ API.prototype.render = function(dest) {
     var splitter = new PassThrough(),
         cacheOut = fs.createWriteStream(cachedResult),
         hadError = false;
-    splitter.pipe(dest);
+
+    // order matters here, prefer writing the cached output before the destination
+    // so that requests made in rapid succession still hit the cache
     splitter.pipe(cacheOut);
+    splitter.pipe(dest);
 
     self.once('error', function() {
       hadError = true;
     });
 
+    expectedEndEvents++;
+
     var onCacheEnd = runOnce(function() {
+      console.log('CEND', etag);
       // finalize the cached result if there were no errors
       if (!hadError) {
         cache.data('etag-' + etag, cachedResult);
         log.debug('Cached etag:', etag, cachedResult);
       } else {
         log.debug('Skipped etag:', etag, 'due to error.');
+      }
+      if(++seenEndEvents == expectedEndEvents) {
+        self.emit('done');
       }
     });
 
@@ -300,7 +328,7 @@ API.prototype.render = function(dest) {
     packageCommonJs({
       cache: cache,
       files: files,
-      out: splitter ? splitter : dest,
+      out: splitter,
       basepath: self.options.basepath,
       main: self.options.main,
       export: self.options['export'],
@@ -317,7 +345,11 @@ API.prototype.set = function(key, value) {
   } else {
     this.options[key] = value;
   }
-  if (key == 'verbose' && value) {
+  if (key == 'debug' && value) {
+    Minilog.enable();
+    Minilog.suggest.defaultResult = true;
+    Minilog.suggest.clear();
+  } else if (key == 'verbose' && value) {
     Minilog.enable();
     // enable logging levels >= info
     Minilog.suggest.defaultResult = false;
@@ -389,13 +421,20 @@ API.middleware = function(opts) {
   opts.include = opts.include || './lib';
 
   // -- Create an instance of the API to use
-  var glue = new API()
-    .include(opts.include);
+  var glue = new API();
 
   // -- All other options are set by clobbering the glue.options hash
   Object.keys(opts).forEach(function(key) {
     glue.set(key, opts[key]);
   });
+
+  // TEMP FIX
+  if(opts.remap) {
+    glue.remap(opts.remap);
+  }
+
+
+  var zcache = [];
 
   // -- Middleware to return
   return function(req, res, next) {
@@ -406,8 +445,64 @@ API.middleware = function(opts) {
     // -- Set content-type
     res.setHeader('Content-Type', 'application/javascript');
 
+    // -- Set etag if the request has one
+    if (req.headers['if-none-match']) {
+      // allow the build to be skipped if:
+      // 1) does a build with this etag exist? `etag` option
+      // 2) you be certain that the input files and directories are
+      // all in the same state (e.g. due to a watcher)? `canSkipBuild` option
+      var etag = req.headers['if-none-match'],
+          canSkipBuild = (typeof opts['canSkipBuild'] === 'function' ?
+            opts['canSkipBuild']() : opts['canSkipBuild']);
+      if (glue.hasETag(etag)) {
+        res.statusCode = 304;
+        res.setHeader('etag', etag);
+        return res.end();
+      }
+    }
+
+    // 0.8.x does not have the res.headersSent property
+    var headersSent = false;
+    res.once('close', function() {
+      headersSent = true;
+    }).once('finish', function() {
+      headersSent = true;
+    });
+
+    if(Buffer.isBuffer(zcache)) {
+      res.setHeader('Content-Encoding', 'gzip');
+      return res.end(zcache);
+    }
+
+    // gzip
+    var gzip;
+    if(supportsGzip(req)) {
+      res.setHeader('Content-Encoding', 'gzip');
+      gzip = require('zlib').createGzip();
+      gzip.pipe(res);
+      gzip.on('data', function(chunk) {
+        zcache.push(chunk);
+      }).once('close', function() {
+        zcache = Buffer.concat(zcache);
+      }).once('finish', function() {
+        zcache = Buffer.concat(zcache);
+      });
+
+    }
+
+
+
+
     // -- Render file and pipe to response
     glue
+      .on('etag', function(etag) {
+        if (!headersSent) {
+          res.setHeader('ETag', etag);
+          console.log('SET etaga', etag);
+        } else {
+          console.log('etag fail', etag);
+        }
+      })
       .on('error', function(err) {
         var strErr = err.toString(),
             reqUrl = (req.originalUrl ? req.originalUrl : req.url);
@@ -425,8 +520,14 @@ API.middleware = function(opts) {
           JSON.stringify(strErr) + ');\n');
         res.end();
       })
-      .render(res);
+      .render(gzip ? gzip : res);
   };
 };
+
+function supportsGzip(req) {
+  return req.headers
+      && req.headers['accept-encoding']
+      && req.headers['accept-encoding'].indexOf('gzip') !== -1;
+}
 
 module.exports = API;

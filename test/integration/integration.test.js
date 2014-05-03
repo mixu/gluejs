@@ -28,6 +28,14 @@ exports['integration tests'] = {
   // - `--transform` with various options
   transform: require('./transform-tests.js'),
 
+  'commands should be applied to all files': function() {
+
+  },
+
+  'transforms should not be applied to files in external modules': function() {
+
+  },
+
   // File inclusion/exclusion
   // - multiple `--includes`
   // - `--exclude` should work
@@ -100,23 +108,10 @@ exports['integration tests'] = {
   // - file size reporter
 
   // Performance tests
-  // - run the same build twice, check the number of cached items
-  // - run the same build, with syntax error, twice, check cached items
-
-  perf: {
-
-    'running the same build twice will make use of the cache': function() {
-
-    },
-
-    'changing options not passed into the runner still invalidate the cache': function() {
-      // e.g. --command or no --command
-    },
-
-    'when a syntax error occurs, the build is not cached': function() {
-
-    }
-  },
+  // - running the same build twice will make use of the cache
+  // - changing options passed into the runner invalidate the cache
+  // - when a syntax error occurs, the build is not cached
+  perf: require('./perf-tests.js'),
 
   // AMD tests
   // - output as AMD
@@ -125,37 +120,40 @@ exports['integration tests'] = {
   // Middleware tests
   // - short form syntax works as expected
   // - middleware error messages
-  middleware: require('./middleware-tests.js'),
-
-  // TODO:
-  // -- can specify a build with two external modules as targets
   // - production mode
   // - middleware etags support
+  // - fs.watch style example
+  middleware: require('./middleware-tests.js'),
+  // TODO:
+  // -- can specify a build with two external modules as targets
   // - mocha test packaging mode (as plugin?)
-  // - cache preheating option
 
-  'production mode': function() {
-/*
-    app.use('/js/third.js', Glue.middleware({
-      umd: true,
-      basepath: outDir + '/third',
-      include: [ './lib/index.js', './foo/bar.js' ],
-      main: 'lib/index.js'
-
-      staticFolder: (DEBUG_MODE ? false : __dirname + '/precompiled/' )
-    }));
-*/
+  'etags should be supported when the full file is found in the cache': function() {
+    // e.g. when a server is restarted
   },
 
-  'can avoid expensive operations using an etag': function() {
-    // generate build
+  'middleware should support gzipping': function() {
 
-    // ask for the same build again, sending the necessary headers
-
-    // the full build should be returned from cache
   },
 
   // Other
+
+  '--no-cache should work correctly': function() {
+
+  },
+
+  '.set(key, value) should produce the same result as .key(value)': function() {
+    // special cases:
+    // .basepath, .remap etc.
+  },
+
+  'module excludes should not be interpreted as regexps': function() {
+    // right now, they are
+  },
+
+  'deleting cache items from underneath a running server': function() {
+
+  },
 
   'can write a --umd bundle': function() {
 
