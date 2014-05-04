@@ -172,6 +172,7 @@ module.exports = {
     });
   },
 
+  // TODO
   'can prerender the build using a watcher like chokidar': function() {
     var chokidar = require('chokidar');
 
@@ -190,7 +191,9 @@ module.exports = {
       }
     };
 
-    chokidar
+    var watcher = chokidar.watch('file or dir', {ignored: /[\/\\]\./, persistent: true});
+
+    watcher
       .on('all', function(event, path) {
         console.log('watcher:', event, path);
         // mark the build as dirty

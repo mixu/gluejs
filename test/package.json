@@ -2,17 +2,18 @@
   "name": "gluejs-tests",
   "description": "Tests for gluejs",
   "dependencies": {
-    "coffee-script": "~1.6.3",
-    "jade": "~0.35.0",
     "brfs": "0.0.8",
+    "chokidar": "^0.8.2",
+    "coffee-script": "~1.6.3",
     "coffeeify": "~0.5.2",
     "es6-module-transpiler": "~0.3.1",
+    "express": "~3.5.0",
     "handlebars-runtime": "~1.0.12",
     "hbsfy": "~0.1.5",
-    "uglify-js": "~2.4.8",
-    "express": "~3.5.0",
-    "rimraf": "~2.2.6",
+    "jade": "~0.35.0",
     "mkdirp": "~0.3.5",
-    "request": "~2.34.0"
+    "request": "~2.34.0",
+    "rimraf": "~2.2.6",
+    "uglify-js": "~2.4.8"
   }
 }

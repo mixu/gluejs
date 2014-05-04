@@ -98,8 +98,13 @@ API.prototype._resolveOptions = function(input) {
   // resolve relative: --ignore, --include and --exclude
   [ 'ignore', 'include', 'exclude' ].forEach(function(key) {
     if (input[key]) {
-      opts[key] = resolvePackage(opts.basepath,
-        resolve(opts.basepath, input[key]));
+      opts[key] = resolve(opts.basepath, opts[key]);
+    }
+  });
+
+  [ 'include', 'exclude' ].forEach(function(key) {
+    if (input[key]) {
+      opts[key] = resolvePackage(opts.basepath, opts[key]);
     }
   });
 
@@ -119,6 +124,8 @@ API.prototype._resolveOptions = function(input) {
       }
     });
   }
+
+  console.log(this.options, 'Build options', opts);
 
   return opts;
 };
@@ -142,8 +149,6 @@ API.prototype.preRender = function(opts, onDone) {
     path: opts['cache-path']
   });
   cache.begin();
-
-  console.log('Build options', opts);
 
   // reporters
   var progress = { total: 0, complete: 0, hit: 0, miss: 0 };
@@ -395,15 +400,17 @@ API.prototype.set = function(key, value) {
     // 2) an object
     //   <= for two params, set key and value
     //   <= for an object param, iterate keys and values and set them
-    if (arguments.length === 2) {
-      this.options[key][arguments[0]] = arguments[1];
-    } else if (arguments.length === 1 &&
-      arguments[0] && typeof arguments[0] === 'object') {
-      Object.keys(arguments[0]).forEach(function(oKey) {
-        self.options[key][oKey] = arguments[0][oKey];
+    // keyName, arg1, arg2
+    if (arguments.length === 3) {
+      this.options[key][arguments[1]] = arguments[2];
+    } else if (arguments.length === 2 &&
+      value && typeof value === 'object') {
+      Object.keys(value).forEach(function(oKey) {
+        self.options[key][oKey] = value[oKey];
       });
     } else {
-      throw new Error('Unknown option format for key "' + key + '": ' + value);
+      throw new Error('Unknown option format for key "' + key + '": ' +
+        Array.prototype.slice.call(arguments));
     }
   } else {
     // 3) a primitive <= overwrite

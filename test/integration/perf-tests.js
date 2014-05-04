@@ -1,10 +1,16 @@
 var assert = require('assert'),
     util = require('util'),
-    fs = require('fs');
+    fs = require('fs'),
+    path = require('path');
 
 var Glue = require('gluejs');
 
 module.exports = {
+
+  before: function() {
+    var fixture = this.fixture;
+    this.cachePath = path.dirname(fixture.filename());
+  },
 
   'running the same build twice will make use of the cache': function(done) {
     var fixture = this.fixture,
@@ -13,6 +19,8 @@ module.exports = {
     var outDir = fixture.dir({
       'index.js': 'module.exports = "Index";'
     });
+
+    var self = this;
 
     var cacheHits = [],
         total = 0;
@@ -42,7 +50,7 @@ module.exports = {
         .on('hit', function(filename){
           cacheHits.push(filename);
         })
-        .set('cachePath', this.cachePath)
+        .set('cache-path', self.cachePath)
         .set('umd', true)
         .render(file);
     }
@@ -59,6 +67,8 @@ module.exports = {
 
     var cacheHits = [],
         total = 0;
+
+    var self = this;
 
     file.once('close', function() {
       assert.equal(total, 1);
@@ -79,7 +89,7 @@ module.exports = {
         .on('hit', function(filename){
           cacheHits.push(filename);
         })
-        .set('cachePath', this.cachePath)
+        .set('cache-path', self.cachePath)
         .set('umd', true)
         .render(file);
     });
@@ -95,7 +105,7 @@ module.exports = {
         .on('hit', function(filename){
           cacheHits.push(filename);
         })
-        .set('cachePath', this.cachePath)
+        .set('cache-path', self.cachePath)
         .set('umd', true)
         .set('command', __dirname + '/../node_modules/.bin/uglifyjs')
         .render(file);
@@ -112,6 +122,8 @@ module.exports = {
 
     var cacheHits = [],
         total = 0;
+
+    var self = this;
 
     file.once('close', function() {
       assert.equal(total, 1);
@@ -138,7 +150,7 @@ module.exports = {
         .on('hit', function(filename){
           cacheHits.push(filename);
         })
-        .set('cachePath', this.cachePath)
+        .set('cache-path', self.cachePath)
         .set('umd', true)
         .render(file);
     }

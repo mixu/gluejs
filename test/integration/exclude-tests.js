@@ -157,7 +157,7 @@ module.exports = {
         'function require(str) { return "extern-" + str; }\n' +
         fs.readFileSync(outFile));
       var result = require(outFile);
-      // console.log(fs.readFileSync(outFile).toString());
+      console.log(fs.readFileSync(outFile).toString());
       assert.deepEqual(result, 'extern-foo');
       done();
     });
