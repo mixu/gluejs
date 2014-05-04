@@ -54,7 +54,7 @@ if(argv['verbose']) {
   argv['progress'] = false;
 }
 
-// Booleans:
+// Boolean params:
 // --reset-exclude
 // --source-url
 // --global-require
@@ -65,33 +65,29 @@ if(argv['verbose']) {
   }
 });
 
-// Strings:
+// String params:
+// --include
 // --exclude
+// --basepath
+// --main
+// --ignore
 // --amd
 // --umd
 // --cache-method
 // --command
 // --transform
 // --jobs
-// --ignore
-[ 'exclude', 'amd', 'umd', 'cache-method', 'command', 'transform', 'jobs',
-  'ignore' ].forEach(function(key) {
+
+[ 'include', 'exclude', 'basepath', 'main', 'ignore'
+  'amd', 'umd', 'cache-method',
+  'command', 'transform', 'jobs'].forEach(function(key) {
   if(argv[key]) {
     g.set(key, argv[key]);
   }
 });
 
-// --include
-g.include(argv['include']);
-
 // --global
 g.export(argv['global']);
-
-// --basepath
-g.basepath(argv['basepath']);
-
-// --main
-g.main(argv['main']);
 
 // --remap
 ['replace', 'remap'].forEach(function(key) {

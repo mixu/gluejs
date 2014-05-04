@@ -25,7 +25,8 @@ exports['runQueue tests'] = {
 
     runner({
       include: [ outDir + '/index.js' ],
-      cache: this.cache
+      cache: this.cache,
+      jobs: 1
     }, function(err, results) {
       assert.ok(!err);
       assert.equal(results.length, 1);
@@ -48,7 +49,8 @@ exports['runQueue tests'] = {
 
     runner({
       include: [ outDir + '/index.js' ],
-      cache: this.cache
+      cache: this.cache,
+      jobs: 1
     }, function(err, results) {
       assert.ok(!err);
       // console.log(results);
@@ -80,7 +82,8 @@ exports['runQueue tests'] = {
 
     runner({
       include: [ outDir ],
-      cache: this.cache
+      cache: this.cache,
+      jobs: 1
     }, function(err, results) {
       assert.ok(!err);
       assert.equal(results.length, 3);
@@ -118,7 +121,8 @@ exports['runQueue tests'] = {
 
     runner({
       include: outDir,
-      cache: this.cache
+      cache: this.cache,
+      jobs: 1
     }, function(err, results) {
       assert.ok(!err);
       // console.log(results);
@@ -154,7 +158,8 @@ exports['runQueue tests'] = {
         outDir + '/one.js',
         outDir + '/two.js'
       ],
-      cache: this.cache
+      cache: this.cache,
+      jobs: 1
     }, function(err, results) {
       assert.ok(!err);
       assert.equal(results.length, 4);
@@ -201,7 +206,8 @@ exports['runQueue tests'] = {
 
     runner({
       include: outDir + '/foo/bar/one.js',
-      cache: this.cache
+      cache: this.cache,
+      jobs: 1
     }, function(err, results) {
       assert.ok(!err);
       assert.equal(results.length, 3);
@@ -240,7 +246,8 @@ exports['runQueue tests'] = {
     });
     runner({
         include: [ outDir + '/index.js' ],
-        cache: this.cache
+        cache: this.cache,
+        jobs: 1
       }, function(err, results) {
         assert.ok(!err);
         // console.log(results);
@@ -282,7 +289,8 @@ exports['runQueue tests'] = {
     });
     runner({
         include: [ outDir + '/index.js' ],
-        cache: this.cache
+        cache: this.cache,
+        jobs: 1
       }, function(err, results) {
         assert.ok(!err);
         // console.log(results);

@@ -18,7 +18,8 @@ function fixtureDir(outDir, include, onDone) {
   // set up fixture
   runTasks({
     include: include,
-    cache: cache
+    cache: cache,
+    jobs: 1
   }, function(err, results) {
     if (err) {
       throw err;

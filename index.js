@@ -9,31 +9,23 @@ var os = require('os'),
     log = require('minilog')('api'),
     ProgressBar = require('progress'),
     microee = require('microee'),
-    PassThrough = require('readable-stream').PassThrough;
+    PassThrough = require('readable-stream').PassThrough,
+    runOnce = require('./lib/util/run-once.js');
 
 var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
 homePath = (typeof homePath === 'string' ? path.normalize(homePath) : process.cwd());
-
-// need to run some callbacks just once, avoid littering the code with tiny booleans
-function runOnce(fn) {
-  var ran = false;
-  return function() {
-    if (!ran) {
-      fn.apply(fn, Array.prototype.slice(arguments));
-    }
-  };
-}
 
 // API wrapper
 function API() {
   // default options
   this.options = {
-    replaced: {},
     remap: {},
     cache: true,
     'cache-path': homePath + path.sep + '.gluejs-cache' + path.sep,
+    'cache-method': 'stat',
     include: [],
     exclude: [],
+    ignore: [],
     // set options here so that the cache hash does not change
     jobs: require('os').cpus().length * 2
   };
@@ -41,38 +33,49 @@ function API() {
 
 microee.mixin(API);
 
-API.prototype.include = function(filepath) {
-  if (!filepath) return this;
-  this.options.include.push(filepath);
-  return this;
-};
-
 // options need to be resolved just before running, since their results
 // depend on the state of the file system (ex. `include()` on a folder that has changed)
 //
-API.prototype._resolveOptions = function() {
+API.prototype._resolveOptions = function(input) {
+  var opts = { };
+  // copy each input key, overwrite later
+  Object.keys(input).forEach(function(key) {
+    opts[key] = input[key];
+  });
+
   // if the cache is disabled, then use a temp path
-  if (!this.options.cache) {
-    this.options['cache-path'] = os.tmpDir() + '/gluejs-' + new Date().getTime();
+  if (!input.cache) {
+    opts['cache-path'] = os.tmpDir() + '/gluejs-' + new Date().getTime();
   }
 
-  if (!this.options['cache-method']) {
-    this.options['cache-method'] = 'stat';
-  }
+  // includes may be:
+  // 1) full path,
+  // 2) relative path, => resolve relative to basepath, or if unavailable, process.cwd
+  // 3) module names
 
-  var firstInclude = (typeof this.options.include === 'string' ?
-        this.options.include : this.options.include[0]),
+  var firstInclude = (typeof input.include === 'string' ?
+        input.include : input.include[0]),
       firstIncludeStat = (fs.existsSync(firstInclude) ? fs.statSync(firstInclude) : false);
 
-  // if basepath is not set, use the firstInclude to set it
-  if (!this.options.basepath) {
-    this.options.basepath = (firstIncludeStat && firstIncludeStat.isFile() ?
-      path.dirname(firstInclude) : firstInclude);
+  if (!input.basepath) {
+    if (firstInclude.charAt(0) == '.') {
+      // relative include => use process.cwd
+      opts.basepath = process.cwd();
+    } else if (firstInclude.charAt(0) == '/') {
+      // full include => use full path
+      opts.basepath = (firstIncludeStat && firstIncludeStat.isFile() ?
+        path.dirname(firstInclude) : firstInclude);
+    }
+  } else {
+    opts.basepath = path.resolve(process.cwd(), input.basepath);
   }
+
   // set main the first include is a file, use it as the main
   // otherwise, warn?
-  if (!this.options.main && firstIncludeStat && firstIncludeStat.isFile()) {
-    this.options.main = path.relative(this.options.basepath, firstInclude);
+  if (!input.main && firstIncludeStat && firstIncludeStat.isFile()) {
+    opts.main = path.relative(input.basepath, firstInclude);
+  } else {
+    opts.main = input.main;
   }
 
   function resolve(to, from) {
@@ -81,14 +84,6 @@ API.prototype._resolveOptions = function() {
       return (relpath.charAt(0) == '.' ? path.resolve(to, relpath) : relpath);
     });
   }
-
-  // resolve relative ignores
-  if (this.options.ignore) {
-    this.options.ignore = resolve(this.options.basepath, this.options.ignore);
-  }
-
-  // resolve all relative includes
-  this.options.include = resolve(this.options.basepath, this.options.include);
 
   function resolvePackage(to, from) {
     var nodeResolve = require('resolve');
@@ -100,7 +95,32 @@ API.prototype._resolveOptions = function() {
     });
   }
 
-  this.options.include = resolvePackage(this.options.basepath, this.options.include);
+  // resolve relative: --ignore, --include and --exclude
+  [ 'ignore', 'include', 'exclude' ].forEach(function(key) {
+    if (input[key]) {
+      opts[key] = resolvePackage(opts.basepath,
+        resolve(opts.basepath, input[key]));
+    }
+  });
+
+  // process remap
+  if (input.remap) {
+    Object.keys(input.remap).forEach(function(key) {
+      var code = input.remap[key];
+      if (typeof code == 'object') {
+        opts.remap[key] = JSON.stringify(code);
+      } else {
+        if (typeof key === 'string' && key.charAt(0) != '.' && key.charAt(0) != '/') {
+          // exclude the module with the same name
+          opts.exclude.push(key);
+        }
+        // function / number / boolean / undefined all convert to string already
+        opts.remap[key] = code;
+      }
+    });
+  }
+
+  return opts;
 };
 
 // preRender performs all the file build tasks without actually producing an output file
@@ -113,32 +133,33 @@ API.prototype.preRender = function(opts, onDone) {
   // normally called with one arg, but can skip resolveOptions when going via render()
   if (arguments.length < 2) {
     onDone = arguments[0];
-    this._resolveOptions();
+    opts = this._resolveOptions(this.options);
   }
 
   // Create the shared cache instance
   var cache = Cache.instance({
-    method: this.options['cache-method'],
-    path: this.options['cache-path']
+    method: opts['cache-method'],
+    path: opts['cache-path']
   });
   cache.begin();
 
-  // console.log('Build options', this.options);
+  console.log('Build options', opts);
 
   // reporters
   var progress = { total: 0, complete: 0, hit: 0, miss: 0 };
   // run any tasks and parse dependencies (mapper)
   var runner = runTasks({
     cache: cache,
-    include: this.options.include,
-    command: this.options.command,
-    transform: this.options.transform,
-    exclude: this.options.exclude,
-    ignore: this.options.ignore,
-    jobs: this.options.jobs
+    include: opts.include,
+    command: opts.command,
+    transform: opts.transform,
+    exclude: opts.exclude,
+    ignore: opts.ignore,
+    jobs: opts.jobs,
+    'gluejs-version': opts['gluejs-version']
     // TODO
     // --reset-exclude should also reset the pre-processing exclusion
-    // if (this.options['reset-exclude']) {
+    // if (opts['reset-exclude']) {
     //   list.exclude(null);
     // }
   }, function(err, files) {
@@ -172,7 +193,7 @@ API.prototype.preRender = function(opts, onDone) {
         ' (cache hits: ' + progress.hit + ')');
   });
 
-  if (this.options.progress && process.stderr.isTTY) {
+  if (opts.progress && process.stderr.isTTY) {
     // progress = new ProgressBar('[:bar] :current / :total :percent :etas', {
     //   complete: '=', incomplete: ' ', width: 20, total: 1
     // });
@@ -195,10 +216,10 @@ API.prototype.preRender = function(opts, onDone) {
 };
 
 API.prototype.hasETag = function(etag) {
-  this._resolveOptions();
+  var opts = this._resolveOptions(this.options);
   var cache = Cache.instance({
-    method: this.options['cache-method'],
-    path: this.options['cache-path']
+    method: opts['cache-method'],
+    path: opts['cache-path']
   });
   var cachedResult = cache.data('etag-' + etag);
   return cachedResult && fs.existsSync(cachedResult);
@@ -224,12 +245,12 @@ API.prototype.render = function(dest) {
       .once('finish', onDestEndFn)
       .once('close', onDestEndFn);
   }
-  this._resolveOptions();
+  var opts = this._resolveOptions(this.options);
 
   // cache instance
   var cache = Cache.instance({
-    method: self.options['cache-method'],
-    path: self.options['cache-path']
+    method: opts['cache-method'],
+    path: opts['cache-path']
   });
 
   var expectedEndEvents = 1,
@@ -260,7 +281,7 @@ API.prototype.render = function(dest) {
 
   // console.time('preRender');
 
-  this.preRender(self.options, function(err, files, runner) {
+  this.preRender(opts, function(err, files, runner) {
 
     // console.timeEnd('preRender');
     // console.time('render');
@@ -329,22 +350,31 @@ API.prototype.render = function(dest) {
       cache: cache,
       files: files,
       out: splitter,
-      basepath: self.options.basepath,
-      main: self.options.main,
-      export: self.options['export'],
-      umd: self.options.umd,
-      remap: self.options.remap,
+      basepath: opts.basepath,
+      main: opts.main,
+      export: opts['export'],
+      umd: opts.umd,
+      remap: opts.remap,
+      'gluejs-version': opts['gluejs-version']
     });
   });
 };
 
 // setters
 API.prototype.set = function(key, value) {
-  if (key == 'exclude' && value) {
-    this.options['exclude'].push(value);
-  } else {
-    this.options[key] = value;
+  var self = this;
+  // Input can be:
+  // 1) key-value pair object
+  if (arguments.length == 1 && key === Object(key)) {
+    Object.keys(key).forEach(function(k) {
+      this.set(k, key[k]);
+    }, this);
+    return this;
   }
+  // 2) primitive <= set or append depending on the original value
+  // 3) array <= set or append depending on the original value
+
+  // original value can be:
   if (key == 'debug' && value) {
     Minilog.enable();
     Minilog.suggest.defaultResult = true;
@@ -354,24 +384,49 @@ API.prototype.set = function(key, value) {
     // enable logging levels >= info
     Minilog.suggest.defaultResult = false;
     Minilog.suggest.clear().allow(/.*/, 'info');
+  } else if (Array.isArray(this.options[key])) {
+    // 1) an array <= append to array
+    if (Array.isArray(value)) {
+      this.options[key] = this.options[key].concat(value);
+    } else {
+      this.options[key].push(value);
+    }
+  } else if (this.options[key] && typeof this.options[key] == 'object') {
+    // 2) an object
+    //   <= for two params, set key and value
+    //   <= for an object param, iterate keys and values and set them
+    if (arguments.length === 2) {
+      this.options[key][arguments[0]] = arguments[1];
+    } else if (arguments.length === 1 &&
+      arguments[0] && typeof arguments[0] === 'object') {
+      Object.keys(arguments[0]).forEach(function(oKey) {
+        self.options[key][oKey] = arguments[0][oKey];
+      });
+    } else {
+      throw new Error('Unknown option format for key "' + key + '": ' + value);
+    }
+  } else {
+    // 3) a primitive <= overwrite
+    this.options[key] = value;
   }
   if (key == 'jobs') {
     log.info('Maximum number of parallel tasks:', this.options.jobs);
   }
+  if (key == 'amd') {
+    log.warn('The "--amd" option has been deprecated, please use "--umd" instead.');
+  }
+  if (key == 'replace') {
+    log.warn('The "--replace" option has been deprecated, please use "--remap" instead.');
+  }
   return this;
 };
 
-['export', 'main'].forEach(function(key) {
-  API.prototype[key] = function(value) {
-    this.options[key] = value;
+['export', 'main', 'exclude', 'basepath', 'remap', 'include'].forEach(function(key) {
+  API.prototype[key] = function() {
+    this.set.apply(this, [ key ].concat(Array.prototype.slice.call(arguments)));
     return this;
   };
 });
-
-API.prototype.basepath = function(value) {
-  this.options.basepath = path.resolve(process.cwd(), value);
-  return this;
-};
 
 // other
 API.prototype.replace = function(module, code) {
@@ -379,155 +434,7 @@ API.prototype.replace = function(module, code) {
   return this.remap(module, code);
 };
 
-API.prototype.remap = function(module, code) {
-  if (arguments.length == 1 && module === Object(module)) {
-    Object.keys(module).forEach(function(k) {
-      this.remap(k, module[k]);
-    }, this);
-  } else {
-    if (typeof code == 'object') {
-      this.options.remap[module] = JSON.stringify(code);
-    } else {
-      if (typeof module === 'string' && module.charAt(0) != '.' && module.charAt(0) != '/') {
-        // exclude the module with the same name
-        this.set('exclude', module);
-      }
-      // function / number / boolean / undefined all convert to string already
-      this.options.remap[module] = code;
-    }
-  }
-  return this;
-};
-
-// TODO cleanup
-// set('exclude') uses direct set, this one converts to regExp
-API.prototype.exclude = function(path) {
-  this.set('exclude', path instanceof RegExp ? path: new RegExp(path));
-  return this;
-};
-
 // Express Middleware
-API.middleware = function(opts) {
-  // allow .middleware(str|arr, opts)
-  if (arguments.length === 2) {
-    var args = Array.prototype.slice.call(arguments);
-    opts = args[1];
-    opts.include = args[0];
-  } else if (typeof opts === 'string' || Array.isArray(opts)) {
-    opts = { include: opts };
-  }
-  // -- Set some sane defaults
-  opts = opts || {};
-  opts.include = opts.include || './lib';
-
-  // -- Create an instance of the API to use
-  var glue = new API();
-
-  // -- All other options are set by clobbering the glue.options hash
-  Object.keys(opts).forEach(function(key) {
-    glue.set(key, opts[key]);
-  });
-
-  // TEMP FIX
-  if(opts.remap) {
-    glue.remap(opts.remap);
-  }
-
-
-  var zcache = [];
-
-  // -- Middleware to return
-  return function(req, res, next) {
-
-    // -- Return all non GET requests
-    if ('GET' !== req.method) return next();
-
-    // -- Set content-type
-    res.setHeader('Content-Type', 'application/javascript');
-
-    // -- Set etag if the request has one
-    if (req.headers['if-none-match']) {
-      // allow the build to be skipped if:
-      // 1) does a build with this etag exist? `etag` option
-      // 2) you be certain that the input files and directories are
-      // all in the same state (e.g. due to a watcher)? `canSkipBuild` option
-      var etag = req.headers['if-none-match'],
-          canSkipBuild = (typeof opts['canSkipBuild'] === 'function' ?
-            opts['canSkipBuild']() : opts['canSkipBuild']);
-      if (glue.hasETag(etag)) {
-        res.statusCode = 304;
-        res.setHeader('etag', etag);
-        return res.end();
-      }
-    }
-
-    // 0.8.x does not have the res.headersSent property
-    var headersSent = false;
-    res.once('close', function() {
-      headersSent = true;
-    }).once('finish', function() {
-      headersSent = true;
-    });
-
-    if(Buffer.isBuffer(zcache)) {
-      res.setHeader('Content-Encoding', 'gzip');
-      return res.end(zcache);
-    }
-
-    // gzip
-    var gzip;
-    if(supportsGzip(req)) {
-      res.setHeader('Content-Encoding', 'gzip');
-      gzip = require('zlib').createGzip();
-      gzip.pipe(res);
-      gzip.on('data', function(chunk) {
-        zcache.push(chunk);
-      }).once('close', function() {
-        zcache = Buffer.concat(zcache);
-      }).once('finish', function() {
-        zcache = Buffer.concat(zcache);
-      });
-
-    }
-
-
-
-
-    // -- Render file and pipe to response
-    glue
-      .on('etag', function(etag) {
-        if (!headersSent) {
-          res.setHeader('ETag', etag);
-          console.log('SET etaga', etag);
-        } else {
-          console.log('etag fail', etag);
-        }
-      })
-      .on('error', function(err) {
-        var strErr = err.toString(),
-            reqUrl = (req.originalUrl ? req.originalUrl : req.url);
-        if (err.path || err.fileName) {
-          strErr = '[' + (err.path || err.fileName) +
-            ':' + err.lineNumber +
-            ':' + err.column + '] '
-            + err.message;
-        }
-
-        log.error('gluejs middleware: ' + reqUrl + ' returning 500 due to error: ', err);
-        res.statusCode = 500;
-        res.write('console.error("[500] gluejs build error (at: ' +
-          req.protocol + '://' + req.host + reqUrl + '):\\n      ", ' +
-          JSON.stringify(strErr) + ');\n');
-        res.end();
-      })
-      .render(gzip ? gzip : res);
-  };
-};
-
-function supportsGzip(req) {
-  return req.headers
-      && req.headers['accept-encoding']
-      && req.headers['accept-encoding'].indexOf('gzip') !== -1;
-}
+API.middleware = require('./lib/middleware.js');
 
 module.exports = API;
