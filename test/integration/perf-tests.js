@@ -44,7 +44,7 @@ module.exports = {
     function build(outDir, file) {
       new Glue()
         .include(outDir)
-        .on('add', function() {
+        .on('file', function() {
           total++;
         })
         .on('hit', function(filename){
@@ -83,7 +83,7 @@ module.exports = {
       });
       new Glue()
         .include(outDir)
-        .on('add', function() {
+        .on('file', function() {
           total++;
         })
         .on('hit', function(filename){
@@ -99,7 +99,7 @@ module.exports = {
     function build(outDir, file) {
       new Glue()
         .include(outDir)
-        .on('add', function() {
+        .on('file', function() {
           total++;
         })
         .on('hit', function(filename){
@@ -144,7 +144,7 @@ module.exports = {
     function build(outDir, file) {
       new Glue()
         .include(outDir)
-        .on('add', function() {
+        .on('file', function() {
           total++;
         })
         .on('hit', function(filename){

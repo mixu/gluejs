@@ -103,10 +103,6 @@ exports['integration tests'] = {
 
   },
 
-  // Reporter tests
-  // - progress
-  // - file size reporter
-
   // Performance tests
   // - running the same build twice will make use of the cache
   // - changing options passed into the runner invalidate the cache
@@ -138,6 +134,10 @@ exports['integration tests'] = {
 
   // Other
 
+  'CLI tests': function() {
+    // test that it works
+  },
+
   '--no-cache should work correctly': function() {
 
   },
@@ -168,7 +168,7 @@ exports['integration tests'] = {
 // if this module is the script being run, then run the tests:
 if (module == require.main) {
   var mocha = require('child_process').spawn('mocha', [
-    '--colors', '--ui', 'exports', '--reporter', 'spec', __filename
+    '--colors', '--bail', '--ui', 'exports', '--reporter', 'spec', __filename
   ]);
   mocha.stderr.on('data', function (data) {
     if (/^execvp\(\)/.test(data)) {

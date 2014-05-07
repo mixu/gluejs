@@ -78,7 +78,7 @@ if(argv['verbose']) {
 // --transform
 // --jobs
 
-[ 'include', 'exclude', 'basepath', 'main', 'ignore'
+[ 'include', 'exclude', 'basepath', 'main', 'ignore',
   'amd', 'umd', 'cache-method',
   'command', 'transform', 'jobs'].forEach(function(key) {
   if(argv[key]) {

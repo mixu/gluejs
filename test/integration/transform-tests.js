@@ -17,6 +17,7 @@ module.exports = {
     });
 
     file.once('close', function() {
+      // console.log(fs.readFileSync(outFile).toString());
       var result = require(outFile);
       assert.deepEqual(result,  'BAR');
       done();
@@ -85,6 +86,7 @@ module.exports = {
 
     file.once('close', function() {
       var name = new Date().getTime();
+      // console.log(fs.readFileSync(outFile).toString());
       var result = require(outFile);
       // use standard require
       var result = result({ name: name });

@@ -83,7 +83,7 @@ module.exports = {
     });
 
     new Glue()
-      .on('add', function(filename) {
+      .on('file', function(filename) {
         added.push(filename);
       })
       .basepath(outDir)

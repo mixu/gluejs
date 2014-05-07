@@ -53,30 +53,25 @@ API.prototype._resolveOptions = function(input) {
   // 2) relative path, => resolve relative to basepath, or if unavailable, process.cwd
   // 3) module names
 
-  var firstInclude = (typeof input.include === 'string' ?
-        input.include : input.include[0]),
-      firstIncludeStat = (fs.existsSync(firstInclude) ? fs.statSync(firstInclude) : false);
+  var firstInclude = (typeof input.include === 'string' ? input.include : input.include[0]),
+      firstIncludeStat;
 
-  if (!input.basepath) {
-    if (firstInclude.charAt(0) == '.') {
-      // relative include => use process.cwd
-      opts.basepath = process.cwd();
-    } else if (firstInclude.charAt(0) == '/') {
-      // full include => use full path
-      opts.basepath = (firstIncludeStat && firstIncludeStat.isFile() ?
-        path.dirname(firstInclude) : firstInclude);
-    }
-  } else {
+  // first priority is to figure out what the base path is
+  if (input.basepath) {
     opts.basepath = path.resolve(process.cwd(), input.basepath);
+  } else if (firstInclude.charAt(0) == '/') {
+    // abs path to a file => use parent dir as basepath
+    firstIncludeStat = (fs.existsSync(firstInclude) ? fs.statSync(firstInclude) : false);
+    opts.basepath = (firstIncludeStat && firstIncludeStat.isFile() ?
+      path.dirname(firstInclude) : firstInclude);
+  } else if (firstInclude.charAt(0) == '.') {
+    // relative include => use process.cwd
+    opts.basepath = process.cwd();
   }
 
-  // set main the first include is a file, use it as the main
-  // otherwise, warn?
-  if (!input.main && firstIncludeStat && firstIncludeStat.isFile()) {
-    opts.main = path.relative(input.basepath, firstInclude);
-  } else {
-    opts.main = input.main;
-  }
+  console.log('basepath', opts.basepath);
+
+  // next, resolve all the relative paths relative to it
 
   function resolve(to, from) {
     return (Array.isArray(from) ? from : [ from ]).map(function(relpath) {
@@ -84,6 +79,45 @@ API.prototype._resolveOptions = function(input) {
       return (relpath.charAt(0) == '.' ? path.resolve(to, relpath) : relpath);
     });
   }
+
+  // resolve relative: --ignore, --include and --exclude
+  [ 'ignore', 'include', 'exclude' ].forEach(function(key) {
+    if (input[key]) {
+      opts[key] = resolve(opts.basepath, opts[key]);
+    }
+  });
+
+  // update first include (apply inferred basepath)
+  firstInclude = (typeof opts.include === 'string' ? opts.include : opts.include[0]);
+  firstIncludeStat = (fs.existsSync(firstInclude) ? fs.statSync(firstInclude) : false);
+
+  console.log('includes:', opts.include);
+  console.log('firstInclude:', firstInclude);
+
+  // next, figure out the main file
+  if (input.main) {
+    opts.main = input.main;
+  } else if (firstIncludeStat && firstIncludeStat.isFile()) {
+    // set main the first include is a file, use it as the main
+    opts.main = path.relative(opts.basepath, firstInclude);
+  } else if (firstIncludeStat && firstIncludeStat.isDirectory()) {
+    // one file in directory
+    var content = fs.readdirSync(firstInclude).filter(function(file) {
+      return path.extname(file) === '.js';
+    });
+    if (content.length === 1) {
+      opts.main = path.relative(opts.basepath, firstInclude + '/' + content[0]);
+    } else if (content.indexOf('index.js') > -1) {
+      opts.main = path.relative(opts.basepath, firstInclude + '/index.js');
+    } else {
+      console.log('WARN', 'unknown main, too many files', opts.main, content);
+    }
+  } else {
+    console.log('WARN', 'unknown main', opts.main);
+  }
+
+  console.log('main', opts.main);
+
 
   function resolvePackage(to, from) {
     var nodeResolve = require('resolve');
@@ -94,13 +128,6 @@ API.prototype._resolveOptions = function(input) {
       return nodeResolve.sync(dep, { basedir: to });
     });
   }
-
-  // resolve relative: --ignore, --include and --exclude
-  [ 'ignore', 'include', 'exclude' ].forEach(function(key) {
-    if (input[key]) {
-      opts[key] = resolve(opts.basepath, opts[key]);
-    }
-  });
 
   [ 'include', 'exclude' ].forEach(function(key) {
     if (input[key]) {
@@ -125,7 +152,7 @@ API.prototype._resolveOptions = function(input) {
     });
   }
 
-  console.log(this.options, 'Build options', opts);
+  // console.log('Build options', opts);
 
   return opts;
 };
@@ -150,8 +177,6 @@ API.prototype.preRender = function(opts, onDone) {
   });
   cache.begin();
 
-  // reporters
-  var progress = { total: 0, complete: 0, hit: 0, miss: 0 };
   // run any tasks and parse dependencies (mapper)
   var runner = runTasks({
     cache: cache,
@@ -162,16 +187,7 @@ API.prototype.preRender = function(opts, onDone) {
     ignore: opts.ignore,
     jobs: opts.jobs,
     'gluejs-version': opts['gluejs-version']
-    // TODO
-    // --reset-exclude should also reset the pre-processing exclusion
-    // if (opts['reset-exclude']) {
-    //   list.exclude(null);
-    // }
   }, function(err, files) {
-    // tj's progress can make the process hang (!) if the total count is off due to exclusions
-    if (progress && progress.rl && progress.rl.close) {
-      progress.rl.close();
-    }
     if (onDone) {
       onDone(err, files, runner);
     }
@@ -179,55 +195,45 @@ API.prototype.preRender = function(opts, onDone) {
   runner.on('parse-error', function(err) {
     self.emit('error', err);
   });
-
-  runner.on('add', function(filename) {
-    progress.total += 1;
-    self.emit('add', filename);
+  runner.on('file', function(filename) {
+    self.emit('file', filename);
   });
   runner.on('hit', function(filename) {
-    progress.hit++;
-    progress.complete++;
     self.emit('hit', filename);
   });
   runner.on('miss', function(filename) {
-    progress.complete++;
     self.emit('miss', filename);
   });
-  runner.once('done', function() {
-    console.log(progress.complete + ' of ' + progress.total +
-        ' (cache hits: ' + progress.hit + ')');
-  });
-
-  if (opts.progress && process.stderr.isTTY) {
-    // progress = new ProgressBar('[:bar] :current / :total :percent :etas', {
-    //   complete: '=', incomplete: ' ', width: 20, total: 1
-    // });
-    var pending = [];
-    runner.on('hit', function(filename) {
-      process.stderr.clearLine();
-      process.stderr.cursorTo(0);
-      process.stderr.write(progress.complete + ' of ' + progress.total +
-        ' (cache hits: ' + progress.hit + ')');
-      // progress.tick();
-    });
-    runner.on('miss', function(filename) {
-      process.stderr.clearLine();
-      process.stderr.cursorTo(0);
-      process.stderr.write(progress.complete + ' of ' + progress.total +
-        ' (cache hits: ' + progress.hit + ')');
-      // progress.tick();
-    });
+  if (opts.progress) {
+    require('./lib/reporters/progress.js')(runner);
+  }
+  if (opts.report) {
+    require('./lib/reporters/size.js')(runner);
   }
 };
 
-API.prototype.hasETag = function(etag) {
+API.prototype._streamEtag = function(etag, dest) {
   var opts = this._resolveOptions(this.options);
   var cache = Cache.instance({
     method: opts['cache-method'],
     path: opts['cache-path']
   });
   var cachedResult = cache.data('etag-' + etag);
-  return cachedResult && fs.existsSync(cachedResult);
+  if (cachedResult) {
+    this.emit('etag', etag);
+    if (opts.etag && opts.etag == etag) {
+      // if a etag is given, we don't even need to stream things off the disk
+      if (dest !== process.stdout) {
+        dest.end();
+      }
+      return true;
+    } else if (fs.existsSync(cachedResult)) {
+      console.log('skip join step');
+      fs.createReadStream(cachedResult).pipe(dest);
+      return true; // dest.once('finish') handles the rest
+    }
+  }
+  return false;
 };
 
 API.prototype.render = function(dest) {
@@ -263,8 +269,6 @@ API.prototype.render = function(dest) {
 
   // set up the onDone tasks on the destination stream
   onDestEnd = runOnce(function() {
-    console.log('DEND');
-
     cache.end();
     if(++seenEndEvents == expectedEndEvents) {
       self.emit('done');
@@ -280,9 +284,10 @@ API.prototype.render = function(dest) {
         }
       });
 
-  // otherwise we need to do cache lookups for each invidual file,
-  // which will reuse results for any file that has not been changed
-  // but comes at the cost of doing real fs operations.
+  // Skip the whole build if: 1) no files have changed and 2) the etag matches
+  if (opts.clean && opts.etag && this._streamEtag(opts.etag, dest)) {
+    return;
+  }
 
   // console.time('preRender');
 
@@ -303,14 +308,8 @@ API.prototype.render = function(dest) {
     var etag = 'W/' + Cache.hash(JSON.stringify(files));
 
     // does a final build result with this etag exist?
-    // if yes, return the cached version
-
-    // TODO: should also support not returning anything at this stage
-
-    var cachedResult = cache.data('etag-' + etag);
-    if (cachedResult && fs.existsSync(cachedResult)) {
-      fs.createReadStream(cachedResult).pipe(dest);
-      return; // dest.once('finish') handles the rest
+    if (self._streamEtag(etag, dest)) {
+      return;
     }
     // must emit before the destination stream/request has closed
     // could be moved somewhere better
@@ -335,7 +334,6 @@ API.prototype.render = function(dest) {
     expectedEndEvents++;
 
     var onCacheEnd = runOnce(function() {
-      console.log('CEND', etag);
       // finalize the cached result if there were no errors
       if (!hadError) {
         cache.data('etag-' + etag, cachedResult);
@@ -350,6 +348,20 @@ API.prototype.render = function(dest) {
 
     cacheOut.once('finish', onCacheEnd).once('close', onCacheEnd);
 
+    var packageCommonJs3 = require('./lib/runner/commonjs3');
+    packageCommonJs3({
+      files: files,
+      out: splitter,
+      basepath: opts.basepath,
+      main: opts.main,
+      export: opts['export'],
+      umd: opts.umd,
+      remap: opts.remap,
+      'gluejs-version': opts['gluejs-version']
+    });
+
+
+/*
     // take the files and package them as a single file (reducer)
     packageCommonJs({
       cache: cache,
@@ -362,6 +374,7 @@ API.prototype.render = function(dest) {
       remap: opts.remap,
       'gluejs-version': opts['gluejs-version']
     });
+*/
   });
 };
 

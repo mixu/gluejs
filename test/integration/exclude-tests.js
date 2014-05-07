@@ -47,9 +47,9 @@ module.exports = {
     });
 
     file.once('close', function() {
+      // console.log(fs.readFileSync(outFile).toString());
       var result = require(outFile);
       // console.log(result);
-      // console.log(fs.readFileSync(outFile).toString());
       assert.deepEqual(result('./foo'), "Foo2");
       assert.deepEqual(result('./bar'), "Bar2");
       done();
@@ -80,7 +80,7 @@ module.exports = {
 
       var result = require(outFile);
       // console.log(fs.readFileSync(outFile).toString());
-      assert.deepEqual(result, "extern-second.js");
+      assert.deepEqual(result, "extern-./second.js");
       done();
     });
 
