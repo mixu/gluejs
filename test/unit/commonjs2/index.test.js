@@ -39,7 +39,7 @@ exports['package generator tests'] = {
       ],
       out: file,
       umd: true
-    }, function(err, result) {
+    }, function(err) {
       var result = require(outFile);
       assert.deepEqual(result,  'Index');
       done();
@@ -74,7 +74,7 @@ exports['package generator tests'] = {
       ],
       out: file,
       umd: true
-    }, function(err, result) {
+    }, function(err) {
       var result = require(outFile);
       // console.log(fs.readFileSync(outFile).toString());
       assert.deepEqual(result,  'Second');

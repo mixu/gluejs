@@ -53,7 +53,7 @@ API.prototype._resolveOptions = function(input) {
   opts.basepath = resolveOpts.inferBasepath(input.basepath, input.include);
 
   // next, resolve relative: --ignore, --include and --exclude
-  [ 'ignore', 'include', 'exclude' ].forEach(function(key) {
+  ['ignore', 'include', 'exclude'].forEach(function(key) {
     if (input[key]) {
       opts[key] = resolveOpts.resolve(opts.basepath, opts[key]);
     }
@@ -62,7 +62,7 @@ API.prototype._resolveOptions = function(input) {
   // next, figure out the main file
   opts.main = resolveOpts.inferMain(input.main, opts.basepath, opts.include);
 
-  [ 'include', 'exclude' ].forEach(function(key) {
+  ['include', 'exclude'].forEach(function(key) {
     if (input[key]) {
       opts[key] = resolveOpts.resolvePackage(opts.basepath, opts[key]);
     }
@@ -202,7 +202,7 @@ API.prototype.render = function(dest) {
   // set up the onDone tasks on the destination stream
   onDestEnd = runOnce(function() {
     cache.end();
-    if(++seenEndEvents == expectedEndEvents) {
+    if (++seenEndEvents == expectedEndEvents) {
       self.emit('done');
     }
   });
@@ -273,7 +273,7 @@ API.prototype.render = function(dest) {
       } else {
         log.debug('Skipped etag:', etag, 'due to error.');
       }
-      if(++seenEndEvents == expectedEndEvents) {
+      if (++seenEndEvents == expectedEndEvents) {
         self.emit('done');
       }
     });
@@ -375,7 +375,7 @@ API.prototype.set = function(key, value) {
 
 ['export', 'main', 'exclude', 'basepath', 'remap', 'include'].forEach(function(key) {
   API.prototype[key] = function() {
-    this.set.apply(this, [ key ].concat(Array.prototype.slice.call(arguments)));
+    this.set.apply(this, [key].concat(Array.prototype.slice.call(arguments)));
     return this;
   };
 });

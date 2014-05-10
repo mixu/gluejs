@@ -25,7 +25,7 @@ function fixtureDir(outDir, include, onDone) {
       throw err;
     }
     onDone(outDir, results);
-  })
+  });
 }
 
 exports['filter-package'] = {

@@ -26,13 +26,13 @@ function fixtureDir(spec, onDone) {
       throw err;
     }
     onDone(outDir, results);
-  })
+  });
 }
 
 function assertHasFilenames(actual, expected) {
   expected.forEach(function(filepath) {
     assert.ok(actual.some(function(obj) {
-      return obj.filename === filepath
+      return obj.filename === filepath;
     }), 'a file named ' + filepath + ' should exist in the output '+ JSON.stringify(actual));
   });
 }
