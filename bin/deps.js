@@ -1,7 +1,9 @@
 var path = require('path'),
     Cache = require('minitask').Cache,
     Minilog = require('minilog'),
-    DetectiveList = require('../lib/list/detective.js');
+    runTasks = require('../lib/runner/transforms/index.js'),
+    loadAMDConfig = require('../lib/runner/amd/load-config.js'),
+    toDeps = require('../lib/runner/commonjs3/to-deps.js');
 
 Minilog.enable();
 
@@ -12,8 +14,8 @@ var optimist = require('optimist')
       'cache': { default: true },
       'include': { },
       'main': { },
-    })
-    .boolean('amd'),
+      'basepath': { }
+    }),
     argv = optimist.parse(process.argv);
 
 var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
@@ -24,8 +26,8 @@ if(!argv['cache-path']) {
 }
 
 // if the cache is disabled, then use a temp path
-if(!argv.cache) {
-  argv['cache-path'] = os.tmpDir() + '/gluejs-' + new Date().getTime();
+if(true || !argv.cache) {
+  argv['cache-path'] = require('os').tmpDir() + '/gluejs-' + new Date().getTime();
 }
 
 var opts = {
@@ -37,56 +39,125 @@ if(!Array.isArray(argv.include)) {
   argv.include = [ argv.include ];
 }
 
+function uniq() {
+  var prev = null;
+  return function(item) {
+    var isDuplicate = (item == prev);
+    prev = item;
+    return !isDuplicate;
+  };
+}
 
-var list = new DetectiveList(opts);
+var basepath = path.resolve(process.cwd(), argv.basepath);
 
+function resolve(to, from) {
+  return (Array.isArray(from) ? from : [ from ]).map(function(relpath) {
+    // skip non-relative paths (this keeps external module names plain)
+    return (relpath.charAt(0) == '.' ? path.resolve(to, relpath) : relpath);
+  });
+}
+
+argv.include = resolve(basepath, argv.include);
+
+// Create the shared cache instance
 var cache = Cache.instance({
-    method: opts['cache-method'],
-    path: opts['cache-path']
+  method: opts['cache-method'],
+  path: opts['cache-path']
 });
 cache.begin();
 
-console.log('Reading files: ');
-argv.include.forEach(function(filepath) {
-  console.log('  ' + filepath);
-  list.add(filepath);
-});
+var amdconfig = loadAMDConfig(argv.amd);
+// baseDir is required for AMD
+amdconfig.baseDir = basepath;
 
-list.exec(function(err, files) {
+var depErrs = [];
 
-  var resultKey = opts['cache-hash'] + '-dependencies-norm';
+var Writable = require('readable-stream').Writable,
+    util = require('util');
 
-  var filesByDependendents = {};
+function Capture(options) {
+  Writable.call(this, options);
+  this.buffer = [];
+  this.opts = options;
+}
 
-  files.forEach(function(item) {
-    item.deps = cache.file(item.name).data(resultKey);
+util.inherits(Capture, Writable);
 
-    (item.deps || []).forEach(function(name) {
-      if(!filesByDependendents[name]) {
-        filesByDependendents[name] = [];
-      }
-      filesByDependendents[name].push(item.name);
-    });
-  });
+Capture.prototype._write = function(chunk, encoding, done) {
+  // marked cannot stream input, so we need to accumulate it here.
+  this.buffer.push(chunk);
+  done();
+};
 
-  var byDeps = Object.keys(filesByDependendents).map(function(name) {
-    return { name: name, deps: filesByDependendents[name] };
-  });
+Capture.prototype.get = function() {
+  if (this.opts && this.opts.objectMode) {
+    return this.buffer;
+  } else {
+    return Buffer.concat(this.buffer).toString();
+  }
+};
 
-  byDeps.sort(function(a, b) {
-    return (a.deps && a.deps.length || 0) - (b.deps && b.deps.length || 0);
-  });
 
-  byDeps.forEach(function(item) {
-    if(item.name.match(/node_modules/)) {
-      return;
-    }
-
-    console.log(item.name);
-
-    console.log(item.deps);
-    console.log();
-  });
-
+// run any tasks and parse dependencies (mapper)
+var runner = runTasks({
+  cache: cache,
+  include: argv.include,
+  exclude: [],
+  ignore: [],
+  jobs: 1,
+  'gluejs-version': 1,
+  'resolver-opts': { amdconfig: amdconfig }
+}, function(err, files) {
   cache.end();
+
+  // errors
+  depErrs = depErrs.sort(function(a, b) { return a.dep.localeCompare(b.dep); });
+  console.log(depErrs.map(function(item) { return item.dep; }).filter(uniq()));
+  // result
+
+  var result = toDeps(files, amdconfig.baseDir, '');
+  var deps = result[0];
+
+  // console.log(result);
+
+  var factor = require('factor-bundle');
+
+  var stream = factor([ './a.js', './b.js' ], { objectMode: true, raw: true });
+
+  stream.on('stream', function(s) {
+    console.log('STREAM', s.file);
+    s.pipe(process.stdout);
+  });
+
+  deps.forEach(function(dep) {
+    stream.write(dep);
+  });
+
+  var capture = new Capture({ objectMode: true })
+    .once('finish', function() {
+      var arr = capture.get();
+      console.log(arr.map(function(dep) {
+        var t = JSON.parse(JSON.stringify(dep));
+        delete t.source;
+        return t;
+      }));
+    })
+    .once('close', function() {
+      var arr = capture.get();
+      console.log(arr.map(function(dep) {
+        var t = JSON.parse(JSON.stringify(dep));
+        delete t.source;
+        return t;
+      }));
+
+    });
+
+  stream.pipe(capture);
+
+  stream.end();
+
+
+});
+runner.on('parse-error', function(err) {
+  depErrs.push(err);
 });

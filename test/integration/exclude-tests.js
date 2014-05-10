@@ -92,7 +92,7 @@ module.exports = {
     .render(file);
   },
 
-  'can --exclude 3rd party module paths from the build': function(done) {
+  'can --exclude 3rd party modules from the build': function(done) {
     var outFile = this.fixture.filename({ ext: '.js' }),
         file = fs.createWriteStream(outFile);
     var outDir = this.fixture.dir({

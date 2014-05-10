@@ -1,90 +1,119 @@
-# What's new in v3
-
-gluejs v3.next adds dependency parsing support:
-
-- Passing `--parse` enables dependency parsing, which can figure out the full dependency graph given just a single entry point. More accurate exclusions may result in smaller output size but come with a performance cost. Note that parsing dependencies is slow (e.g. the performance is closer to browserify's performance).
-- Benefits:
-  - provides more accurate exclusion information (e.g. modules not connected from the main file can be ignored; files like package.json can often be safely excluded)
-  - allows the user to only specify `--main` without any includes
-  - allows us to auto-detect node_modules dependencies without explicit include management (making live reload possible / nice)
-  - paves way for efficient node core module support
-- The caching system has been significantly improved, with some minor performance gains and reduced file handle usage.
-- The [browser field](https://gist.github.com/defunctzombie/4339901) in package.json files is supported via [browser-resolve](https://github.com/defunctzombie/node-browser-resolve)
-- `--replace` has been deprecated in favor of `--remap`. modules will only be loaded when requested, not earlier.
-- direct file requires like `require('jade/runtime')` should now resolve correctly
-- *Ignoring files*. `--ignore file` replaces the file with an empty file in the build.
 
 -----
 
 # Todo
 
-- Parse:
-  - disable the automatic excludes like `/dist/` because they mess with things like jquery
-- Test against parse errors causing issues, such as caching the incorrect set of dependencies.
-- Return proper error messages for parse errors when using the middleware
+- gzip support
+- --silent support
 
-- Etag:
-  - when a build finishes, store a cache entry for the full build (using all the options)
-  - allow querying gluejs by the build hash, which will return the full build if it exists in the cache,
-  and otherwise do a rebuild using the given options
+----
+
+### Better externals
+
+For more granular control over what external modules are included in your build, you can use the following features:
+
+`--include <name>` and `--exclude <name>` allow you to include or exclude a specific module in your build. Excluded modules are looked up from the global context (e.g. if there is a global require() function, it will be called for those modules). Module names are resolved relative to the base path of the build.
+
+`--remap <name>=<expression>` allows you to bind external modules to any expression which will be evaluated client-side. For example you might want to load jQuery externally from `window.$` using `--remap jquery=window.$`.
+
+----
+
+### Targeting transforms
+
+`--extensions`. By default, only .js and .json files are included in builds.
+
+If you want to add further extensions, such as `.coffee` or `.jade`, you can use the `--extensions` option to add more supported extensions. For example: `--extensions .jade` will allow you to `require('./foo')` and have it match `./foo.jade` in the same folder.
+
+`--command extension=str` and `--transform extension=str`: these extended versions of command and transform specification allow you to load and apply transforms on specific file extensions. For example: `--transform .jade=jadeify` will apply the `jadeify` transform on `.jade` files.
+
+
+
+- also allow coffee=coffeeify without the dot
+- --global-transform should allow transforms to run globally
+- --global-command
+
+Also full build result transform?
+
+----
+
+### Inline source maps
+
+- inline per-file source maps (=> adding to master source map with offsets)
+
+For external source maps, one can extract from the output.
+
+Related:
+
+- https://github.com/substack/node-browserify/issues/322
+- [fix sourceurl in IE](https://github.com/substack/node-browserify/issues/271)
+- [sourcemap w/# vs w/@](https://github.com/substack/node-browserify/issues/529)
+- [source maps should be exportable to file](https://github.com/substack/node-browserify/issues/339)
+
+----
+
+## Node core shims
+
+- add core module shimming support
+- add implicit global support (__dirname etc.)
+- obscura related to module vars:
+  - [require.main](https://github.com/substack/node-browserify/issues/234)
+
+----
+
+### Missing depencency handling
+
+--ignore-missing: causes missing modules to be ignored, require() on them returns {}
+--exclude-missing: causes missing modules to be excluded, require() on them will be looked up from the higher-level scope, if not found, an error is thrown.
+Default: warn about missing
+
+----
+
+### Symlink handling
+
+- [use real paths](https://github.com/substack/node-browserify/pull/549)
+- [avoid duplication due to symlinks](https://github.com/substack/node-browserify/issues/444)
+- [test w/modules using npm link](https://github.com/substack/node-browserify/issues/692)
+
+----
 
 - add `cache clean`
+- pouchdb might make for a good benchmark
+
+Look into how deamdify, deglobalify and es6ify might be made to work w/gluejs.
+
+https://github.com/substack/node-browserify/pull/336
+
+browserify.transform field in package.json
+
+By default browserify considers only `\*.js` files in such cases.
+Note, that if files do not contain javascript source code then you also need to specify a corresponding transform for them.
+
+Strip BOMs
+
+https://github.com/substack/node-browserify/issues/313
+
+Optional deduplication (based on contents). Optional because there are some edge cases e.g. 507.
+
+Tests
+- Strip # (probably already OK, just add test)
+- gluejs --include . => return equivalent package
+- parse invalid json file
+- transforms installed globally should also work
+- require() a core module should look in your node_modules/ directory before using one of its browser builtins
+- infer-packages should work when main is `.` or main is empty
+- allow core modules to be ignored
+- allow core modules to be ignored in package.json browser field
+- [--standalone A.B.C should construct nested objects](https://github.com/substack/node-browserify/issues/534)
+
+--no-parse file support
+
+- maybe: allow bundles to just have a delegating require() impl
+
+[via](https://github.com/substack/node-browserify/issues/577):
 
 ## More features
 
 - implement `--compare`: compares the trees from using the detective strategy vs the default strategy
-
-### Better externals
-
-*Better externals handling*: Sometimes you want to have granular control over what external modules are included in your build. The following options let you do that:
-
-`--external <name>`: specifies that that module should not be bundled but instead looked up from the global context. For example, `--external underscore` specifies that the underscore module should not be included in the build result. Any references to underscore will be ignored.
-
-`--remap <name>=<expression>`: specifies that `require(name)` should return whatever the value of the expression is. This is useful for remapping external modules. For example you might want to load jQuery externally from `window.$` using `--remap jquery=window.$`.
-
-`--no-externals`: this option prevents any modules from under `node_modules` from being included.
-
-`--include-external <name>`: this option adds an external back after `--no-externals` (whitelist approach).
-
-`--only-externals`: this option only bundles modules under `node_modules`.
-
-### Middleware enhancements
-
-*Short form syntax*:
-
-    app.use('/js/main.js', glue('./client/index.js'));
-
-    app.use('/js/deps.js', glue([ 'backbone', 'underscore']);
-
-Another example:
-
-    app.use('/js/deps.js', glue({ include: './client/', 'only-externals': true }));
-    // e.g. /js/foo.js => bundle containing ./client/foo.js
-    app.use('/js/', glue({ include: './client/', 'no-externals': true }));
-
-*Preheat cache*: pre-emptively run the first build when the server starts.
-
-*Middleware error messages*: the Express middleware now returns a piece of code which prints an error both in the console and as HTML when the files in the build have syntax errors.
-
-Requires `debug` to be true.
-
-*Middleware etags support*: if the module bundle has not changed, then the Express middleware will completely skip rebuilding the file.
-
-*Switching between development and production modes*:
-
-- allow using the same code paths for production and dev
-- use a specific staging area folder
-  - in dev, check the upstream folders for changes
-  - in production, simply serve the staging area contents
-
-Example:
-
-    if (development) {
-      app.use();
-    } else {
-      glue.package();
-      app.use(express.static(outDir));
-    }
 
 ### Shimming non-commonJS libraries that export globals
 
@@ -115,49 +144,16 @@ Might be nice to make this even easier to use from tests... via REST API?
   - `--dedupe-force modulename` should force only a single instance of a module, in spite of conflicting package.json data
 
 
-### Replacing modules or individual files
-
-*Substituting a module*. To replace a module with a different module in gluejs, use the `remap` option:
-
-    remap: { "underscore": "require('lodash')" }
-
-via the command line, this would be written as `--remap underscore="require('lodash')"`.
-
-*Substituting a file*. The `browser` field in package.json is a new addition which allows CommonJS bundlers to replace files which are not compatible with the browser with alternatives provided by the module. You can use this to replace files in your build, and it can also be used by 3rd party modules which support both the browser and Node.
-
-You can replace the whole package with a specific file:
-
-    "browser": "dist/browser.js"
-
-or you can override individual modules and files in `package.json`:
-
-    "browser": {
-      "fs": "level-fs",
-      "./lib/filters.js": "./lib/filters-client.js"
-    },
-
-This will replace `./lib/filters.js` with `./lib/filters-client.js` in the build result.
-
 ### Core variable and core module shimming
 
 - detect core modules and core variables
 - load appropriate shims
 
-### Optimistic rebuilding
-
-- Continuous rebuild via watcher
-  - file changes
-    - rebuild every n milliseconds, return results in a non-blocking manner
-  - dir content changes
-    - trigger full rebuild
-
 # Evaluation
 
 - empirically based packaging / dynamic loading **
-- Source maps support
 - Mocking out dependencies during testing/runtime **
 - RequireJS to CommonJS conversion
-- Easier conventions for adding a module both on the client and server side, e.g. only a node_modules entry => client side
 
 ## New architecture
 
@@ -274,12 +270,6 @@ argv.ignore.toExpr()
       }
     }
 
-TODO:
-
-- progress bar support:
-  - emit progress events (e.g. as each file is processed)
-  - emit progress done event
-
 Package generator queue (commonjs2/index.js):
 
     [ Infer packages ]
@@ -303,19 +293,8 @@ Package generator queue (commonjs2/index.js):
 
     -- generate full build --
 
-TODO:
+## use amdetective
 
-- progress bar support:
-  - emit progress events (e.g. as each file is processed)
-  - emit progress done event
-
-## use detective and amdetective
-
-Steps:
-
-- apply later stage optimizations:
-  - minimize the list of --replace shimmed modules in each package output based on the real set of dependencies from all files within that package
-  - add core module shimming support
 - amd:
   - config.js loading
   - better resolve error reporting
@@ -325,20 +304,17 @@ Steps:
 Test cases:
 
 - apply .npmignore last
-- perf test: load large directory a couple of hundred times and ensure caching works
 
 ## Tiny module optimizations
 
 - add support for fully static resolution: given the full set of require() call dependencies, convert them into static lookups
 
-## Implicit global support
-
-- can detect naively via regex
-
 ## Docs todo
 
 - need a good example of applying a transformation via the API
 - need a good example of using a transformation with the Express middleware
+- `--global-require` example (e.g. how to make `require('foo')` work in arbitrary script tags)
+- example of running a bundle result (UMD) in Node
 - local dev server example post detective support
 - document the grunt task options that are available
 - Express middleware dev config example (e.g. if(DEV) { build() } else { express.static('..'); }
@@ -358,7 +334,6 @@ TODO
 # Known issues
 
 - setting basepath to ./node_modules/foo causes the root to be empty rather than being based inside the package directory. E.g. you need to do require('foo') to get the result rather than require('./index.js');
-- replace('foo', 'window.foo') applies to all subdependencies indiscriminately. Need a better syntax to control this. Old behavior was to only replace top level dependencies.
 
 # How do I ...?
 

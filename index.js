@@ -228,7 +228,6 @@ API.prototype._streamEtag = function(etag, dest) {
       }
       return true;
     } else if (fs.existsSync(cachedResult)) {
-      console.log('skip join step');
       fs.createReadStream(cachedResult).pipe(dest);
       return true; // dest.once('finish') handles the rest
     }

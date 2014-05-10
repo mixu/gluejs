@@ -25,36 +25,8 @@ module.exports = {
       'index.js': 'module.exports = "Index";'
     });
 
-    var umd = require('umd');
 
     file.once('close', function() {
-      /*
-      fs.writeFileSync(outFile,
-        prelude({ standalone: 'foo' }) +
-        fs.readFileSync(outFile) +
-        postlude({ standalone: 'foo' })
-      );
-
-      function prelude(opts) {
-          if (opts.standalone) {
-              return umd.prelude(opts.standalone).trim() + 'return ';
-          }
-          if (hasExports) {
-            return (opts.externalRequireName || 'require') + '=';
-          }
-        }
-
-      function postlude(opts) {
-          if (opts.standalone) {
-              return '\n(' + JSON.stringify(outDir + '/index.js') + ')' + umd.postlude(opts.standalone);
-          }
-          if (opts.debug) {
-            return '\n';
-          }
-
-        }
-  */
-
       console.log(outFile);
       console.log(fs.readFileSync(outFile).toString());
 

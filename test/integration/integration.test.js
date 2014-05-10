@@ -36,6 +36,10 @@ exports['integration tests'] = {
 
   },
 
+  'add support for bundle-commands': function() {
+    // these are run at the end of the whole process, and cached just like any other build
+  },
+
   // File inclusion/exclusion
   // - multiple `--includes`
   // - `--exclude` should work
@@ -55,7 +59,7 @@ exports['integration tests'] = {
 
   // try to implement these as exclusions
 
-  'can use --external to exclude externals at the main package': function() {
+  'can use --exclude to exclude externals at the main package': function() {
 
   },
 
@@ -63,7 +67,7 @@ exports['integration tests'] = {
 
   },
 
-  'can use --include-external to whitelist an external': function() {
+  'can use --include to whitelist an external': function() {
 
   },
 
@@ -83,7 +87,11 @@ exports['integration tests'] = {
   // - outputting external source maps (???)
   // - making the global require available via `--global-require`
 
-  'can add --source-url\'s': function() {
+  'can add inline source maps': function() {
+
+  },
+
+  'can use factor-bundle': function() {
 
   },
 
@@ -123,6 +131,14 @@ exports['integration tests'] = {
   // TODO:
   // -- can specify a build with two external modules as targets
   // - mocha test packaging mode (as plugin?)
+
+  'run a .render with an empty target to perform a eager build': function() {
+
+  },
+
+  '.render() should return a Readable Stream': function() {
+
+  },
 
   'etags should be supported when the full file is found in the cache': function() {
     // e.g. when a server is restarted

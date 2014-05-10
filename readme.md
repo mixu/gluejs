@@ -1,65 +1,30 @@
-# gluejs V2
+# gluejs V3
 
-Package Node/CommonJS modules for the browser
+`require('modules')` in the browser
 
-New version! gluejs v2 is now out with a bunch of new features ([v1 branch](https://github.com/mixu/gluejs/tree/master))
-
+New version! gluejs v3 is now out. For v2, see the [v2 branch](https://github.com/mixu/gluejs/tree/glue2).
 
 - Converts code written for Node.js to run in the browser
 - Lightweight require shim (~400 characters, minified but not gzipped)
-- Easy to connect to intermediate shell tasks (e.g. minifiers) due to streams2 support
-- Fast (can use caching to avoid rebuilding unchanged files)
-- Programmable: use the Node API to serve packages directly, or build static packages using the command line tool
-  - render() to console, or directly to a HTTP request
-  - include() files or full directories, blacklist using exclude(regexp)
-- Bind variables under window.* to require() statements using replace()
-- Compile templating language files to JS via a custom handler
-- Source url support
+- Faster than browserify: built-in, enabled-by-default, unobtrusive persistent per-file caching
+- Comes with Express middleware, CLI build tool and API
+- Supports things like minification and template compilation through transforms and commands (compatible with browserify transforms)
+- Supports source urls, shimming browser modules and remapping module names in builds
+- No core module shims (yet)
 
-## Usage example: console
+## What's new in v3.0
 
-    gluejs \
-      --include ./lib/ \
-      --include ./node_modules/microee/ \
-      --global App \
-      --main lib/index.js \
-      --out app.js \
-      --command 'uglifyjs --no-copyright --mangle-toplevel'
+gluejs v3.0 adds a number of usability and performance improvements:
 
-All of these options are also available via a Node API (e.g. `require('gluejs')`).
-
-## Usage example: express middleware (new in v2.2!)
-
-    var express = require('express'),
-        glue = require('gluejs'),
-        app = express();
-
-    app.use(express.static(__dirname));
-
-    app.use('/app.js', glue.middleware({
-      basepath: __dirname,
-      include: [ './lib', '../node_modules/jade/' ]
-    }));
-
-    app.listen(3000);
-    console.log('Listening on port 3000');
-
-`glue.middleware()` can accept most of the options supported by the Node API.
-
-## Using the resulting file
-
-The build result is a standalone file, which is exported as a global (`lib/index.js` is exposed as `App`):
-
-    <script src="app.js"></script>
-    <script>
-      console.log(window.App); // single external interface to the package
-    </script>
-
-The require() statements inside the package work just like under Node, yet none of the internals are leaked into the global namespace.
-
-gluejs does not export a global "require()" function in the browser; this means that it is compatible with other code since all details are hidden and only a single interface is exported (main file's ```module.exports```). The reasons behind this are documented in much more detail in my book, "[Single page applications in depth](http://singlepageappbook.com/maintainability1.html)". If you want to export the require implementation, you can use `--global-require`.
-
-An additional benefit is that you only need one HTTP request to load a package, and that the resulting files can be redistributed (e.g. to a non-Node web application) without worry. If you need to set breakpoints inside files, use `--source-url` to enable source urls.
+- The biggest change is that dependency parsing is now enabled by default. This means that you can specify a single file to `--include` and the full dependency graph is traced out and bundled automatically, like browserify does.
+- The middleware has been enhanced significantly with etags support, gzipping, minification and browser-compatible error messages when builds fail.
+- Performance for cached builds and builds that use transforms has increased. Enabling dependency parsing by default has cost some performance compared to the v2 branch (see benchmarks), but this is offset by the caching as well as usability improvements such as automatically excluding files that are not `require()`d and automatically including any newly required node_modules.
+- Other new features include:
+  - improvements to the Express middleware (etags support, gzip support etc.)
+  - support for the `browser` field in package json
+  - support for source maps (in place of source urls)
+  - support for factoring out common dependencies
+  - support for file watchers
 
 ## Installation
 
@@ -69,232 +34,184 @@ To install the command line tool globally, run
 
 Alternatively, you can run the tool (e.g. via a Makefile) as `./node_modules/gluejs/bin/gluejs`.
 
-# What's new in v2.3
+## Packaging for the web
 
-gluejs v2.3 adds UMD support and performance / robustness improvements.
+Install the starwars npm module and Express:
 
-- UMD support: you can now run the same build result in Node and AMD and in the browser. This enables three use cases:
-  - you can use gluejs bundles in AMD/Require.js (via config.js, see the relevant section below)
-  - you can share the same file between AMD and Node
-  - you can use gluejs to produce a minified/obfuscated version of your codebase that's usable in Node
-- chained require() resolution. The gluejs `require()` shim has been redesigned so that if a `require` function is already defined, then it will fall back to that function. This has two implications:
-  - if `--global-require` is set (exporting the `require()` function), you can split your app into multiple bundles loaded separately in the browser and they will appropriately chain require() calls as long they are loaded in prerequisite order
-  - UMD bundles running under Node will fall back to using Node's native `require` for modules that are not in the bundle
-- Added pre-filters to skip .git / svn / hg / cvs directories for better performance
-- Improved the behavior of the cache when the metadata is corrupted or in an unexpected format
+    npm install gluejs starwars express
 
-## What's new in v2.2
+Let's create a basic module (`app/index.js`):
 
-Note: if you are upgrading from an older version: the default value for `--global` is now `App` rather than `Foo`.
+    var starwars = require('starwars');
 
-gluejs v2.2 adds Express middleware for serving gluejs packages, thanks [@JibSales](https://github.com/JibSales).
+    module.exports = function() {
+      return starwars();
+    };
 
-## What's new in v2.1
+Next, set up a basic Express server and use the gluejs middleware:
 
-Note: if you are upgrading from v2.0: `--cache` is now called `--cache-path`.
+    var express = require('express'),
+        app = express();
 
-gluejs v2.1 adds significant performance improvements over v2.0! In addition, it adds support for custom transformations, including ones that were written for [browserify](https://github.com/substack/node-browserify#list-of-source-transforms).
+    app.use('/app.js', glue.middleware('app/index.js'));
 
-- the task execution engine now supports running multiple tasks concurrently while producing a single output file. Most build systems only use a single output stream, which means that expensive tasks such as `uglifyjs` are run on each file in serial order. gluejs v2.1's new engine executes all tasks in parallel, kind of like MapReduce at a small scale (configurable via `--jobs`).
-- anecdotally, this has reduced build time for CPU-intensive builds (e.g. minifying a large number of files) by ~50% by making use of all the available CPU cores.
-- the system now enables caching by default; if you run the same gluejs task twice, only the changed files are re-processed. Changes are detected either using md5 hashing or filesize + modification time. Caching used to be an advanced option, but it helps a lot in practice so I figured I'd enable it by default. You can opt out via `--no-cache`, but why?
-- the cache supports multiple versions of the same input file (e.g. if you have a gluejs task for a debug build and a production build, switching between the two no longer invalidates the cache).
-- added support for custom transformations, such as compiling template files and other compile-to-JS files.
+    app.use(express.static('./app'));
 
-For example, on a Macbook Pro using a ~1.2Mb input with ~600 files and applying minification (which is CPU-intensive), `--no-cache --jobs 1` (e.g. force serial execution):
+    app.listen(3000, function() {
+      console.log('Listening on port 3000');
+    });
 
-    0:56.75 wall clock time, 39.90 user, 21.18 system
+Create basic HTML which loads the bundle and calls the exported function:
 
-and `--no-cache` (e.g. parallel execution with default options):
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <script src="/app.js"></script>
+      <script>
+        console.log(App()); // call the function exported from app/index.js
+        document.body.html = '<h1>' + App() + '</h1>';
+      </script>
+    </head>
+    <body></body>
+    </html>
 
-    0:18.89 wall clock time, 72.78 user, 29.04 system
+When you open `http://localhost:3000` and open the developer tools console, you should see starwars quotes.
 
-In other words, the build completes almost 3x faster than before.
+Within the packaged files, require() calls  work just like in Node. Any files and modules required from `app/index.js` or it's dependencies are packaged automatically.
 
-## What's new in v2
+In the browser, only the index files (`app/index.js` in this case) `module.exports` is exposed, and is made available under `window.App` by default (set `--global` to change the name).
 
-gluejs (v2) is a comprehensive refactoring to make use of Node 0.10.x -style streams (under 0.8.x via [readable-stream](https://github.com/isaacs/readable-stream)).
+By default, gluejs does not export a global "require()" function in the browser; this means that it is compatible with other code since the package is self-contained. If you want to export the require implementation, you can use `--global-require`. If you need to set breakpoints inside files, use `--source-url` to enable source urls.
 
-- internals refactored to make working with unix pipes (e.g. minification, obfuscation etc.) much easier via Node 0.10.x streams
-- internals refactored to make file operation easier to apply (e.g. each task is separated into it's own pipe)
-- faster repeated builds via file caching
-- more accurate npmignore/gitignore matching
+## CLI / standalone builds
 
-## Neat new features
-
-Easier minification (or other processing) via `--command`:
+To create same build using the CLI tool, run `npm install -g gluejs` and use the CLI:
 
     gluejs \
-    --include ./lib \
-    --replace jQuery=window.jQuery \
-    --command 'uglifyjs --no-copyright' \
-    --global App \
-    --main lib/index.js \
-    --out app.js
+      --include ./app/index.js \
+      --global App \
+      --out app.js \
+      --command 'uglifyjs --no-copyright'
 
-With that option, all files are piped through `uglifyjs` before writing to disk.
+This command also runs the `uglifyjs` minifier to reduce the file size.
 
-Gorgeous new reporter (enable via `--report`), with stats on savings from minification:
+The build result is a standalone file, which is exported as a global (`app/index.js` is exposed as `App`). You can use the resulting file in the same way as the in the middleware example, and the resulting file can be redistributed (e.g. to a non-Node web application) without worry as it is fully self-contained.
 
-    # Root package
-      lib/web/shim.js                          12.94kb 38% -> 3.84kb (-9324b -71%)
-      lib/common/shim.util.js                  4.65kb  13% -> 1.21kb (-3524b -75%)
-      lib/common/outlet.js                     4.07kb  12% -> 2.05kb (-2074b -50%)
-      lib/common/view.js                       3.94kb  11% -> 1.93kb (-2054b -51%)
-      lib/common/collection_view.js            2.09kb  6 % -> 1.03kb (-1082b -51%)
-      lib/common/collection.js                 1.18kb  3 % -> 494b   (-716b  -60%)
-      lib/common/table_view.js                 458b    1 % -> 38b    (-420b  -92%)
-      lib/web/index.js                         271b    0 % -> 280b   (9b     3%)
-    Package total: 29.59kb 88% -> 10.85kb (-19185b -64%)
-    Package dependencies: htmlparser-to-html, microee
-    # htmlparser-to-html
-      node_modules/htmlparser-to-html/index.js 2.43kb  7 % -> 1.26kb (-1190b -48%)
-    Package total: 2.43kb 7% -> 1.26kb (-1190b -48%)
-    # microee
-      node_modules/microee/index.js            1.24kb  3 % -> 900b   (-366b  -29%)
-    Package total: 1.24kb 3% -> 900b (-366b -29%)
-    Total size: 12.99kb (-20741b -61%)
+### Performance comparison with browserify and gluejs
 
-Report explained:
+`gluejs` shares a lot of features with browserify (e.g. transform compatibility, dependency parsing), but it uses it's own task execution engine and much more aggressive caching. The following benchmark was run on a Macbook Pro (2013) using a ~1Mb input with ~700 files. I measured the time using the `time` command, using the elapsed time as the metric.
 
-    lib/web/shim.js                          12.94kb 38% -> 3.84kb (-9324b -71%)
-    [filename]         [original size] [% of total] -> [minified size] (savings in bytes and %)
+- On an initial attempt, browserify runs out of file handles with EMFILE. Increasing the file limit via `ulimit -n` fixes this issue.
 
-The `.npmignore` and `package.json` exclude logic is now more accurate, leading to smaller builds.
+<table>
+  <tr>
+    <td></td>
+    <td>gluejs v3.0</td>
+    <td>gluejs v3.0 (w/cache)</td>
+    <td>gluejs v2.3.7</td>
+    <td>gluejs v2.3.7 (w/cache)</td>
+    <td>browserify v3.44.2</td>
+  </tr>
+  <tr>
+    <td>Plain build (no transforms)</td>
+    <td>5.40s</td>
+    <td>0.45s</td>
+    <td>3.72s</td>
+    <td>2.28s</td>
+    <td>10.37s</td>
+  </tr>
+  <tr>
+    <td>Build w/uglifyjs</td>
+    <td>20.70s</td>
+    <td>0.44s</td>
+    <td>24.16s</td>
+    <td>2.21s</td>
+    <td>Build fails (too many simultaneous processes).</td>
+  </tr>
+</table>
 
-## Upgrading from gluejs v1
+As you can see, gluejs is quite fast and handles files in way that avoids causing EMFILE.
 
-The command line option syntax has changed: `gluejs --include foo bar` has to be written as `gluejs --include foo --include bar`.
+Note that in build w/uglifyjs, the majority of the time is spent in uglifyjs - the only difference between the two builds is the addition of uglify. gluejs does well with large builds where only a few files have changed between runs thanks to the caching system, which is enabled by default and requires no additional configuration.
 
-The `--npm foo` option no longer exists. Instead, just `--include ./node_modules/foo`, the package inference engine will figure out that the target is a npm module and handle it correctly.
+You can work around the issue w/too many simultaneous processes that occurs in the browserify build by running uglifyjs separately, but you shouldn't have to do that just to avoid EMFILE / memory limitations and not all transforms will actually work as post-actions.
 
-The `.concat(packageA, packageB)`, `.define(module, code)`, `.defaults()` features are deprecated (use bash or string concatenation; use different --include statements).
+### Upgrading from v2 to v3
 
-## Usage
+`--include` now works by parsing the dependency graph. If you have a large build with many modules, you'll want to use `--exclude modulename` to exclude modules you don't want in the build. This should make it possible to replicate the v2 behavior.
 
-````markdown
-Usage: gluejs --include <file/dir ...> {OPTIONS}
+`--include` and `--exclude` are now resolved slightly differently: they are no longer automatically converted into regular expressions. See the relevant section below.
 
-## Basic
+`--replace` has been deprecated in favor of `--remap`. The distinction between the two (eager vs. late lookup) turned out not to really matter.
 
-  --include         Path to import.
-  --exclude         JS regular expression string to match against the included paths
-  --out             File to write. Default: stdout
-  --global          Name of the global to export. Default: "App"
-  --basepath        Base path for relative file paths. Default: process.cwd()
-  --main            Name of the main file/module to export. Default: index.js
+`--reset-exclude` is no longer supported due to the new dependency resolution mechanism.
 
-## Replace / remap
+### Changelog
 
-  --replace foo=bar Bind require("name") to an expression, e.g. jQuery to window.$.
-  --remap foo=bar   Remap a name to another name (within the same package). See the docs.
+For changes made prior to v3.0, check out the [changelog](changelog.md).
 
-## Build options
+## Table of contents
 
-  --source-url      Add source URL annotations to the files. Useful for development,
-                    but note that this is not compatible with IE.
-  --global-require  Export the require() implementation into the global space.
-  --amd             Export the module via the require.js AMD define("name", ...) using
-                    the name specified in --global. Note that the requirejs will not
-                    pick up modules defined like this unless you do at least one
-                    asynchronous require() call.
+- Basic options
+- Middleware
+  - Basic usage
+  - Useful additional options
+  - Error messages
+  - Etags support
+  - Gzip support
+  - Using a file watcher
+- Build options
+  - [`--source-url`](#__source_url): Add source URL annotations to the files. Useful for development, but note that this is not compatible with IE.
+  - [`--global-require`](#__global_require): Export the require() implementation into the global space.
+  - [`--umd`](#__umd): Export the module using the UMD wrapper.
+- Replacing modules or individual files
+  - [`--remap <name>=<expr>`](#__remap): Bind require("name") to an expression, e.g. jQuery to window.$.
+  - [browser in package.json]()
+- Minification / source transforms
+  - [`--command <str>`](#__command): Pipe each file through a shell command and capture the output (e.g. --command "uglifyjs --no-copyright").
+  - [`--transform <str>`](#__transform): Activates a source transformation module.
+- Performance
+  - [`--jobs <int>`](#__jobs): Sets the maximum level of parallelism for the task execution pipeline. Default: `os.cpus().length * 2`
+  - [`--cache-path <path>`](#__cache_path): Use a cache directory to store file builds. The cache speeds up large builds (and minified builds) significantly since only source files that have changed are updated.
+  - [`--cache-method <str>`](#__cache_method): Sets the cache method: stat | hash algorighm name.
+- Reporting
+  - [`--progress`](#__progress): Display a progress bar with estimated time remaining.
+  - [`--report`](#__report): Display the file size report.
+  - [`--verbose`](#__verbose): Verbose output.
+  - [`--version`](#__version): Show version info.
+  - [`--silent`](#__silent): Disable all output, including the reporter.
 
-## Minification / source transforms
+## Basic options
 
-  --command         Pipe each file through a shell command and capture the output
-                    (e.g. --command "uglifyjs --no-copyright").
-  --transform       Activates a source transformation module.
+These are the basic options (CLI option / API option):
 
-## Performance
+- `--include <path|name>` / `.include(path|name)`: include a file or package in the build.
+- `--exclude <path|name>` / `.exclude(path|name)`: exclude a file or package from the build.
+- `--ignore <path|name>` / `set('ignore', path|name)` (v3.0): excludes the given files, folders or packages from the build. Inserts `module.exports = {}` in place of the actual file, which means that `require(path|name)` returns `{}`.
+- `--out <path>` / `.render(dest)`: file to write. Default: stdout
+- `--global <name>` / `.export(name)`: Sets the name of the global variable to export. Default: `App` (e.g. causes the package to be exported under `window.App`).
+- `--basepath <path>` / `.basepath(path)`: Base path for relative file paths. All relative paths are appended to this value. Default: directory in which the first --include resides.
+- `--main <path>` / `.main(path)`: Name of the main file/module to export. Default: the first --included file.
 
-  --cache-path      Use a cache directory to store file builds. The cache speeds up
-                    large builds (and minified builds) significantly since only source
-                    files that have changed are updated.
-  --jobs            Sets the maximum level of parallelism for the task
-                    execution pipeline. Default: `os.cpus().length * 2`
-  --cache-method    Sets the cache method: stat | hash algorighm name.
+`--include`, `--exclude` and `--ignore` patterns are all resolved as follows:
 
-## Reporting
+- `--include ./path/to/file.js`: include a file (and any dependencies).
+- `--include ./path/to/folder`: include all files in the folder.
+- `--include name`: include the package named `name` from `node_modules`
 
-  --report          Display the file size report.
-  --silent          Disable all output, including the reporter.
-  --verbose         More verbose output, such as files being filtered out and processed.
-  --version         Version info
+Relative paths are resolved relative to `--basepath`.
 
-## Advanced
+For `--include`, the files are also parsed and their dependencies are automatically bundled. `.json` files are also supported; just like in Node, you can use `require('./foo.json')` within the resulting bundle.
 
-  --reset-exclude   Advanced: do not apply the default exclusions
-                    (/dist/, /example/, /benchmark/, .min.js).
-````
+`--main` and `--basepath` are automatically inferred from the `--include` values, so often you don't need to set them explicitly. It might still be beneficial to set them to be more explicit.
 
-## API usage example
+In `.render(destination)`, the destination can be either a Writable Stream (e.g. a file or a HTTP response) or a callback which accepts `function(err, output){}`.
 
-```javascript
-var Glue = require('gluejs');
-new Glue()
-  .basepath('./lib') // output paths are relative to this
-  .main('index.js')  // the file that's exported as the root of the package
-  .include('./lib')  // includes all files in the dir
-  .exclude(new RegExp('.+\\.test\\.js')) // excludes .test.js
-  .replace({
-    'jquery': 'window.$ ', // binds require('jquery') to window.$
-    'Chat': 'window.Chat'
-  })
-  .export('App') // the package is output as window.App
-  .render(fs.createWriteStream('./out.js'));
-```
+## Middleware features (v3.x)
 
-You can also render e.g. to a http response:
+### Basic usage
 
-```javascript
-  .render(function (err, txt) {
-    // send the package as a response to a HTTP request
-    res.setHeader('content-type', 'application/javascript');
-    res.end(txt);
-  });
-```
-
-## --include
-
-`--include <path>` (console) / `.include(path)` (API).
-
-- If the path is a file, include it.
-- If the path is a directory, include all files in it recursively.
-- If the path is a node module, include all files in it and all subdependencies in the build.
-
-Sub-dependencies are also automatically bundled, as long as they've been installed by npm. Since the require() semantics are the same as in Node, subdependencies can depend on different versions of the same module without conflicting with each other.
-
-`.json` files are also supported; just like in Node, you can use `require('./foo.json')` within the resulting bundle.
-
-## --exclude
-
-`--exclude <regexp>` / `.exclude(regexp)`: Excludes all files matching the regexp from the build. Evaluated just before rendering the build so it applies to all files.
-
-`--reset-exclude`: **New advanced option**. Removes the default exclusions (matching /dist/, /example/, /benchmark/, [-.]min.js$). For example: `--reset-exclude --exclude '/foo/'`.
-
-## --global
-
-`--global <name>` / `.export(name)`: Name of the global name to export. Default: `App` (e.g. `window.App`)
-
-## --basepath
-
-`--basepath <path>` / `.basepath(path)`: Base path for relative file paths. All relative paths are appended to this value. Default: process.cwd().
-
-## --main
-
-`--main <filename>` / `.main('filename')`: Name of the main file/module to export. Default: index.js.
-
-## --out
-
-`--out <path>` / `.render(destination)`: Write to the target path.
-
-For `.render`, the destination can be either a Writable Stream or a callback `function(err, output){}`. See the API usage example above.
-
-## .middleware
-
-`.middleware({ include: ... })`: Returns a Express/Connect compatible request handler.
-
-For example:
+`glue.middleware({ include: ... })`: returns a Express/Connect compatible request handler. For example:
 
     app.use('/js/app.js', glue.middleware({
       include: __dirname + '/lib'
@@ -307,33 +224,105 @@ Or at the route level:
       include: __dirname + '/lib'
     }));
 
-Using full paths is recommended to avoid ambiguity. `basepath` defaults to the `include` path, and `main` defaults to `index.js`.
+You probably want to either use full paths or set `basepath` explicitly to the base path for all relative paths.
 
-## --replace
+Multiple bundles example:
 
-`--replace name=expr` / `.replace(name, value)` / `.replace({ name: ... })`: Replace the return value of a `require()` call.
+    app.use('/js/deps.js', glue({ include: './client/', 'only-externals': true }));
+    // e.g. /js/foo.js => bundle containing ./client/foo.js
+    app.use('/js/', glue({ include: './client/', 'no-externals': true }));
 
-For example, to bind `require('underscore')` to `window._`:
+### Error messages
 
-    --replace underscore=window._
+*Middleware error messages*: the Express middleware now returns a piece of code which prints an error both in the console and as HTML when the files in the build have syntax errors.
 
-To bind `require('fs')` to `undefined`:
+Requires `debug` to be true.
 
-    --replace fs={}
+### etags and gzip support
 
-Using a global require (e.g. to bind to the value of a AMD module):
+The middleware supports etags in v3.0 and above. This is enabled by default. Each build is associated with a etag, which is sent by the middleware. On subsequent requests, the state of the file system is checked and if nothing has changed, then the middleware can return a 304 Not modified (without any data or any processing beyond the FS checks).
 
-    --replace sha1="window.require('sha1')"
+This works by using `glue.set('etag', etag)` before executing the build. If this option is set, then gluejs will emit an etag and return an empty result if everything checks out. The middleware then returns an empty result with 304 Not modified.
 
-## --remap
+The middleware also supports gzipping. Just pass `gzip: true` as part of the options hash to gzip the build results.
 
-`--remap name=expr` / `.remap(key, value)`: Remap a name to another name (within the same package).
+### Using a file watcher
 
-For example, to remap `require('assert')` to `require('chai').assert`:
+While the etags and gzipping improve performance significantly (~300ms per request), they still require a full file system iteration to ensure that whatever is returned from the cache is up to date.
 
-    --remap "assert=require('chai').assert"
+To speed up builds even further, you can integrate a file watcher library. The task of the file watcher library is simply to track whether the input files have changed. If files have changed, a file system traversal is performed - if not, cached builds can be returned without additional work.
 
-When you are binding to a external module, use `--replace`. When the module is internal to the package (e.g. fs, assert, ...), use `--remap`. Basically the difference is that `--remap` dependencies are only resolved when they are first required, whereas `--replace` is a direct assignment / evaluation. The delayed evaluation is needed for internal modules to prevent circular dependencies from causing issues during load time.
+This works by setting `glue.set('clean', true)` and setting the `etag` to the appropriate etag. When clean is true and there is a cached build, then the cached build is reused without requiring a full file system scan.
+
+You can also use the watcher to trigger builds, so that a new build is triggered as soon as files are changed. This speeds up HTTP requests since the build is kicked off much earlier.
+
+You can use your library of choice for the actual file watching. For example, using chokidar for watching:
+
+    ...
+
+### Switching between development and production mode
+
+The following example illustrates how you can write an endpoint which uses the same code path in dev and production. In dev mode, things are rebuilt on demand. In production mode, the builds are performed when first requested, and subsequent requests will simply serve back a static file from a static file directory:
+
+    var opts = {
+      include: 'app/index.js'
+    };
+    var staticFile = __dirname + '/static/app.js';
+
+    app.get('/js/app.js', function(req, res, next) {
+      if (isDev) return next(); // always rebuild in dev mode
+      res.sendfile(staticFile, function(err) {
+        if (!err) return; // sendfile completed successfully
+        if (err.code && err.code === 'ENOENT') {
+          opts.out = fs.createWriteStream(staticFile);
+          return next(); // pass to middleware
+        }
+        return next(err);
+      });
+    }, Glue.middleware(opts));
+
+### API and usage example
+
+`new Glue({ key: value })`: you can now pass in a options hash to the constructor, which makes reusing the same set of options easier.
+
+*Methods*. The basic options have their own methods, everything else is configured via `.set(key, value)`. This example lists the main methods:
+
+```javascript
+var Glue = require('gluejs');
+new Glue()
+  .basepath('./lib') // output paths are relative to this
+  .main('index.js')  // the file that's exported as the root of the package
+  .include('./lib')  // includes all files in the dir
+  .exclude(new RegExp('.+\\.test\\.js')) // excludes .test.js
+  .remap({
+    'jquery': 'window.$ ', // binds require('jquery') to window.$
+    'Chat': 'window.Chat'
+  })
+  .export('App') // the package is output as window.App
+  .render(fs.createWriteStream('./out.js'));
+```
+
+You can also render e.g. to a http response:
+
+```javascript
+res.setHeader('content-type', 'application/javascript');
+glue.render(res);
+```
+
+To render without producing output - for example, to enable eager rebuilding via a watcher - run `.render()` without passing in any parameters.
+
+*Events*. `.render()` returns a Readable Stream which emits the normal readable stream events. It also emits the following additional events:
+
+- Bundle compilation events:
+  - `.on('file', function(file) {})`: emitted when a file is added to the bundle with full path to the file
+  - `.on('file-hit', function(file) {})`: emitted for each cache hit
+  - `.on('file-miss', function(file) {})`: emitted for each cache miss
+  - `.on('file-done', function(file, contentPath)) {}`: emitted when a file has been fully processed (e.g. all transforms have run).
+  - `error`
+  - `done`
+  - `etag`
+
+## Build options
 
 ## --source-url
 
@@ -341,70 +330,7 @@ When you are binding to a external module, use `--replace`. When the module is i
 
 ![screenshot](https://github.com/mixu/gluejs/raw/master/test/sample/sourceurl.png)
 
-To enable source URLs, set the following option:
-
-```javascript
-.set('source-url', true)
-```
-
 Note that source URLs require that scripts are wrapped in a eval block with a special comment, which is not supported by IE, so don't use source URLs for production builds.
-
-## --command
-
-`--command <cmd>` / `.set('command', <cmd>)`: Pipe each file through a shell command and capture the output. For example:
-
-    --command "uglifyjs --no-copyright"
-
-For more complicated use cases, you'll probably want to use `--transform`.
-
-## --transform (v2.1)
-
-`--transform <module>`: activates a source transformation module. This enables 3rd party extensions for things that are more complex than just piping through via `--command`.  API-compatible with browserify's [source transformation modules](https://github.com/substack/node-browserify#list-of-source-transforms).
-
-This feature is new, so let me know if you run into issues with it.
-
-For example, using coffeeify:
-
-    npm install coffeeify
-    gluejs --transform coffeeify --include index.coffee > bundle.js
-
-gluejs uses [minitask](https://github.com/mixu/minitask) internally, so you can also write modules that return sync / async functions, Node core duplex / transform streams or Node core child_process objects.
-
-See the [section on writing transform modules](#writing_transform_modules) as well as [this example which uses Square's ES6-module-compiler](https://github.com/mixu/gluejs/blob/glue2/test/command-integration/es6-module.js) and [Jade example](https://github.com/mixu/gluejs/blob/glue2/test/command-integration/jade-module.js) for examples.
-
-If you write a transformation, file a PR against the readme so I can feature it here. I've tested functionality using the examples above, but I haven't published them as modules as it's hard to maintain something I'm not using.
-
-## --report
-
-Display the summary report. Particularly useful if you are minifying files, since the report will show the file size after transformation.
-
-## --jobs (v2.1)
-
-`--jobs <n>` / `.set('jobs', <n>)`: Sets the maximum level of parallelism for the task execution pipeline. Default: `os.cpus().length * 2`.
-
-## --cache-path (v2.1)
-
-`--cache-path <path>` / `.set('cache-path', <path>)`: Use a specific directory for caching. This is a directory where the results of the previous builds are stored along with metadata. Caching is enabled by default in v2.1. If a path is not set, then `~/.gluejs-cache` is used for storing cache results. You can just delete the directory to invalidate the cache.
-
-The cache speeds up large builds (and minified builds) significantly since only source files that have changed are updated.
-
-Use a directory with a dot in front to hide the cached files (remember to also gitignore the directory). The path is relative to the working directory. For example:
-
-    --cache-path .cache
-
-When the cache is in use, the number of cache hits are shown:
-
-    Cache hits: 2 / 2 files
-
-To get even more info, enable `--verbose`.
-
-## --cache-method (v2.1)
-
-`--cache-method <stat|md5|sha512>` / `.set('cache-method', <method>)`: Sets the cache invalidation method. `stat` uses the file size and last modified date of the input file. `md5` (and other hash algorithms supported by `crypto.createHash`) uses hashes to verify that the input file has not changed. Default: stat.
-
-## --no-cache (v2.1)
-
-`--no-cache` / `.set('cache', false)`: Disables the cache; sets the cache directory to a temporary directory.
 
 ## --global-require
 
@@ -440,7 +366,7 @@ HTML page (assuming "foo" is a node module):
 
 With `--global-require`, `require()` statements are resolved as if they were inside index.js.
 
-## --umd (new in v2.3)
+## --umd
 
 `--umd` / `.set('umd', true)`: UMD compatible export.
 
@@ -474,7 +400,139 @@ after which the module is accessible as `myapp`.
 
 Note that Require.js might not pick up modules defined like this unless you do at least one asynchronous require() call, e.g. you need to run the no-op code `require(['foo'], function(foo){ });` before `require('foo')` will work. This seems to be a quirk in the Require.js AMD shim.
 
-Upgrade note: `--amd`, an older option which was only compatible with AMD/requirejs, is now equivalent to `--umd`.
+## --remap
+
+To replace a module with a different module in gluejs, use the `remap` option. For example, to bind `require('underscore')` to `window._`:
+
+    remap: { "underscore": "window._" }
+
+In the CLI, this would be written as `--remap underscore="window._"`.
+
+Note that `remap` strings are strings of JS code which are evaluated when `require` calls happen. For example, you can do `--remap underscore="require('lodash')"` to remap underscore to lodash.
+
+### Substituting a file
+
+The [browser field](https://gist.github.com/defunctzombie/4339901) in package.json files is supported via [browser-resolve](https://github.com/defunctzombie/node-browser-resolve)
+
+The `browser` field in package.json is a new addition which allows CommonJS bundlers to replace files which are not compatible with the browser with alternatives provided by the module. You can use this to replace files in your build, and it can also be used by 3rd party modules which support both the browser and Node.
+
+You can replace the whole package with a specific file:
+
+    "browser": "dist/browser.js"
+
+or you can override individual modules and files in `package.json`:
+
+    "browser": {
+      "fs": "level-fs",
+      "./lib/filters.js": "./lib/filters-client.js"
+    },
+
+This will replace `./lib/filters.js` with `./lib/filters-client.js` in the build result.
+
+You can also ignore modules by setting them to `false`:
+
+    "browser": {
+      "fs": false,
+    },
+
+This has the same effect as `--ignore`: an empty object will be returned when that module is required.
+
+## Minification and source transforms
+
+## --command
+
+`--command <cmd>` / `.set('command', <cmd>)`: Pipe each file through a shell command and capture the output. For example:
+
+    --command "uglifyjs --no-copyright"
+
+For more complicated use cases, you'll probably want to use `--transform`.
+
+## --transform
+
+`--transform <module>`: activates a source transformation module. This enables 3rd party extensions for things that are more complex than just piping through via `--command`.  API-compatible with browserify's [source transformation modules](https://github.com/substack/node-browserify#list-of-source-transforms).
+
+For example, using coffeeify:
+
+    npm install coffeeify
+    gluejs --transform coffeeify --include index.coffee > bundle.js
+
+gluejs uses [minitask](https://github.com/mixu/minitask) internally, so you can also write modules that return sync / async functions, Node core duplex / transform streams or Node core child_process objects.
+
+See the [section on writing transform modules](#writing_transform_modules) as well as [this example which uses Square's ES6-module-compiler](https://github.com/mixu/gluejs/blob/glue2/test/command-integration/es6-module.js) and [Jade example](https://github.com/mixu/gluejs/blob/glue2/test/command-integration/jade-module.js) for examples.
+
+If you write a transformation, file a PR against the readme so I can feature it here. I've tested functionality using the examples above, but I haven't published them as modules as it's hard to maintain something I'm not using.
+
+## Optimizing shared modules into a shared file
+
+Often web applications consist of multiple entry points, where each page has some internal workflow that is specific to it as well as some common modules. For these kinds of applications, an optimal build involves making a tradeoff between between the number of requests made and the amount of data transferred.
+
+One fairly easy and decent tradeoff is to split the build into one file that contains the shared set of dependencies, and another one that contains the page-specific code.
+
+After optimization, the common modules should be in a shared package file, and the page-specific modules should be in separate files which make use of the shared package.
+
+
+
+How to set up a multi-page gluejs-based project that has the following goals:
+
+- Each page uses a mix of common and page-specific modules.
+- All pages share the same gluejs config.
+- After an optimization build, the common items should be in a shared common layer, and the page-specific modules should be in a page-specific layer.
+- The HTML page should not have to be changed after doing the build.
+- The bundles have external sourcemap files associated
+
+Multiple entry point bundles, which make use of a set of shared modules. For example:
+
+- /index.html (index.js): main application
+- /admin.html (admin.js): user admin section
+
+You can run a build which produces a file called `shared.js` which contains the modules which are used by both `index.js` and `admin.js`:
+
+    glue({
+      include: [ './index.js', './admin.js' ],
+      ...
+      out: fs.createWriteStream('./shared.js')
+    });
+
+Implement `factor-bundle` or equivalent.
+
+
+To exclude all modules, use `--no-externals`. This option forces the build to only contain files that are not under the `node_modules` folder.
+
+
+`--no-externals`: this option prevents any modules from under `node_modules` from being included.
+
+`--only-externals`: this option only bundles modules under `node_modules`.
+
+
+## Performance related options
+
+## --jobs
+
+`--jobs <n>` / `.set('jobs', <n>)`: Sets the maximum level of parallelism for the task execution pipeline. Default: `os.cpus().length * 2`.
+
+## --cache-path
+
+`--cache-path <path>` / `.set('cache-path', <path>)`: Use a specific directory for caching. This is a directory where the results of the previous builds are stored along with metadata. Caching is enabled by default since v2.1.
+
+The default directory is  `~/.gluejs-cache`. You can just delete the directory to invalidate the cache.
+
+Use a directory with a dot in front to hide the cached files (remember to also gitignore the directory). The path is relative to the working directory. For example:
+
+    --cache-path .cache
+
+## --cache-method
+
+`--cache-method <stat|md5|sha512>` / `.set('cache-method', <method>)`: Sets the cache invalidation method. `stat` uses the file size and last modified date of the input file. `md5` (and other hash algorithms supported by `crypto.createHash`) uses hashes to verify that the input file has not changed. Default: stat.
+
+## --no-cache
+
+`--no-cache` / `.set('cache', false)`: Disables the cache; sets the cache directory to a temporary directory.
+
+# Reporting
+
+## --report
+
+Display the summary report. Particularly useful if you are minifying files, since the report will show the file size after transformation.
 
 ## --verbose
 
@@ -519,19 +577,6 @@ Here is an example:
 
     // indicate that this is a gluejs module rather than a browserify module
     module.exports.gluejs = true;
-
-### Benchmark methodology
-
-Ran this:
-
-    /usr/bin/time -f "\n%E wall clock,\n%U user mode CPU seconds,\n%S kernel mode CPU seconds" \
-      gluejs \
-      --no-cache \
-      --jobs 1 \
-      --command 'uglifyjs --no-copyright' \
-      --no-report \
-      --progress \
-      ...
 
 ## License
 

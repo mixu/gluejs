@@ -40,9 +40,8 @@ module.exports = {
   'can specify a middleware build with a single file target': function(done) {
     // first: single main file + all deps
     this.app.use('/js/first.js',
-      Glue.middleware(this.outDir + '/first/index.js', { umd: true})
+      Glue.middleware(this.outDir + '/first/index.js', { umd: true })
     );
-
 
     var outFile = this.fixture.filename({ ext: '.js' });
     request.get('http://localhost:3000/js/first.js',
@@ -206,7 +205,50 @@ module.exports = {
       });
 
     this.app.use('/js/watcher.js', Glue.middleware(opts));
-  }
+  },
 
+  'switching between development and production mode': function(done) {
+    var staticFile = this.fixture.filename({ ext: '.js' });
+    var opts = {
+      basepath: this.outDir,
+      include: './first/index.js',
+      umd: true
+    };
+
+    var buildCount = 0;
+
+    this.app.get('/js/production-mode.js', function(req, res, next) {
+      if (false) {
+        return next();
+      }
+      res.sendfile(staticFile, function(err) {
+        if(!err) {
+          return; // completed successfully
+        }
+        if (err.code && err.code === 'ENOENT') {
+          opts.out = fs.createWriteStream(staticFile);
+          buildCount++;
+          return next(); // run gluejs
+        }
+        return next(err);
+      });
+    }, Glue.middleware(opts));
+
+    var outFile = this.fixture.filename({ ext: '.js' });
+    request.get('http://localhost:3000/js/production-mode.js',
+      function(err, res, body) {
+        assert.equal(res.statusCode, 200);
+        fs.writeFileSync(outFile, body);
+        var result = require(outFile);
+        assert.deepEqual(result, "Dep");
+        assert.equal(buildCount, 1);
+        request.get('http://localhost:3000/js/production-mode.js',
+          function(err, res, body) {
+            assert.equal(res.statusCode, 200);
+            assert.equal(buildCount, 1);
+            done();
+        });
+      });
+  }
 };
 

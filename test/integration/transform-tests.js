@@ -257,5 +257,41 @@ module.exports = {
       .main('test.coffee')
       .export('module.exports')
       .render(file);
+  },
+
+  'print pretty error when a --command fails': function(done){
+    var outFile = this.fixture.filename({ ext: '.js' }),
+        file = fs.createWriteStream(outFile);
+    var outDir = this.fixture.dir({
+      'index.js': '}|alksdjklasdkljaskldaskldjklasjdklasjd'
+    });
+
+    var spawn = require('child_process').spawn;
+    var path = require('path');
+
+    var ps = spawn(path.resolve(__dirname + '../../../bin/gluejs'), [
+      '--include', outDir,
+      '--cache-path', this.cachePath,
+      '--umd',
+      '--command', 'node -e "throw new Error(\'STDERR-error\')"'
+    ]);
+
+    var stderr = '',
+        stdout = '';
+
+    ps.stderr.on('data', function (data) {
+      stderr += data;
+    });
+
+    ps.stdout.on('data', function (data) {
+      stdout += data;
+    });
+
+    ps.on('exit', function(code) {
+      // console.log(stderr, stdout);
+      assert.notEqual(code, 0);
+      assert.notEqual(stdout.indexOf('STDERR-error'), -1);
+      done();
+    });
   }
 };
