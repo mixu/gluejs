@@ -10,7 +10,8 @@ var os = require('os'),
     ProgressBar = require('progress'),
     microee = require('microee'),
     PassThrough = require('readable-stream').PassThrough,
-    runOnce = require('./lib/util/run-once.js');
+    runOnce = require('./lib/util/run-once.js'),
+    resolveOpts = require('./lib/util/resolve-opts.js');
 
 var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
 homePath = (typeof homePath === 'string' ? path.normalize(homePath) : process.cwd());
@@ -48,90 +49,22 @@ API.prototype._resolveOptions = function(input) {
     opts['cache-path'] = os.tmpDir() + '/gluejs-' + new Date().getTime();
   }
 
-  // includes may be:
-  // 1) full path,
-  // 2) relative path, => resolve relative to basepath, or if unavailable, process.cwd
-  // 3) module names
-
-  var firstInclude = (typeof input.include === 'string' ? input.include : input.include[0]),
-      firstIncludeStat;
-
   // first priority is to figure out what the base path is
-  if (input.basepath) {
-    opts.basepath = path.resolve(process.cwd(), input.basepath);
-  } else if (firstInclude.charAt(0) == '/') {
-    // abs path to a file => use parent dir as basepath
-    firstIncludeStat = (fs.existsSync(firstInclude) ? fs.statSync(firstInclude) : false);
-    opts.basepath = (firstIncludeStat && firstIncludeStat.isFile() ?
-      path.dirname(firstInclude) : firstInclude);
-  } else if (firstInclude.charAt(0) == '.') {
-    // relative include => use process.cwd
-    opts.basepath = process.cwd();
-  }
+  opts.basepath = resolveOpts.inferBasepath(input.basepath, input.include);
 
-  console.log('basepath', opts.basepath);
-
-  // next, resolve all the relative paths relative to it
-
-  function resolve(to, from) {
-    return (Array.isArray(from) ? from : [ from ]).map(function(relpath) {
-      // skip non-relative paths (this keeps external module names plain)
-      return (relpath.charAt(0) == '.' ? path.resolve(to, relpath) : relpath);
-    });
-  }
-
-  // resolve relative: --ignore, --include and --exclude
+  // next, resolve relative: --ignore, --include and --exclude
   [ 'ignore', 'include', 'exclude' ].forEach(function(key) {
     if (input[key]) {
-      opts[key] = resolve(opts.basepath, opts[key]);
+      opts[key] = resolveOpts.resolve(opts.basepath, opts[key]);
     }
   });
 
-  // update first include (apply inferred basepath)
-  firstInclude = (typeof opts.include === 'string' ? opts.include : opts.include[0]);
-  firstIncludeStat = (fs.existsSync(firstInclude) ? fs.statSync(firstInclude) : false);
-
-  console.log('includes:', opts.include);
-  console.log('firstInclude:', firstInclude);
-
   // next, figure out the main file
-  if (input.main) {
-    opts.main = input.main;
-  } else if (firstIncludeStat && firstIncludeStat.isFile()) {
-    // set main the first include is a file, use it as the main
-    opts.main = path.relative(opts.basepath, firstInclude);
-  } else if (firstIncludeStat && firstIncludeStat.isDirectory()) {
-    // one file in directory
-    var content = fs.readdirSync(firstInclude).filter(function(file) {
-      return path.extname(file) === '.js';
-    });
-    if (content.length === 1) {
-      opts.main = path.relative(opts.basepath, firstInclude + '/' + content[0]);
-    } else if (content.indexOf('index.js') > -1) {
-      opts.main = path.relative(opts.basepath, firstInclude + '/index.js');
-    } else {
-      console.log('WARN', 'unknown main, too many files', opts.main, content);
-    }
-  } else {
-    console.log('WARN', 'unknown main', opts.main);
-  }
-
-  console.log('main', opts.main);
-
-
-  function resolvePackage(to, from) {
-    var nodeResolve = require('resolve');
-    return (Array.isArray(from) ? from : [ from ]).map(function(dep) {
-      if (dep.charAt(0) == '.' || dep.charAt(0) == '/') {
-        return dep;
-      }
-      return nodeResolve.sync(dep, { basedir: to });
-    });
-  }
+  opts.main = resolveOpts.inferMain(input.main, opts.basepath, opts.include);
 
   [ 'include', 'exclude' ].forEach(function(key) {
     if (input[key]) {
-      opts[key] = resolvePackage(opts.basepath, opts[key]);
+      opts[key] = resolveOpts.resolvePackage(opts.basepath, opts[key]);
     }
   });
 

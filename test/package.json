@@ -3,7 +3,7 @@
   "description": "Tests for gluejs",
   "dependencies": {
     "brfs": "0.0.8",
-    "chokidar": "^0.8.2",
+    "chokidar": "~0.8.2",
     "coffee-script": "~1.6.3",
     "coffeeify": "~0.5.2",
     "es6-module-transpiler": "~0.3.1",
