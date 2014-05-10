@@ -3,7 +3,9 @@ var path = require('path'),
     Minilog = require('minilog'),
     runTasks = require('../lib/runner/transforms/index.js'),
     loadAMDConfig = require('../lib/runner/amd/load-config.js'),
-    toDeps = require('../lib/runner/commonjs3/to-deps.js');
+    toDeps = require('../lib/runner/commonjs3/to-deps.js'),
+    uniq = require('../lib/util/uniq.js'),
+    Capture = require('../lib/file-tasks/capture.js');
 
 Minilog.enable();
 
@@ -30,34 +32,19 @@ if(true || !argv.cache) {
   argv['cache-path'] = require('os').tmpDir() + '/gluejs-' + new Date().getTime();
 }
 
-var opts = {
-  'cache-method': argv['cache-method'] || 'stat',
-  'cache-path': argv['cache-path']
-};
+var opts = JSON.parse(JSON.stringify(argv));
+opts['cache-method'] = argv['cache-method'] || 'stat';
 
-if(!Array.isArray(argv.include)) {
-  argv.include = [ argv.include ];
-}
-
-function uniq() {
-  var prev = null;
-  return function(item) {
-    var isDuplicate = (item == prev);
-    prev = item;
-    return !isDuplicate;
-  };
-}
-
-var basepath = path.resolve(process.cwd(), argv.basepath);
-
-function resolve(to, from) {
-  return (Array.isArray(from) ? from : [ from ]).map(function(relpath) {
-    // skip non-relative paths (this keeps external module names plain)
-    return (relpath.charAt(0) == '.' ? path.resolve(to, relpath) : relpath);
-  });
-}
-
-argv.include = resolve(basepath, argv.include);
+// basepath
+opts.basepath = resolveOpts.inferBasepath(argv.basepath, argv.include);
+// relative paths
+[ 'ignore', 'include', 'exclude' ].forEach(function(key) {
+  if (opts[key]) {
+    opts[key] = resolveOpts.resolve(opts.basepath, opts[key]);
+  }
+});
+// main file
+opts.main = resolveOpts.inferMain(argv.main, opts.basepath, opts.include);
 
 // Create the shared cache instance
 var cache = Cache.instance({
@@ -71,32 +58,6 @@ var amdconfig = loadAMDConfig(argv.amd);
 amdconfig.baseDir = basepath;
 
 var depErrs = [];
-
-var Writable = require('readable-stream').Writable,
-    util = require('util');
-
-function Capture(options) {
-  Writable.call(this, options);
-  this.buffer = [];
-  this.opts = options;
-}
-
-util.inherits(Capture, Writable);
-
-Capture.prototype._write = function(chunk, encoding, done) {
-  // marked cannot stream input, so we need to accumulate it here.
-  this.buffer.push(chunk);
-  done();
-};
-
-Capture.prototype.get = function() {
-  if (this.opts && this.opts.objectMode) {
-    return this.buffer;
-  } else {
-    return Buffer.concat(this.buffer).toString();
-  }
-};
-
 
 // run any tasks and parse dependencies (mapper)
 var runner = runTasks({
