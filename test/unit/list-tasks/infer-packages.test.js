@@ -54,13 +54,13 @@ exports['infer-packages'] = {
     fixtureDir({
       'simple.js': 'module.exports = true;'
     }, function(outDir, list) {
-      infer(list, { basepath: outDir });
+      infer(list);
       list = removeStat(list);
       // console.log(util.inspect(list, null, 10, true));
       assert.equal(list.packages.length, 1);
       // the root (or base) package should be anonymous (=> name is given by the user)
       assert.ok(typeof list.packages[0].name == 'undefined');
-      assert.equal(list.packages[0].basepath, outDir);
+      assert.ok(typeof list.packages[0].basepath == 'undefined');
       assert.ok(typeof list.packages[0].main == 'undefined');
       // the package files should be correct
       assert.deepEqual(list.packages[0].files, [ { name: outDir + '/simple.js' } ]);
@@ -73,7 +73,7 @@ exports['infer-packages'] = {
       'index.js': 'module.exports = true;',
       'node_modules/foo.js': 'module.exports = true;'
     }, function(outDir, list) {
-      infer(list, { basepath: outDir });
+      infer(list);
       list = removeStat(list);
       // console.log(util.inspect(list, null, 10, true));
       assert.equal(list.packages.length, 2);
@@ -110,7 +110,7 @@ exports['infer-packages'] = {
       'node_modules/foo/index.js': 'module.exports = true;',
       'node_modules/foo/lib/sub.js': 'module.exports = true;'
     }, function(outDir, list) {
-      infer(list, { basepath: outDir });
+      infer(list);
       list = removeStat(list);
       // console.log(util.inspect(list, null, 10, true));
       assert.equal(list.packages.length, 2);
@@ -140,7 +140,7 @@ exports['infer-packages'] = {
       'node_modules/foo/lib/sub.js': 'module.exports = true;',
       'node_modules/foo/package.json': '{ "main": "main.js" }'
     }, function(outDir, list) {
-      infer(list, { basepath: outDir });
+      infer(list);
       list = removeStat(list);
       // console.log(util.inspect(list, null, 10, true));
       assert.equal(list.packages.length, 2);
@@ -171,7 +171,7 @@ exports['infer-packages'] = {
       'node_modules/aa/node_modules/cc/differentfile.js': 'module.exports = true;',
       'node_modules/aa/node_modules/cc/package.json': '{ "main": "differentfile.js" }'
     }, function(outDir, list) {
-      infer(list, { basepath: outDir });
+      infer(list);
       list = removeStat(list);
       // console.log(util.inspect(list.packages, null, 10, true));
 
@@ -179,8 +179,6 @@ exports['infer-packages'] = {
       assert.deepEqual(list.packages,
         [
         { files: [ { name: outDir + '/index.js' } ],
-          basepath: outDir,
-          main: 'index.js',
           dependenciesById: { aa: 1 } },
         { name: 'aa',
           uid: 1,
@@ -211,15 +209,13 @@ exports['infer-packages'] = {
       'a/index.js': 'module.exports = true;',
       'a/node_modules/b.json': '{}'
     }, function(outDir, list) {
-      infer(list, { basepath: outDir });
+      infer(list);
       list = removeStat(list);
       // console.log(util.inspect(list, null, 10, true));
       assert.equal(list.packages.length, 2);
       assert.deepEqual(list.packages,
        [
         { files: [ { name: outDir + '/a/index.js' } ],
-         basepath: outDir,
-         main: 'index.js',
          dependenciesById: { b: 1 } },
         { name: 'b',
          uid: 1,
@@ -237,14 +233,12 @@ exports['infer-packages'] = {
       'a/node_modules/b/alt.js': 'module.exports = true;',
       'a/node_modules/b/package.json': '{ "main": "alt" }',
     }, function(outDir, list) {
-      infer(list, { basepath: outDir });
+      infer(list);
       list = removeStat(list);
       // console.log(util.inspect(list, null, 10, true));
       assert.equal(list.packages.length, 2);
       assert.deepEqual(list.packages, [
        { files: [ { name: outDir + '/a/index.js' } ],
-         basepath: outDir,
-         main: 'index.js',
          dependenciesById: { b: 1 } },
        { name: 'b',
          uid: 1,
@@ -264,15 +258,12 @@ exports['infer-packages'] = {
       'a/node_modules/b/lib/index.js': 'module.exports = true;',
       'a/node_modules/b/package.json': '{ "main" : "./lib" }'
     }, function(outDir, list) {
-      infer(list, { basepath: outDir });
+      infer(list);
       list = removeStat(list);
       // console.log(util.inspect(list, null, 10, true));
       assert.equal(list.packages.length, 2);
-      assert.deepEqual(list.packages,  [ {
-        files: [ { name: outDir + '/a/index.js' } ],
-        basepath: outDir,
-        main: 'index.js',
-        dependenciesById: { b: 1 } },
+      assert.deepEqual(list.packages,  [ { files: [ { name: outDir + '/a/index.js' } ],
+         dependenciesById: { b: 1 } },
        { name: 'b',
          uid: 1,
          basepath: outDir + '/a/node_modules/b/',
@@ -291,15 +282,11 @@ exports['infer-packages'] = {
       'a/node_modules/b/url.js': 'module.exports = true;',
       'a/node_modules/b/package.json': ' { "main": "./foo/../url.js" }'
     }, function(outDir, list) {
-      infer(list, { basepath: outDir });
+      infer(list);
       list = removeStat(list);
       // console.log(util.inspect(list, null, 10, true));
       assert.equal(list.packages.length, 2);
-      assert.deepEqual(list.packages,  [
-        {
-         files: [ { name: outDir + '/a/index.js' } ],
-         basepath: outDir,
-         main: 'index.js',
+      assert.deepEqual(list.packages,  [ { files: [ { name: outDir + '/a/index.js' } ],
          dependenciesById: { b: 1 } },
        { name: 'b',
          uid: 1,
@@ -309,48 +296,6 @@ exports['infer-packages'] = {
           [ { name: outDir + '/a/node_modules/b/url.js' },
             { name: outDir + '/a/node_modules/b/package.json' } ].sort(byName),
          dependenciesById: {} } ]);
-      done();
-    });
-  },
-
-  'for each dependency in package.json, add a dependency entry even if the file is not in the list': function(done) {
-    fixtureDir({
-      'a/index.js': 'module.exports = true;',
-      'a/package.json': JSON.stringify({
-        main: 'index.js',
-        dependencies: {
-          b: '*',
-          d: '1.x' // this dep only exists in the package.json file
-        }
-      }),
-      'a/node_modules/b/url.js': 'module.exports = true;',
-      'a/node_modules/b/package.json': JSON.stringify({
-        main: 'url.js',
-        dependencies: {
-          c: '*'
-        }
-      }),
-      // 'a/node_modules/c.js': 'module.exports = true;'
-    }, function(outDir, list) {
-      infer(list, { basepath: outDir + '/a/'  });
-      list = removeStat(list);
-      // console.log(util.inspect(list, null, 10, true));
-      assert.equal(list.packages.length, 2);
-      assert.deepEqual(list.packages,  [
-       { files:
-          [ { name: outDir + '/a/index.js' },
-            { name: outDir + '/a/package.json' } ].sort(byName),
-         basepath: outDir + '/a/',
-         main: 'index.js',
-         dependenciesById: { b: 1, d: null } },
-       { name: 'b',
-         uid: 1,
-         basepath: outDir + '/a/node_modules/b/',
-         main: 'url.js',
-         files:
-          [ { name: outDir + '/a/node_modules/b/url.js' },
-            { name: outDir + '/a/node_modules/b/package.json' } ].sort(byName),
-         dependenciesById: { c: null } } ]);
       done();
     });
   }
