@@ -1,8 +1,8 @@
-TESTS += ./*.test.js
-TESTS += ./unit/list-tasks/*.test.js
+TESTS += test/*.test.js
+TESTS += test/list-tasks/*.test.js
 
 test:
-	@cd test && mocha \
+	@mocha \
 		--ui exports \
 		--reporter spec \
 		--slow 2000ms \
@@ -30,5 +30,5 @@ test-lint:
 		--no-cache \
 		--include ./lib \
 		--basepath ./ \
-		--out /tmp/lint.js
-	gjslint --nojsdoc --custom_jsdoc_tags=api --max_line_length=120 --disable=0131,300,2,1,6 /tmp/lint.js
+		--out ./test/tmp/lint.js
+	gjslint --nojsdoc --custom_jsdoc_tags=api --max_line_length=120 --disable=0131,300,2,1,6 ./test/tmp/lint.js
