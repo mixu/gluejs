@@ -11,6 +11,7 @@ gluejs v2.next adds optional dependency parsing support:
 # Todo
 
 - Parse:
+  - add support for parsing directory --include arguments
   - disable the automatic excludes like `/dist/` because they mess with things like jquery
   - transform and command options: parse the resulting file for dependencies
   - direct file requires like `require('jade/runtime')` should resolve correctly
@@ -30,6 +31,8 @@ gluejs v2.next adds optional dependency parsing support:
 Steps:
 
 - implement `--compare`: compares the trees from using the detective strategy vs the default strategy
+- apply compatibility fixes:
+  - allow including directories using the detective strategy
 - apply later stage optimizations:
   - minimize the list of --replace shimmed modules in each package output based on the real set of dependencies from all files within that package
   - add core module shimming support

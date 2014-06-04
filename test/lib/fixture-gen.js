@@ -1,8 +1,6 @@
 var os = require('os'),
     fs = require('fs'),
-    path = require('path'),
-    mkdirp = require('mkdirp'),
-    rimraf = require('rimraf');
+    path = require('path');
 
 function FixtureGen() {
   this.root = this.filename({
@@ -38,12 +36,6 @@ FixtureGen.prototype.file = function(data, opts) {
   return filename;
 };
 
-FixtureGen.prototype.dirname = function() {
-  var filename = this.filename();
-  fs.mkdirSync(filename);
-  return filename;
-};
-
 FixtureGen.prototype.dir = function(spec) {
   // generate a new directory
   var outDir = this.filename();
@@ -54,7 +46,7 @@ FixtureGen.prototype.dir = function(spec) {
     var fullname = path.normalize(outDir + '/' + name);
 
     if (path.dirname(fullname) != outDir) {
-      mkdirp.sync(path.dirname(fullname));
+      console.log('WARN: FixtureGen does not yet support subdirs', fullname);
     }
     fs.writeFileSync(fullname, (Array.isArray(data) ? data.join('\n') : data));
   });
