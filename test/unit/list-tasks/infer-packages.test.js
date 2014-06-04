@@ -9,6 +9,143 @@ function pluck(key, obj) {
   return o;
 }
 
+var cases = {
+
+  'can infer a single-file package': {
+    files: [ '/fixtures/simple.js' ]
+  },
+
+  'has-node-module-file': {
+    files: [
+      '/fixtures/index.js',
+      '/fixtures/node_modules/foo.js'
+    ]
+  },
+
+  'has-node-module-folder': {
+    files: [
+      '/fixtures/index.js',
+      '/fixtures/node_modules/foo/index.js',
+      '/fixtures/node_modules/foo/lib/sub.js'
+    ]
+  },
+
+  'has-node-module-folder-mainfile-via-package-json': {
+    files: [
+      '/fixtures/index.js',
+      '/fixtures/node_modules/foo/main.js',
+      '/fixtures/node_modules/foo/lib/sub.js',
+      '/fixtures/node_modules/foo/package.json'
+    ],
+    fakeFS: {
+      existsSync: function(name) {
+        return !!(name == '/fixtures/node_modules/foo/package.json');
+      },
+      '/fixtures/node_modules/foo/package.json': JSON.stringify({
+        main: 'main.js'
+      })
+    }
+  },
+
+  'has-sub-sub-sub-module': {
+    files: [
+      '/fixtures/index.js',
+      '/fixtures/node_modules/aa/index.js',
+      '/fixtures/node_modules/aa/node_modules/bb.js',
+      '/fixtures/node_modules/aa/node_modules/cc/differentfile.js',
+      '/fixtures/node_modules/aa/node_modules/cc/package.json'
+    ],
+    fakeFS: {
+      existsSync: function(name) {
+        return !!(name == '/fixtures/node_modules/aa/node_modules/cc/package.json');
+      },
+      '/fixtures/node_modules/aa/node_modules/cc/package.json': JSON.stringify({
+        main: 'differentfile.js'
+      })
+    }
+  },
+
+  'json-node-module': {
+    files: [
+      '/a/index.js',
+      '/a/node_modules/b.json'
+    ],
+    fakeFS: {
+      existsSync: function(name) {
+        return false;
+      }
+    }
+  },
+
+  'package-json-guess-extension': {
+    files: [
+      '/a/index.js',
+      '/a/node_modules/b/alt.js',
+      '/a/node_modules/b/package.json'
+    ],
+    fakeFS: {
+      existsSync: function(name) {
+        return !!(name == '/a/node_modules/b/package.json');
+      },
+      '/a/node_modules/b/package.json': JSON.stringify({
+        main: 'alt'
+      })
+    }
+  },
+
+  'package-json-guess-directory': {
+    files: [
+      '/a/index.js',
+      '/a/node_modules/b/lib/index.js',
+      '/a/node_modules/b/package.json'
+    ],
+    fakeFS: {
+      existsSync: function(name) {
+        return !!(name == '/a/node_modules/b/package.json');
+      },
+      '/a/node_modules/b/package.json': JSON.stringify({
+        main: './lib/'
+      })
+    }
+  },
+
+  'package-json-relpath': {
+    files: [
+      '/a/index.js',
+      '/a/node_modules/b/lib/foo/bar/alt.js',
+      '/a/node_modules/b/package.json'
+    ],
+    fakeFS: {
+      existsSync: function(name) {
+        return !!(name == '/a/node_modules/b/package.json');
+      },
+      '/a/node_modules/b/package.json': JSON.stringify({
+        main: './lib/foo/../foo/bar/alt.js'
+      })
+    }
+  },
+
+  'if the main path is a relative path, it should be normalized': {
+    files: [
+      '/a/index.js',
+      '/a/node_modules/b/url.js',
+      '/a/node_modules/b/package.json'
+    ],
+    fakeFS: {
+      existsSync: function(name) {
+        return !!(name == '/a/node_modules/b/package.json');
+      },
+      '/a/node_modules/b/package.json': JSON.stringify({
+        main: './url.js'
+      })
+    }
+  }
+};
+
+Object.keys(cases).forEach(function(name) {
+  cases[name].files = cases[name].files.map(function(file) { return { name: file }; });
+});
+
 exports['infer-packages'] = {
 
   before: function() {
@@ -28,9 +165,7 @@ exports['infer-packages'] = {
   },
 
   'can infer a single-file package': function() {
-    var list = {
-      files: [ '/fixtures/simple.js' ].map(function(file) { return { name: file }; })
-    };
+    var list = cases['can infer a single-file package'];
     infer(list);
     // console.log(util.inspect(list, null, 10, true));
     assert.equal(list.packages.length, 1);
@@ -43,12 +178,7 @@ exports['infer-packages'] = {
   },
 
   'can infer two packages from module-file and detect the right main file': function() {
-    var list = {
-      files: [
-        '/fixtures/index.js',
-        '/fixtures/node_modules/foo.js'
-      ].map(function(file) { return { name: file }; })
-    };
+    var list = cases['has-node-module-file'];
     infer(list);
     // console.log(util.inspect(list, null, 10, true));
     assert.equal(list.packages.length, 2);
@@ -67,23 +197,7 @@ exports['infer-packages'] = {
   },
 
   'can infer two packages from module-folder': function() {
-    var list = {
-      files: [
-        '/fixtures/index.js',
-        '/fixtures/node_modules/foo/index.js',
-        '/fixtures/node_modules/foo/lib/sub.js'
-      ].map(function(file) { return { name: file }; }),
-      fakeFS: {
-        existsSync: function(name) {
-          return list.files.some(function(item) {
-            return item.name == name;
-          });
-        },
-      }
-    };
-    // set up fakeFS
-    this.fakeFS = list.fakeFS;
-
+    var list = cases['has-node-module-folder'];
     infer(list);
     // console.log(util.inspect(list, null, 10, true));
     assert.equal(list.packages.length, 2);
@@ -105,22 +219,7 @@ exports['infer-packages'] = {
   },
 
   'can pick up main file name from package.json': function() {
-    var list = {
-      files: [
-        '/fixtures/index.js',
-        '/fixtures/node_modules/foo/main.js',
-        '/fixtures/node_modules/foo/lib/sub.js',
-        '/fixtures/node_modules/foo/package.json'
-      ].map(function(file) { return { name: file }; }),
-      fakeFS: {
-        existsSync: function(name) {
-          return !!(name == '/fixtures/node_modules/foo/package.json');
-        },
-        '/fixtures/node_modules/foo/package.json': JSON.stringify({
-          main: 'main.js'
-        })
-      }
-    };
+    var list = cases['has-node-module-folder-mainfile-via-package-json'];
 
     // set up fakeFS
     this.fakeFS = list.fakeFS;
@@ -143,23 +242,7 @@ exports['infer-packages'] = {
   },
 
   'can pick up recursive node_modules': function(){
-    var list = {
-      files: [
-        '/fixtures/index.js',
-        '/fixtures/node_modules/aa/index.js',
-        '/fixtures/node_modules/aa/node_modules/bb.js',
-        '/fixtures/node_modules/aa/node_modules/cc/differentfile.js',
-        '/fixtures/node_modules/aa/node_modules/cc/package.json'
-      ].map(function(file) { return { name: file }; }),
-      fakeFS: {
-        existsSync: function(name) {
-          return !!(name == '/fixtures/node_modules/aa/node_modules/cc/package.json');
-        },
-        '/fixtures/node_modules/aa/node_modules/cc/package.json': JSON.stringify({
-          main: 'differentfile.js'
-        })
-      }
-    };
+    var list = cases['has-sub-sub-sub-module'];
     // set up fakeFS
     this.fakeFS = list.fakeFS;
     infer(list);
@@ -192,17 +275,7 @@ exports['infer-packages'] = {
   },
 
   'can resolve single .json file npm module': function() {
-    var list = {
-      files: [
-        '/a/index.js',
-        '/a/node_modules/b.json'
-      ].map(function(file) { return { name: file }; }),
-      fakeFS: {
-        existsSync: function(name) {
-          return false;
-        }
-      }
-    };
+    var list = cases['json-node-module'];
     infer(list);
     // console.log(util.inspect(list, null, 10, true));
     assert.equal(list.packages.length, 2);
@@ -219,21 +292,7 @@ exports['infer-packages'] = {
   },
 
   'it should be OK to define the main file without the .js extension': function() {
-    var list = {
-      files: [
-        '/a/index.js',
-        '/a/node_modules/b/alt.js',
-        '/a/node_modules/b/package.json'
-      ].map(function(file) { return { name: file }; }),
-      fakeFS: {
-        existsSync: function(name) {
-          return !!(name == '/a/node_modules/b/package.json');
-        },
-        '/a/node_modules/b/package.json': JSON.stringify({
-          main: 'alt'
-        })
-      }
-    };
+    var list = cases['package-json-guess-extension'];
     // set up fakeFS
     this.fakeFS = list.fakeFS;
     infer(list);
@@ -253,21 +312,7 @@ exports['infer-packages'] = {
   },
 
   'it should be OK to define the main file as just a directory': function() {
-    var list = {
-      files: [
-        '/a/index.js',
-        '/a/node_modules/b/lib/index.js',
-        '/a/node_modules/b/package.json'
-      ].map(function(file) { return { name: file }; }),
-      fakeFS: {
-        existsSync: function(name) {
-          return !!(name == '/a/node_modules/b/package.json');
-        },
-        '/a/node_modules/b/package.json': JSON.stringify({
-          main: './lib/'
-        })
-      }
-    };
+    var list = cases['package-json-guess-directory'];
     // set up fakeFS
     this.fakeFS = list.fakeFS;
     infer(list);
@@ -286,21 +331,7 @@ exports['infer-packages'] = {
   },
 
   'if the main path is a relative path, it should be normalized': function() {
-    var list = {
-      files: [
-        '/a/index.js',
-        '/a/node_modules/b/url.js',
-        '/a/node_modules/b/package.json'
-      ].map(function(file) { return { name: file }; }),
-      fakeFS: {
-        existsSync: function(name) {
-          return !!(name == '/a/node_modules/b/package.json');
-        },
-        '/a/node_modules/b/package.json': JSON.stringify({
-          main: './foo/../url.js'
-        })
-      }
-    };
+    var list = cases['if the main path is a relative path, it should be normalized'];
     // set up fakeFS
     this.fakeFS = list.fakeFS;
     infer(list);
