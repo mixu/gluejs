@@ -5,6 +5,7 @@
 
 - gzip support
 - --silent support
+- time reporter
 
 ----
 

@@ -89,7 +89,7 @@ module.exports = {
       // console.log(fs.readFileSync(outFile).toString());
       var result = require(outFile);
       // use standard require
-      var result = result({ name: name });
+      result = result({ name: name });
       assert.deepEqual(result, '<h1>Hello '+name+'</h1>');
       done();
     });
