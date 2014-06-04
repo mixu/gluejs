@@ -4,7 +4,7 @@ var assert = require('assert'),
 var infer = require('../../../lib/list-tasks/infer-packages.js'),
     FixtureGen = require('../../lib/fixture-gen.js'),
     Cache = require('minitask').Cache,
-    runTasks = require('../../../lib/runner/transforms/index.js');
+    runTasks = require('transform-runner');
 
 var cache = Cache.instance({
     method: 'stat',
@@ -19,7 +19,8 @@ function fixtureDir(spec, onDone) {
 
   runTasks({
     include: outDir,
-    cache: cache,
+    // cache: cache,
+    log: require('minilog')('runner'),
     jobs: 1
   }, function(err, results) {
     if (err) {
@@ -68,7 +69,7 @@ exports['infer-packages'] = {
       'node_modules/foo.js': 'module.exports = true;'
     }, function(outDir, files) {
       var packages = infer(files, { basepath: outDir });
-      // console.log(util.inspect(packages, null, 10, true));
+      console.log(util.inspect(packages, null, 10, true));
       assert.equal(packages.length, 2);
       // the root (or base) package should be anonymous (=> name is given by the user)
       assert.ok(typeof packages[0].name == 'undefined');

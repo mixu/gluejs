@@ -5,7 +5,7 @@ var infer = require('../../../lib/list-tasks/infer-packages.js'),
     filter = require('../../../lib/list-tasks/filter-packages.js'),
     FixtureGen = require('../../lib/fixture-gen.js'),
     Cache = require('minitask').Cache,
-    runTasks = require('../../../lib/runner/transforms/index.js');
+    runTasks = require('transform-runner');
 
 var cache = Cache.instance({
     method: 'stat',
@@ -18,7 +18,8 @@ function fixtureDir(outDir, include, onDone) {
   // set up fixture
   runTasks({
     include: include,
-    cache: cache,
+//    cache: cache,
+    log: require('minilog')('runner'),
     jobs: 1
   }, function(err, results) {
     if (err) {
@@ -58,20 +59,17 @@ exports['filter-package'] = {
       assert.deepEqual(packages[0].files, [
       { filename: outDir + '/a/included_file.js',
          content: outDir + '/a/included_file.js',
-         rawDeps: [],
-         deps: [],
+         deps: {},
          renames: [] },
        { filename: outDir + '/a/included_file.foobar',
          content: outDir + '/a/included_file.foobar',
-         rawDeps: [],
-         deps: [],
+         deps: {},
          renames: [] },
 
       // TODO: not sure if /a/included_directory/ccc/ddd.js should be here as well...
        { filename: outDir + '/a/included_directory/bbb.js',
          content: outDir + '/a/included_directory/bbb.js',
-         rawDeps: [],
-         deps: [],
+         deps: {},
          renames: [] } ]);
       done();
     });
@@ -124,23 +122,19 @@ exports['filter-package'] = {
       assert.deepEqual(packages[0].files,  [
        { filename: outDir + '/a/.npmignore',
          content: outDir + '/a/.npmignore',
-         rawDeps: [],
-         deps: [],
+         deps: {},
          renames: [] },
        { filename: outDir + '/a/included_file.js',
          content: outDir + '/a/included_file.js',
-         rawDeps: [],
-         deps: [],
+         deps: {},
          renames: [] },
        { filename: outDir + '/a/included_file.foobar',
          content: outDir + '/a/included_file.foobar',
-         rawDeps: [],
-         deps: [],
+         deps: {},
          renames: [] },
        { filename: outDir + '/a/included_directory/bbb.js',
          content: outDir + '/a/included_directory/bbb.js',
-         rawDeps: [],
-         deps: [],
+         deps: {},
          renames: [] } ]);
       done();
     });

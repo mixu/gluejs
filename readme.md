@@ -317,7 +317,7 @@ To render without producing output - for example, to enable eager rebuilding via
   - `.on('file', function(file) {})`: emitted when a file is added to the bundle with full path to the file
   - `.on('file-hit', function(file) {})`: emitted for each cache hit
   - `.on('file-miss', function(file) {})`: emitted for each cache miss
-  - `.on('file-done', function(file, contentPath)) {}`: emitted when a file has been fully processed (e.g. all transforms have run).
+  - `.on('file-done', function(file, result)) {}`: emitted when a file has been fully processed (e.g. all transforms have run). `result` is a hash containing the information gathered during the parse
   - `error`
   - `done`
   - `etag`

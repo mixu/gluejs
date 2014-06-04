@@ -8,6 +8,26 @@
 
 ----
 
+### API refactor
+
+Convert into a pipeline consisting of:
+
+- `resolve-require`: takes an initial set of files + tasks, emits JSON objects with the necessary dependencies
+- `etagger`: handle etags
+- `gluejs-pack`: takes a set of JSON objects and generates a JS package file from them
+
+Code:
+
+    runner.exclude(exclude)
+          .ignore(ignore)
+          .on('...');
+
+    list.include(include)
+        .pipe(runner)
+        .pipe(etagger)
+        .pipe(packager)
+        .pipe(dest);
+
 ### Better externals
 
 For more granular control over what external modules are included in your build, you can use the following features:

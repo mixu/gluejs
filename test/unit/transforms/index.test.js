@@ -4,7 +4,7 @@ var assert = require('assert'),
 var Minilog = require('minilog');
 var FixtureGen = require('../../lib/fixture-gen.js'),
     Cache = require('minitask').Cache,
-    runner = require('../../../lib/runner/transforms/index.js');
+    runner = require('transform-runner');
 
 exports['runQueue tests'] = {
 
@@ -25,7 +25,8 @@ exports['runQueue tests'] = {
 
     runner({
       include: [ outDir + '/index.js' ],
-      cache: this.cache,
+      // cache: this.cache,
+      log: require('minilog')('runner'),
       jobs: 1
     }, function(err, results) {
       assert.ok(!err);
@@ -33,8 +34,7 @@ exports['runQueue tests'] = {
       assert.deepEqual(results[0], {
         filename: outDir + '/index.js',
         content: outDir + '/index.js',
-        rawDeps: [],
-        deps: [],
+        deps: {},
         renames: []
       });
       done();
@@ -49,7 +49,8 @@ exports['runQueue tests'] = {
 
     runner({
       include: [ outDir + '/index.js' ],
-      cache: this.cache,
+      // cache: this.cache,
+      log: require('minilog')('runner'),
       jobs: 1
     }, function(err, results) {
       assert.ok(!err);
@@ -58,15 +59,13 @@ exports['runQueue tests'] = {
       assert.deepEqual(results[0], {
         filename: outDir + '/index.js',
         content: outDir + '/index.js',
-        rawDeps: [ './second.js' ],
-        deps: [ outDir + '/second.js' ],
+        deps: { './second.js': outDir + '/second.js' },
         renames: []
       });
       assert.deepEqual(results[1], {
         filename: outDir + '/second.js',
         content: outDir + '/second.js',
-        rawDeps: [ ],
-        deps: [ ],
+        deps: {},
         renames: []
       });
       done();
@@ -82,7 +81,8 @@ exports['runQueue tests'] = {
 
     runner({
       include: [ outDir ],
-      cache: this.cache,
+      // cache: this.cache,
+      log: require('minilog')('runner'),
       jobs: 1
     }, function(err, results) {
       assert.ok(!err);
@@ -91,22 +91,19 @@ exports['runQueue tests'] = {
       assert.deepEqual(results[0], {
         filename: outDir + '/one.js',
         content: outDir + '/one.js',
-        rawDeps: [],
-        deps: [],
+        deps: {},
         renames: []
       });
       assert.deepEqual(results[1], {
         filename: outDir + '/sub/dep.js',
         content: outDir + '/sub/dep.js',
-        rawDeps: [],
-        deps: [],
+        deps: {},
         renames: []
       });
       assert.deepEqual(results[2], {
         filename: outDir + '/two.js',
         content: outDir + '/two.js',
-        rawDeps: [ './sub/dep' ],
-        deps: [ outDir + '/sub/dep.js' ],
+        deps: { './sub/dep': outDir + '/sub/dep.js' },
         renames: []
       });
       done();
@@ -121,7 +118,8 @@ exports['runQueue tests'] = {
 
     runner({
       include: outDir,
-      cache: this.cache,
+      // cache: this.cache,
+      log: require('minilog')('runner'),
       jobs: 1
     }, function(err, results) {
       assert.ok(!err);
@@ -130,15 +128,13 @@ exports['runQueue tests'] = {
       assert.deepEqual(results[0], {
         filename: outDir + '/foo/bar/baz/abc/dep.js',
         content: outDir + '/foo/bar/baz/abc/dep.js',
-        rawDeps: [],
-        deps: [],
+        deps: {},
         renames: []
       });
       assert.deepEqual(results[1], {
         filename: outDir + '/foo/bar/baz/main.js',
         content: outDir + '/foo/bar/baz/main.js',
-        rawDeps: [],
-        deps: [],
+        deps: {},
         renames: []
       });
       done();
@@ -158,7 +154,8 @@ exports['runQueue tests'] = {
         outDir + '/one.js',
         outDir + '/two.js'
       ],
-      cache: this.cache,
+      // cache: this.cache,
+      log: require('minilog')('runner'),
       jobs: 1
     }, function(err, results) {
       assert.ok(!err);
@@ -167,29 +164,25 @@ exports['runQueue tests'] = {
       assert.deepEqual(results[0],  {
         filename: outDir + '/node_modules/backbone.js',
         content: outDir + '/node_modules/backbone.js',
-        rawDeps: [ 'underscore' ],
-        deps: [ outDir + '/node_modules/underscore.js' ],
+        deps: { 'underscore': outDir + '/node_modules/underscore.js' },
         renames: []
       });
       assert.deepEqual(results[1], {
         filename: outDir + '/node_modules/underscore.js',
         content: outDir + '/node_modules/underscore.js',
-        rawDeps: [],
-        deps: [],
+        deps: {},
         renames: []
       });
       assert.deepEqual(results[2], {
         filename: outDir + '/one.js',
         content: outDir + '/one.js',
-        rawDeps: [ 'backbone' ],
-        deps: [ outDir + '/node_modules/backbone.js' ],
+        deps: { 'backbone': outDir + '/node_modules/backbone.js' },
         renames: []
       });
       assert.deepEqual(results[3], {
         filename: outDir + '/two.js',
         content: outDir + '/two.js',
-        rawDeps: [ 'underscore' ],
-        deps: [ outDir + '/node_modules/underscore.js' ],
+        deps: { 'underscore': outDir + '/node_modules/underscore.js' },
         renames: []
       });
       done();
@@ -206,7 +199,8 @@ exports['runQueue tests'] = {
 
     runner({
       include: outDir + '/foo/bar/one.js',
-      cache: this.cache,
+      // cache: this.cache,
+      log: require('minilog')('runner'),
       jobs: 1
     }, function(err, results) {
       assert.ok(!err);
@@ -215,22 +209,19 @@ exports['runQueue tests'] = {
       assert.deepEqual(results[0], {
         filename: outDir + '/foo/bar/node_modules/backbone.js',
         content: outDir + '/foo/bar/node_modules/backbone.js',
-        rawDeps: [ 'underscore' ],
-        deps: [ outDir + '/node_modules/underscore.js' ],
+        deps: { 'underscore': outDir + '/node_modules/underscore.js' },
         renames: []
       });
       assert.deepEqual(results[1], {
         filename: outDir + '/foo/bar/one.js',
         content: outDir + '/foo/bar/one.js',
-        rawDeps: [ 'backbone' ],
-        deps: [ outDir + '/foo/bar/node_modules/backbone.js' ],
+        deps: { 'backbone': outDir + '/foo/bar/node_modules/backbone.js' },
         renames: []
       });
       assert.deepEqual(results[2], {
         filename: outDir + '/node_modules/underscore.js',
         content: outDir + '/node_modules/underscore.js',
-        rawDeps: [],
-        deps: [],
+        deps: {},
         renames: []
       });
       done();
@@ -246,7 +237,8 @@ exports['runQueue tests'] = {
     });
     runner({
         include: [ outDir + '/index.js' ],
-        cache: this.cache,
+        // cache: this.cache,
+        log: require('minilog')('runner'),
         jobs: 1
       }, function(err, results) {
         assert.ok(!err);
@@ -256,18 +248,15 @@ exports['runQueue tests'] = {
         {
           filename: outDir + '/index.js',
           content: outDir + '/index.js',
-          rawDeps: [ 'foo' ],
-          deps: [ outDir + '/node_modules/foo/main.js' ],
+          deps: { 'foo': outDir + '/node_modules/foo/main.js' },
           renames: [] },
         { filename: outDir + '/node_modules/foo/lib/sub.js',
           content: outDir + '/node_modules/foo/lib/sub.js',
-          rawDeps: [],
-          deps: [],
+          deps: {},
           renames: [] },
         { filename: outDir + '/node_modules/foo/main.js',
           content: outDir + '/node_modules/foo/main.js',
-          rawDeps: [ './lib/sub' ],
-          deps: [ outDir + '/node_modules/foo/lib/sub.js' ],
+          deps: { './lib/sub': outDir + '/node_modules/foo/lib/sub.js' },
           renames: [] }
         ]);
 
@@ -289,7 +278,7 @@ exports['runQueue tests'] = {
     });
     runner({
         include: [ outDir + '/index.js' ],
-        cache: this.cache,
+        // cache: this.cache,
         jobs: 1
       }, function(err, results) {
         assert.ok(!err);
@@ -298,23 +287,19 @@ exports['runQueue tests'] = {
         assert.deepEqual(results, [
            { filename: outDir + '/index.js',
               content: outDir + '/index.js',
-              rawDeps: [ 'aa' ],
-              deps: [ outDir + '/node_modules/aa/index.js' ],
+              deps: { 'aa': outDir + '/node_modules/aa/index.js' },
               renames: [] },
             { filename: outDir + '/node_modules/aa/index.js',
               content: outDir + '/node_modules/aa/index.js',
-              rawDeps: [ 'bb' ],
-              deps: [ outDir + '/node_modules/aa/node_modules/bb.js' ],
+              deps: { 'bb': outDir + '/node_modules/aa/node_modules/bb.js' },
               renames: [] },
             { filename: outDir + '/node_modules/aa/node_modules/bb.js',
               content: outDir + '/node_modules/aa/node_modules/bb.js',
-              rawDeps: [ 'cc' ],
-              deps: [ outDir + '/node_modules/aa/node_modules/cc/differentfile.js' ],
+              deps: { 'cc': outDir + '/node_modules/aa/node_modules/cc/differentfile.js' },
               renames: [] },
             { filename: outDir + '/node_modules/aa/node_modules/cc/differentfile.js',
               content: outDir + '/node_modules/aa/node_modules/cc/differentfile.js',
-              rawDeps: [],
-              deps: [],
+              deps: {},
               renames: [] }
         ]);
         done();

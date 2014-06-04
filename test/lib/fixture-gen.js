@@ -4,9 +4,11 @@ var os = require('os'),
     mkdirp = require('mkdirp'),
     rimraf = require('rimraf');
 
+var tmpDir = (os.tmpdir || os.tmpDir)();
+
 function FixtureGen() {
   this.root = this.filename({
-    path: os.tmpDir()
+    path: tmpDir
   });
   fs.mkdirSync(this.root);
 }
@@ -63,7 +65,7 @@ FixtureGen.prototype.dir = function(spec) {
 
 FixtureGen.prototype.clean = function() {
   // ensure that this is under os.tmpdir()
-  if (this.root.substr(os.tmpDir().length) == os.tmpDir()) {
+  if (this.root.substr(tmpDir.length) == tmpDir) {
     rimraf.sync(this.root);
   }
 };

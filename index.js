@@ -1,7 +1,7 @@
 var os = require('os'),
     fs = require('fs'),
     path = require('path'),
-    runTasks = require('./lib/runner/transforms/index.js'),
+    runTasks = require('transform-runner'),
     packageCommonJs = require('./lib/runner/commonjs2/index.js'),
     Capture = require('./lib/file-tasks/capture.js'),
     Minilog = require('minilog'),
@@ -177,12 +177,79 @@ API.prototype.preRender = function(opts, onDone) {
   });
   cache.begin();
 
+  var Task = require('minitask').Task,
+      getTasks = require('./lib/runner/transforms/get-tasks.js');
+
+  // cache hash (only options which affect the build invalidation (at this level)
+  var invalidationOpts = {};
+  ['include', 'command', 'transform', 'exclude', 'ignore',
+   'gluejs-version' ].forEach(function(key) {
+    invalidationOpts[key] = opts[key];
+  });
+  var cacheHash = cache.hash(JSON.stringify(invalidationOpts));
+
   // run any tasks and parse dependencies (mapper)
   var runner = runTasks({
-    cache: cache,
+    // new API
+    tasks: function(filename, done) {
+      // Resolve tasks just prior to processing the file
+      var tasks = (path.extname(filename) != '.json' ? getTasks(filename, {
+        command: opts.command,
+        transform: opts.transform
+      }) : []);
+
+      // tasks empty? skip and produce a new tuple
+      if (tasks.length === 0) {
+        return false;
+      }
+
+      // add parse-result-and-update-deps task
+      // Wrapping and final file size reporting are inherently serial (because they are
+      // part of the join-into-single-file Reduce task)
+      var task = new Task(tasks);
+
+      var cacheFile = cache.filepath();
+
+      task.once('done', function() {
+        done(null, cacheFile);
+      });
+
+      task.input(fs.createReadStream(filename))
+          .output(fs.createWriteStream(cacheFile))
+          .exec();
+
+      return true;
+    },
+
+    cache: {
+      // cache keys need to be generated based on the config hash to become a factor
+      // in the invalidation in addition to the file content
+      key: function(name) {
+        return cacheHash + '-' + name;
+      },
+      get: function(filename, key, isPath) {
+        if (isPath) {
+          return cache.file(filename).path(this.key(key));
+        } else {
+          return cache.file(filename).data(this.key(key));
+        }
+      },
+      set: function(filename, key, value, isPath) {
+        if (isPath) {
+          return cache.file(filename).path(this.key(key), value);
+        } else {
+          return cache.file(filename).data(this.key(key), value);
+        }
+      },
+      filepath: function() {
+        return cache.filepath();
+      }
+    },
+
+    log: Minilog('runner'),
+
+    // old
     include: opts.include,
-    command: opts.command,
-    transform: opts.transform,
     exclude: opts.exclude,
     ignore: opts.ignore,
     jobs: opts.jobs,
