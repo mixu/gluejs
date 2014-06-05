@@ -5,3 +5,4 @@ lib/util/amd-vendor-wrap-global.js
 lib/require/*.min.js
 test/integration/command-integration/*
 bin/
+temp/

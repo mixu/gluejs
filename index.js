@@ -7,11 +7,10 @@ var os = require('os'),
     Minilog = require('minilog'),
     Cache = require('minitask').Cache,
     log = require('minilog')('api'),
-    ProgressBar = require('progress'),
     microee = require('microee'),
-    PassThrough = require('readable-stream').PassThrough,
     runOnce = require('./lib/util/run-once.js'),
-    resolveOpts = require('./lib/util/resolve-opts.js');
+    resolveOpts = require('./lib/util/resolve-opts.js'),
+    cacheSplitter = require('./lib/file-tasks/splitter.js');
 
 var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
 homePath = (typeof homePath === 'string' ? path.normalize(homePath) : process.cwd());
@@ -90,128 +89,6 @@ API.prototype._resolveOptions = function(input) {
   return opts;
 };
 
-// preRender performs all the file build tasks without actually producing an output file
-// you can call this method on a build from, say, a fs.watch style tool to optimistically
-// run builds.
-//
-API.prototype.preRender = function(opts, onDone) {
-  var self = this;
-
-  // normally called with one arg, but can skip resolveOptions when going via render()
-  if (arguments.length < 2) {
-    onDone = arguments[0];
-    opts = this._resolveOptions(this.options);
-  }
-
-  // Create the shared cache instance
-  var cache = Cache.instance({
-    method: opts['cache-method'],
-    path: opts['cache-path']
-  });
-  cache.begin();
-
-  var Task = require('minitask').Task,
-      getTasks = require('./lib/runner/transforms/get-tasks.js');
-
-  // cache hash (only options which affect the build invalidation (at this level)
-  var invalidationOpts = {};
-  ['include', 'command', 'transform', 'exclude', 'ignore',
-   'gluejs-version' ].forEach(function(key) {
-    invalidationOpts[key] = opts[key];
-  });
-  var cacheHash = cache.hash(JSON.stringify(invalidationOpts));
-
-  // run any tasks and parse dependencies (mapper)
-  var runner = runTasks({
-    // new API
-    tasks: function(filename, done) {
-      // Resolve tasks just prior to processing the file
-      var tasks = (path.extname(filename) != '.json' ? getTasks(filename, {
-        command: opts.command,
-        transform: opts.transform
-      }) : []);
-
-      // tasks empty? skip and produce a new tuple
-      if (tasks.length === 0) {
-        return false;
-      }
-
-      // add parse-result-and-update-deps task
-      // Wrapping and final file size reporting are inherently serial (because they are
-      // part of the join-into-single-file Reduce task)
-      var task = new Task(tasks);
-
-      var cacheFile = cache.filepath();
-
-      task.once('done', function() {
-        done(null, cacheFile);
-      });
-
-      task.input(fs.createReadStream(filename))
-          .output(fs.createWriteStream(cacheFile))
-          .exec();
-
-      return true;
-    },
-
-    cache: {
-      // cache keys need to be generated based on the config hash to become a factor
-      // in the invalidation in addition to the file content
-      key: function(name) {
-        return cacheHash + '-' + name;
-      },
-      get: function(filename, key, isPath) {
-        if (isPath) {
-          return cache.file(filename).path(this.key(key));
-        } else {
-          return cache.file(filename).data(this.key(key));
-        }
-      },
-      set: function(filename, key, value, isPath) {
-        if (isPath) {
-          return cache.file(filename).path(this.key(key), value);
-        } else {
-          return cache.file(filename).data(this.key(key), value);
-        }
-      },
-      filepath: function() {
-        return cache.filepath();
-      }
-    },
-
-    log: Minilog('runner'),
-
-    // old
-    include: opts.include,
-    exclude: opts.exclude,
-    ignore: opts.ignore,
-    jobs: opts.jobs,
-    'gluejs-version': opts['gluejs-version']
-  }, function(err, files) {
-    if (onDone) {
-      onDone(err, files, runner);
-    }
-  });
-  runner.on('parse-error', function(err) {
-    self.emit('error', err);
-  });
-  runner.on('file', function(filename) {
-    self.emit('file', filename);
-  });
-  runner.on('hit', function(filename) {
-    self.emit('hit', filename);
-  });
-  runner.on('miss', function(filename) {
-    self.emit('miss', filename);
-  });
-  if (opts.progress) {
-    require('./lib/reporters/progress.js')(runner);
-  }
-  if (opts.report) {
-    require('./lib/reporters/size.js')(runner);
-  }
-};
-
 API.prototype._streamEtag = function(etag, dest) {
   var opts = this._resolveOptions(this.options);
   var cache = Cache.instance({
@@ -235,39 +112,33 @@ API.prototype._streamEtag = function(etag, dest) {
   return false;
 };
 
+// you can call this method without a `DEST` on a build from,
+// say, a fs.watch style tool to optimistically run builds.
+
 API.prototype.render = function(dest) {
-  var self = this;
+  var self = this,
+      expectedEndEvents = 1,
+      seenEndEvents = 0,
+      opts = this._resolveOptions(this.options),
+      cache = Cache.instance({
+        method: opts['cache-method'],
+        path: opts['cache-path']
+      });
+
+  function onErr(err) {
+    if (err) {
+      self.emit('error', err);
+      cache.end();
+    }
+  }
 
   // create a stream capturer if we want the result as callback result
   if (typeof dest == 'function') {
-    // store the function - makes sure dest is always a writable stream
-    var doneFn = dest,
-        onDestEndFn = runOnce(function() {
-          doneFn(null, capture.get());
-        });
-
-    dest = new Capture()
-      .once('error', function(err) {
-        console.error('Error in the capture stream: ', err);
-        console.trace();
-        doneFn(err, null);
-      })
-      .once('finish', onDestEndFn)
-      .once('close', onDestEndFn);
+    dest = new Capture().wrap(dest);
   }
-  var opts = this._resolveOptions(this.options);
-
-  // cache instance
-  var cache = Cache.instance({
-    method: opts['cache-method'],
-    path: opts['cache-path']
-  });
-
-  var expectedEndEvents = 1,
-      seenEndEvents = 0;
 
   // set up the onDone tasks on the destination stream
-  onDestEnd = runOnce(function() {
+  var onDestEnd = runOnce(function() {
     cache.end();
     if (++seenEndEvents == expectedEndEvents) {
       self.emit('done');
@@ -275,56 +146,79 @@ API.prototype.render = function(dest) {
   });
   dest.once('finish', onDestEnd)
       .once('close', onDestEnd)
-      .once('error', function(err) {
-        cache.end();
-        if (err) {
-          self.emit('error', err);
-          return;
-        }
-      });
+      .once('error', onErr);
 
   // Skip the whole build if: 1) no files have changed and 2) the etag matches
   if (opts.clean && opts.etag && this._streamEtag(opts.etag, dest)) {
     return;
   }
 
-  // console.time('preRender');
+  cache.begin();
 
-  this.preRender(opts, function(err, files, runner) {
+  // cache hash (only options which affect the build invalidation (at this level)
+  var invalidationOpts = {};
+  ['include', 'command', 'transform', 'exclude', 'ignore',
+   'gluejs-version'].forEach(function(key) {
+    invalidationOpts[key] = opts[key];
+  });
 
-    // console.timeEnd('preRender');
-    // console.time('render');
+  // run any tasks and parse dependencies (mapper)
+  var runner = runTasks({
+    // new API
+    tasks: require('./lib/runner/transforms/get-tasks.js')({
+      cache: cache,
+      command: opts.command,
+      transform: opts.transform
+    }),
 
-    runner.removeAllListeners();
+    cache: require('./lib/runner/transforms/wrap-cache.js')(cache, cache.hash(JSON.stringify(invalidationOpts))),
+
+    log: Minilog('runner'),
+
+    // old
+    include: opts.include,
+    exclude: opts.exclude,
+    ignore: opts.ignore,
+    jobs: opts.jobs,
+    'gluejs-version': opts['gluejs-version']
+  });
+  runner.on('parse-error', function(err) {
+    self.emit('error', err);
+  });
+  runner.on('file', function(filename) {
+    self.emit('file', filename);
+  });
+  runner.on('hit', function(filename) {
+    self.emit('hit', filename);
+  });
+  runner.on('miss', function(filename) {
+    self.emit('miss', filename);
+  });
+  if (opts.progress) {
+    require('./lib/reporters/progress.js')(runner);
+  }
+  if (opts.report) {
+    require('./lib/reporters/size.js')(runner);
+  }
+
+  runner.once('done', function(err, files) {
     if (err) {
-      self.emit('error', err);
-      cache.end();
-      return;
+      return onErr(err);
     }
-
     // calculate a etag for the result
     // best ensure that the files are in sorted order
-    var etag = 'W/' + Cache.hash(JSON.stringify(files));
+    var etag = 'W/' + Cache.hash(JSON.stringify(files)),
+        hadError = false;
 
-    // does a final build result with this etag exist?
-    if (self._streamEtag(etag, dest)) {
+    // is `dest` not set? => used to skip the latter half of the build, for heating up the
+    // cache when using a file watcher
+    // OR: does a final build result with this etag exist?
+    if (!dest || self._streamEtag(etag, dest)) {
       return;
     }
     // must emit before the destination stream/request has closed
     // could be moved somewhere better
     self.emit('etag', etag);
-
-    // create a file that caches the result
-    cachedResult = cache.filepath();
-    // create a passthrough stream
-    var splitter = new PassThrough(),
-        cacheOut = fs.createWriteStream(cachedResult),
-        hadError = false;
-
-    // order matters here, prefer writing the cached output before the destination
-    // so that requests made in rapid succession still hit the cache
-    splitter.pipe(cacheOut);
-    splitter.pipe(dest);
 
     self.once('error', function() {
       hadError = true;
@@ -332,25 +226,22 @@ API.prototype.render = function(dest) {
 
     expectedEndEvents++;
 
-    var onCacheEnd = runOnce(function() {
-      // finalize the cached result if there were no errors
-      if (!hadError) {
-        cache.data('etag-' + etag, cachedResult);
-        log.debug('Cached etag:', etag, cachedResult);
-      } else {
-        log.debug('Skipped etag:', etag, 'due to error.');
-      }
-      if (++seenEndEvents == expectedEndEvents) {
-        self.emit('done');
-      }
-    });
-
-    cacheOut.once('finish', onCacheEnd).once('close', onCacheEnd);
-
     var packageCommonJs3 = require('./lib/runner/commonjs3');
+
     packageCommonJs3({
       files: files,
-      out: splitter,
+      out: cacheSplitter(cache.filepath(), dest, function(err, cacheFile) {
+        // finalize the cached result if there were no errors
+        if (!hadError) {
+          cache.data('etag-' + etag, cacheFile);
+          log.debug('Cached etag:', etag, cacheFile);
+        } else {
+          log.debug('Skipped etag:', etag, 'due to error.');
+        }
+        if (++seenEndEvents == expectedEndEvents) {
+          self.emit('done');
+        }
+      }),
       basepath: opts.basepath,
       main: opts.main,
       export: opts['export'],
@@ -358,22 +249,6 @@ API.prototype.render = function(dest) {
       remap: opts.remap,
       'gluejs-version': opts['gluejs-version']
     });
-
-
-/*
-    // take the files and package them as a single file (reducer)
-    packageCommonJs({
-      cache: cache,
-      files: files,
-      out: splitter,
-      basepath: opts.basepath,
-      main: opts.main,
-      export: opts['export'],
-      umd: opts.umd,
-      remap: opts.remap,
-      'gluejs-version': opts['gluejs-version']
-    });
-*/
   });
 };
 

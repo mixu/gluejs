@@ -16,7 +16,7 @@ test:
 .PHONY: test lint
 
 
-GJSLINT := --nojsdoc --exclude_directories=node_modules,lib/require,lib/util,test,lib/require --max_line_length=120 --disable=200,201,202,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,230,231,232,233,250,251,252
+GJSLINT := --nojsdoc --exclude_directories=node_modules,lib/require,lib/util,test,lib/require,temp --max_line_length=120 --disable=200,201,202,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,230,231,232,233,250,251,252
 
 lint:
 	fixjsstyle $(GJSLINT) -r .
@@ -32,3 +32,6 @@ test-lint:
 		--basepath ./ \
 		--out /tmp/lint.js
 	gjslint --nojsdoc --custom_jsdoc_tags=api --max_line_length=120 --disable=0131,300,2,1,6 /tmp/lint.js
+
+docs:
+	generate-md --input ./readme.md --output temp/
