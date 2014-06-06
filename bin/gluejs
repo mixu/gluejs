@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 var fs = require('fs'),
     path = require('path'),
-    Glue = require('../index.js'),
-    Minilog = require('minilog');
+    Glue = require('../index.js');
 
 var opts = require('optimist')
     .usage('Usage: $0 --include <file/dir ...> --out filename.js')
@@ -47,11 +46,19 @@ if(!argv['include']) {
 
 var g = new Glue();
 
-// set verbose early, so that all messages are shown
+// set logging levels early, so that all messages are shown
 if(argv['verbose']) {
   g.set('report', true);
-  g.set('verbose', true);
+  g.set('log', 'info');
   argv['progress'] = false;
+}
+
+// --silent
+if(argv['silent']) {
+  g.set('report', false);
+  g.set('progress', false);
+} else {
+  g.set('log', 'warn');
 }
 
 // Boolean params:
@@ -59,9 +66,16 @@ if(argv['verbose']) {
 // --source-url
 // --global-require
 // --parse
-[ 'reset-exclude', 'source-url', 'global-require', 'parse' ].forEach(function(key) {
+[ 'reset-exclude', 'source-url', 'global-require', 'parse', 'debug', 'verbose' ].forEach(function(key) {
   if(argv[key]) {
     g.set(key, true);
+  }
+});
+
+// Allow the following params to be specified with a ,
+[ 'include', 'exclude', 'ignore', 'remap', 'replace'].forEach(function(key) {
+  if (argv[key] && !Array.isArray(argv[key])) {
+    argv[key] = argv[key].split(',');
   }
 });
 
@@ -77,10 +91,12 @@ if(argv['verbose']) {
 // --command
 // --transform
 // --jobs
+// --log
 
 [ 'include', 'exclude', 'basepath', 'main', 'ignore',
   'amd', 'umd', 'cache-method',
-  'command', 'transform', 'jobs'].forEach(function(key) {
+  'command', 'transform', 'jobs',
+  'log'].forEach(function(key) {
   if(argv[key]) {
     g.set(key, argv[key]);
   }
@@ -94,24 +110,17 @@ g.export(argv['global']);
   if (!argv[key]) {
     return;
   }
-  if (key == 'replace') {
-    log.warn('The "--replace" option has been deprecated, please use "--remap" instead.');
-  }
   // allow --remap foo=bar,baz=abc or --remap foo=bar --remap bar=abc
-  if(Array.isArray(argv[key])) {
-    argv[key].forEach(function(item) {
-      var pos = item.indexOf('='),
-          name = item.substring(0, pos),
-          value = item.substring(pos+1);
-      g.remap(name, value);
-    });
-  } else {
-    argv[key].split(',').forEach(function(item) {
-      var pos = item.indexOf('='),
-          name = item.substring(0, pos),
-          value = item.substring(pos+1);
-      g.remap(name, value);
-    });
+  var values = {};
+
+  argv[key].forEach(function(item) {
+    var pos = item.indexOf('='),
+        name = item.substring(0, pos),
+        value = item.substring(pos+1);
+    values[name] = value;
+  });
+  if (Object.keys(values).length > 0) {
+    g.set(key, values);
   }
 });
 
@@ -127,13 +136,6 @@ if(typeof argv['report'] !== 'undefined') {
 
 if(typeof argv['progress'] !== 'undefined') {
   g.set('progress', argv['progress']);
-}
-
-// --silent
-if(argv['silent']) {
-  g.set('report', false);
-  g.set('verbose', false);
-  g.set('progress', false);
 }
 
 g.set('cache', argv['cache']);

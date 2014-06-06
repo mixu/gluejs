@@ -7,13 +7,22 @@
 - --silent support
 - time reporter
 
+
+Major issues:
+
+- if a module's reference resolves to a target file that is not included in the build (like a symlink to node_modules circling back to the module) then it is not included.
+  - browserify resolves this using source hashing + nomap to deduplicate files and place appropriate redirects (e.g. require() with nomap)
+  - we could probably use inodes to get the same result
+- module ids are not canonicalized, so they cannot be looked up against in a flexible manner, requiring several variant entries to be placed in the output (e.g. full path, full path without .js and so on).
+- the exclusion/ignore/remap logic is hella messy, and probably wrong when it comes to module names.
+
 ----
 
 ### API refactor
 
 Convert into a pipeline consisting of:
 
-- `resolve-require`: takes an initial set of files + tasks, emits JSON objects with the necessary dependencies
+- `transform-runner`: takes an initial set of files + tasks, emits JSON objects with the necessary dependencies
 - `etagger`: handle etags
 - `gluejs-pack`: takes a set of JSON objects and generates a JS package file from them
 

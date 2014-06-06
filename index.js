@@ -84,8 +84,6 @@ API.prototype._resolveOptions = function(input) {
     });
   }
 
-  // console.log('Build options', opts);
-
   return opts;
 };
 
@@ -124,6 +122,8 @@ API.prototype.render = function(dest) {
         method: opts['cache-method'],
         path: opts['cache-path']
       });
+
+  log.info('Build options', opts);
 
   function onErr(err) {
     if (err) {
@@ -247,6 +247,8 @@ API.prototype.render = function(dest) {
       export: opts['export'],
       umd: opts.umd,
       remap: opts.remap,
+      ignore: opts.ignore, // to suppress error messages
+      exclude: opts.exclude, // to suppress error messages
       'gluejs-version': opts['gluejs-version']
     });
   });
@@ -267,16 +269,44 @@ API.prototype.set = function(key, value) {
   // 3) array <= set or append depending on the original value
 
   // original value can be:
-  if (key == 'debug' && value) {
-    Minilog.enable();
-    Minilog.suggest.defaultResult = true;
-    Minilog.suggest.clear();
-  } else if (key == 'verbose' && value) {
-    Minilog.enable();
-    // enable logging levels >= info
-    Minilog.suggest.defaultResult = false;
-    Minilog.suggest.clear().allow(/.*/, 'info');
-  } else if (Array.isArray(this.options[key])) {
+  if (key === 'verbose' && value) {
+    key = 'log';
+    value = 'info';
+  }
+  if (key == 'jobs') {
+    log.info('Maximum number of parallel tasks:', this.options.jobs);
+  }
+  if (key == 'debug') {
+    log.warn('The "--debug" option has been deprecated, please use "--log debug" instead.');
+    key = 'log';
+    value = 'debug';
+  }
+  if (key == 'amd') {
+    log.warn('The "--amd" option has been deprecated, please use "--umd" instead.');
+    key = 'umd';
+  }
+  if (key == 'replace') {
+    log.warn('The "--replace" option has been deprecated, please use "--remap" or "--ignore" instead.');
+    key = 'remap';
+  }
+
+  if (key == 'log' && value) {
+    if (process.stdout.isTTY) {
+      Minilog.enable();
+    } else {
+      Minilog.pipe(Minilog.suggest).pipe(new Minilog.Stringifier()).pipe(process.stdout);
+    }
+
+    if (['info', 'warn', 'error'].indexOf(value) > -1) {
+      // enable logging levels >= info
+      Minilog.suggest.defaultResult = false;
+      Minilog.suggest.clear().allow(/.*/, value);
+    } else if (value === 'debug') {
+      Minilog.suggest.defaultResult = true;
+      Minilog.suggest.clear();
+    }
+  }
+  if (Array.isArray(this.options[key])) {
     // 1) an array <= append to array
     if (Array.isArray(value)) {
       this.options[key] = this.options[key].concat(value);
@@ -302,15 +332,6 @@ API.prototype.set = function(key, value) {
   } else {
     // 3) a primitive <= overwrite
     this.options[key] = value;
-  }
-  if (key == 'jobs') {
-    log.info('Maximum number of parallel tasks:', this.options.jobs);
-  }
-  if (key == 'amd') {
-    log.warn('The "--amd" option has been deprecated, please use "--umd" instead.');
-  }
-  if (key == 'replace') {
-    log.warn('The "--replace" option has been deprecated, please use "--remap" instead.');
   }
   return this;
 };
