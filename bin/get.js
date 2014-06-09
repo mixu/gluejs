@@ -10,7 +10,7 @@ var fs = require('fs'),
     Cache = require('minitask').Cache,
     nodeResolve = require('resolve');
 
-var optimist = require('optimist')
+var yargs = yargs('yargs')
     .usage('Usage: $0 --include <file/dir ...>')
     .options({
       'amd': { },
@@ -19,7 +19,7 @@ var optimist = require('optimist')
       'main': { }
     })
     .boolean('amd'),
-    argv = optimist.parse(process.argv);
+    argv = yargs.parse(process.argv);
 
 if (!argv['include']) {
   console.log('Usage: --include <file/dir>');

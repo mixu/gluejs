@@ -3,7 +3,7 @@ var fs = require('fs'),
     path = require('path'),
     Glue = require('../index.js');
 
-var opts = require('optimist')
+var opts = require('yargs')
     .usage('Usage: $0 --include <file/dir ...> --out filename.js')
     .options({
       'amd': { },

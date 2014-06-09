@@ -35,13 +35,13 @@
     "microee": "0.0.5",
     "minilog": "~2.0.3",
     "minimatch": "0.2.12",
-    "miniq": "0.0.1",
+    "miniq": "0.1.1",
     "minitask": "~0.2.0",
-    "optimist": "~0.5.2",
     "progress": "~1.1.2",
     "readable-stream": "1.1.9",
     "resolve": "~0.6.1",
-    "umd": "~2.1.0"
+    "umd": "~2.1.0",
+    "yargs": "~1.2.2"
   },
   "devDependencies": {
     "mocha": "1.x",

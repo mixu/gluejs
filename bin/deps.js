@@ -9,7 +9,7 @@ var path = require('path'),
 
 Minilog.enable();
 
-var optimist = require('optimist')
+var yargs = require('yargs')
     .usage('Usage: $0 --include <file/dir ...>')
     .options({
       'amd': { },
@@ -18,7 +18,7 @@ var optimist = require('optimist')
       'main': { },
       'basepath': { }
     }),
-    argv = optimist.parse(process.argv);
+    argv = yargs.parse(process.argv);
 
 var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
 homePath = (typeof homePath === 'string' ? path.normalize(homePath) : process.cwd());
