@@ -15,6 +15,10 @@ var os = require('os'),
 var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
 homePath = (typeof homePath === 'string' ? path.normalize(homePath) : process.cwd());
 
+function strToRegEx(str) {
+  return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+}
+
 // API wrapper
 function API() {
   // default options
@@ -67,6 +71,13 @@ API.prototype._resolveOptions = function(input) {
     }
   });
 
+  opts.exclude = opts.exclude.map(function(str) {
+    if (typeof str === 'string') {
+      return new RegExp('^' + str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&") + '.*$');
+    }
+    return str;
+  });
+
   // process remap
   if (input.remap) {
     Object.keys(input.remap).forEach(function(key) {
@@ -76,7 +87,7 @@ API.prototype._resolveOptions = function(input) {
       } else {
         if (typeof key === 'string' && key.charAt(0) != '.' && key.charAt(0) != '/') {
           // exclude the module with the same name
-          opts.exclude.push(key);
+          opts.exclude.push(new RegExp('.*\/node_modules\/' + strToRegEx(key) + '.*'));
         }
         // function / number / boolean / undefined all convert to string already
         opts.remap[key] = code;
@@ -124,6 +135,7 @@ API.prototype.render = function(dest) {
       });
 
   log.info('Build options', opts);
+  log.info('Options.exclude', opts.exclude.map(function(re) { return re.toString(); }));
 
   function onErr(err) {
     if (err) {
