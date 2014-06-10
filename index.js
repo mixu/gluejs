@@ -30,6 +30,7 @@ function API() {
     include: [],
     exclude: [],
     ignore: [],
+    log: 'warn',
     // set options here so that the cache hash does not change
     jobs: require('os').cpus().length * 2
   };
@@ -206,6 +207,13 @@ API.prototype.render = function(dest) {
   runner.on('miss', function(filename) {
     self.emit('miss', filename);
   });
+
+  if (opts.log === 'debug') {
+    runner.on('file-done', function(filename) {
+      log.info('Result:', filepath, []);
+    });
+  }
+
   if (opts.progress) {
     require('./lib/reporters/progress.js')(runner);
   }
@@ -217,6 +225,14 @@ API.prototype.render = function(dest) {
     if (err) {
       return onErr(err);
     }
+
+    if (opts.list) {
+      files
+        .map(function(file) { return file.filename; })
+        .sort(function(a, b) { return a.localeCompare(b); })
+        .forEach(function(name) { console.log(name); });
+    }
+
     // calculate a etag for the result
     // best ensure that the files are in sorted order
     var etag = 'W/' + Cache.hash(JSON.stringify(files)),

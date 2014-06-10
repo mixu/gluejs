@@ -47,18 +47,39 @@ if(!argv['include']) {
 var g = new Glue();
 
 // set logging levels early, so that all messages are shown
-if(argv['verbose']) {
-  g.set('report', true);
-  g.set('log', 'info');
-  argv['progress'] = false;
+// Logging level (exclusive):
+// --verbose: Enable verbose logging
+// --debug: Enable debug logging
+var logLevel = 'warn';
+if (argv['verbose']) {
+  logLevel = 'info';
 }
+if (argv['debug']) {
+  logLevel = 'debug';
+}
+g.set('log', logLevel);
 
-// --silent
-if(argv['silent']) {
-  g.set('report', false);
-  g.set('progress', false);
+// Logging reporters:
+// --silent: no reporter
+// --progress: progress report (enabled by default)
+// --report: size report
+// --list: file list, disables others
+
+if (argv['silent']) {
+  // no reporters
+} if (argv['list']) {
+  g.set('list', true);
+  g.set('log', 'error');
 } else {
-  g.set('log', 'warn');
+  ['progress', 'report'].forEach(function(key) {
+    if (typeof argv[key] !== 'undefined') {
+      g.set(key, argv[key]);
+    }
+  });
+  // if --out filename and not --silent, enable the progress reporter
+  if (argv['out'] && process.stderr.isTTY) {
+    g.set('progress', true);
+  }
 }
 
 // Boolean params:
@@ -73,10 +94,14 @@ if(argv['silent']) {
 });
 
 // Allow the following params to be specified with a ,
+// Also accept multiple param groups: --foo a,b,c --foo d,e,f
 [ 'include', 'exclude', 'ignore', 'remap', 'replace'].forEach(function(key) {
-  if (argv[key] && !Array.isArray(argv[key])) {
-    argv[key] = argv[key].split(',');
+  if (!argv[key]) {
+    return;
   }
+  argv[key] = (Array.isArray(argv[key]) ? argv[key] : [ argv[key] ]).reduce(function(prev, curr) {
+    return prev.concat(curr.split(','));
+  }, []);
 });
 
 // String params:
@@ -123,20 +148,6 @@ g.export(argv['global']);
     g.set(key, values);
   }
 });
-
-// if not explicitly disabled and output is defined
-if(argv['out']) {
-  g.set('progress', true);
-  argv['progress'] = true;
-}
-
-if(typeof argv['report'] !== 'undefined') {
-  g.set('report', argv['report']);
-}
-
-if(typeof argv['progress'] !== 'undefined') {
-  g.set('progress', argv['progress']);
-}
 
 g.set('cache', argv['cache']);
 
