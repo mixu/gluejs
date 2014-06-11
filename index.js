@@ -15,10 +15,6 @@ var os = require('os'),
 var homePath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
 homePath = (typeof homePath === 'string' ? path.normalize(homePath) : process.cwd());
 
-function strToRegEx(str) {
-  return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
-}
-
 // API wrapper
 function API() {
   // default options
@@ -58,42 +54,56 @@ API.prototype._resolveOptions = function(input) {
 
   // next, resolve relative: --ignore, --include and --exclude
   ['ignore', 'include', 'exclude'].forEach(function(key) {
-    if (input[key]) {
-      opts[key] = resolveOpts.resolve(opts.basepath, opts[key]);
+    if (!input[key]) {
+      return;
     }
+    if (key === 'include' || key == 'ignore') {
+      opts[key].forEach(function(item) {
+        if (typeof item !== 'string') {
+          throw new Error('Includes and ignores must be strings - any regular expressions ' +
+            'must be applied as exclusions after including a set of files/directories.');
+        }
+      });
+    }
+    // handle package references
+    opts[key] = opts[key].map(function(str) {
+      if (typeof str !== 'string') {
+        return str;
+      } else if (str.charAt(0) == '.' || str.charAt(0) == '/') {
+        // resolve non-packages to their full paths
+        return path.resolve(opts.basepath, str);
+      }
+      if (key === 'include') {
+        // include package => resolve actual package root and include it + all deps
+        return resolveOpts.resolvePackage(opts.basepath, str);
+      } else if (key === 'ignore') {
+        // ignore package => add a remap expression for the package + add the package itself
+        // so we can detect references to it later
+        opts.remap[str] = '{}';
+        return resolveOpts.getPackageRoot(opts.basepath, str);
+      } else if (key === 'exclude') {
+        // exclude or ignore package => resolve package root folder and exclude it + subpath
+        return resolveOpts.getPackageRoot(opts.basepath, str);
+      }
+    }).filter(Boolean);
   });
 
   // next, figure out the main file
   opts.main = resolveOpts.inferMain(input.main, opts.basepath, opts.include);
 
-  ['include', 'exclude'].forEach(function(key) {
-    if (input[key]) {
-      opts[key] = resolveOpts.resolvePackage(opts.basepath, opts[key]);
-    }
-  });
-
-  opts.exclude = opts.exclude.map(function(str) {
-    if (typeof str === 'string') {
-      return new RegExp('^' + str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&") + '.*$');
-    }
-    return str;
-  });
-
   // process remap
   if (input.remap) {
-    Object.keys(input.remap).forEach(function(key) {
-      var code = input.remap[key];
-      if (typeof code == 'object') {
-        opts.remap[key] = JSON.stringify(code);
+    Object.keys(input.remap).forEach(function(name) {
+      var code = input.remap[name];
+      opts.remap[name] = (typeof code == 'object' ? JSON.stringify(code) : code);
+      // add an exclusion for the remapped file, or the remapped package
+      if (name.charAt(0) != '.' && name.charAt(0) != '/') {
+        opts.exclude.push(resolveOpts.getPackageRoot(opts.basepath, name));
       } else {
-        if (typeof key === 'string' && key.charAt(0) != '.' && key.charAt(0) != '/') {
-          // exclude the module with the same name
-          opts.exclude.push(new RegExp('.*\/node_modules\/' + strToRegEx(key) + '.*'));
-        }
-        // function / number / boolean / undefined all convert to string already
-        opts.remap[key] = code;
+        opts.exclude.push(name);
       }
     });
+    opts.exclude = opts.exclude.filter(Boolean);
   }
 
   return opts;
@@ -209,8 +219,8 @@ API.prototype.render = function(dest) {
   });
 
   if (opts.log === 'debug') {
-    runner.on('file-done', function(filename) {
-      log.info('Result:', filepath, []);
+    runner.on('file-done', function(filename, result) {
+      log.info('Result:', filename, result);
     });
   }
 
@@ -305,7 +315,6 @@ API.prototype.set = function(key, value) {
     log.info('Maximum number of parallel tasks:', this.options.jobs);
   }
   if (key == 'debug') {
-    log.warn('The "--debug" option has been deprecated, please use "--log debug" instead.');
     key = 'log';
     value = 'debug';
   }

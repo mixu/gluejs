@@ -12,6 +12,16 @@ New version! gluejs v3 is now out. For v2, see the [v2 branch](https://github.co
 - Supports source urls, shimming browser modules and remapping module names in builds
 - No core module shims (yet)
 
+## Why gluejs?
+
+`gluejs` exists to fill gaps in `browserify`'s feature set. It follows a similar approach but has different priorities. `gluejs` was first written to resolve an issue with `browserify` ~v1.x where the bundled results were way too large. I needed something that produced small bundles to distribute a number of open source and internal libraries so I wrote `gluejs`.
+
+`gluejs` v2.x was mostly about performance enhancements. browserify now creates much more reasonably-sized output, but it still isn't very performant or robust on large trees (~1k+ files + transformations) and doesn't take advantage of caching. `gluejs` v2.x introduced an enabled-by-default disk cache which made incremental builds extremely fast, a robust task runner and support for browserify transforms.
+
+`gluejs` v3.x adds support for dependency tracing, and enhancements targeted towards serving directly to HTTP from the cache. For example, a full build which takes ~10s in browserify takes ~5s in gluejs, and with caching it takes ~0.4s; most of that time is spent validating the file tree which can also be skipped by using a file watcher.
+
+Dependencies are now statically resolved to provide a better user experience (e.g. including a file automatically picks up any files and modules it depends on). Some parts of the `gluejs` architecture are now closer to `browserify`. The initial resolution code, transform execution and caching are still unique to `gluejs` and these are the bits that make it faster, but the backend packaging now uses browserify's `browser-pack` format, which allows making use of more open source goodies compatible with that format (in addition to browserify transforms).
+
 ## What's new in v3.0
 
 gluejs v3.0 adds a number of usability and performance improvements:

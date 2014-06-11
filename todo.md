@@ -4,17 +4,25 @@
 # Todo
 
 - gzip support
-- --silent support
 - time reporter
-
 
 Major issues:
 
-- if a module's reference resolves to a target file that is not included in the build (like a symlink to node_modules circling back to the module) then it is not included.
-  - browserify resolves this using source hashing + nomap to deduplicate files and place appropriate redirects (e.g. require() with nomap)
-  - we could probably use inodes to get the same result
 - module ids are not canonicalized, so they cannot be looked up against in a flexible manner, requiring several variant entries to be placed in the output (e.g. full path, full path without .js and so on).
-- the exclusion/ignore/remap logic is hella messy, and probably wrong when it comes to module names.
+  - This could be resolved by canonicalizing and including the slightly larger but more robust alternative require() implementation
+- add support for saving configuration as JSON and loading from JSON
+- refactor the ignore logic
+  - rather than using fake files in the build, just use regular exclusions
+  - remapping now needs to work a bit differently:
+    - for modules, the exact same module name - or a subpath foo/bar needs to work
+    - for files, there may be multiple ways to resolve to the same target file so we need to take into account the target path when determining remaps
+  - ignores are then just remaps with fixed code
+- docs:
+  - includes are paths only (no regexps)
+  - excludes support both paths/modules via --exclude and regexps via --exclude-re
+  - ignores, remaps are paths only (no regexps)
+  - excluded files fall back to any higher-level require() implementation, to allow for chaining
+- document how to target --transform and --command
 
 ----
 
