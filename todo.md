@@ -10,13 +10,6 @@ Major issues:
 
 - module ids are not canonicalized, so they cannot be looked up against in a flexible manner, requiring several variant entries to be placed in the output (e.g. full path, full path without .js and so on).
   - This could be resolved by canonicalizing and including the slightly larger but more robust alternative require() implementation
-- add support for saving configuration as JSON and loading from JSON
-- refactor the ignore logic
-  - rather than using fake files in the build, just use regular exclusions
-  - remapping now needs to work a bit differently:
-    - for modules, the exact same module name - or a subpath foo/bar needs to work
-    - for files, there may be multiple ways to resolve to the same target file so we need to take into account the target path when determining remaps
-  - ignores are then just remaps with fixed code
 - docs:
   - includes are paths only (no regexps)
   - excludes support both paths/modules via --exclude and regexps via --exclude-re

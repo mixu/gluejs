@@ -10,8 +10,10 @@ var opts = require('yargs')
       'basepath': { 'default': process.cwd() },
       'cache': { default: true },
       'cache-path': { },
+      'config': { },
       'command': { },
       'exclude': { },
+      'exclude-regexp': { },
       'global': { },
       'global-require': { },
       'include': { },
@@ -32,7 +34,8 @@ var opts = require('yargs')
     .boolean('report')
     .boolean('progress')
     .boolean('verbose')
-    .boolean('parse'),
+    .boolean('parse')
+    .boolean('export-config'),
     argv = opts.parse(process.argv);
 
 if(argv['version'] || argv['v'] ) {
@@ -40,11 +43,29 @@ if(argv['version'] || argv['v'] ) {
   process.exit();
 }
 
+var g = new Glue(),
+    config = {};
+
+if (argv['config']) {
+  argv.config = path.resolve(process.cwd(), argv['config']);
+  if (fs.existsSync(argv.config)) {
+    config = require(argv.config);
+    g.set(config);
+    if(config['out']) {
+      g.render(fs.createWriteStream(config['out']));
+    } else {
+      g.render(process.stdout);
+    }
+    return;
+  } else {
+    console.log('Failed to load config file:', argv.config);
+    process.exit(1);
+  }
+}
+
 if(!argv['include']) {
   return fs.createReadStream(__dirname + '/usage.txt').pipe(process.stdout).on('close', function () { process.exit(1) });
 }
-
-var g = new Glue();
 
 // set logging levels early, so that all messages are shown
 // Logging level (exclusive):
@@ -60,7 +81,7 @@ if (argv['debug']) {
 if (argv['silent']) {
   logLevel = 'error';
 }
-g.set('log', logLevel);
+config['log'] = logLevel;
 
 // Logging reporters:
 // --silent: no reporter
@@ -71,17 +92,17 @@ g.set('log', logLevel);
 if (argv['silent']) {
   // no reporters
 } else if (argv['list']) {
-  g.set('list', true);
-  g.set('log', 'error');
+  config['list'] = true;
+  config['log'] = 'error';
 } else {
   ['progress', 'report'].forEach(function(key) {
     if (typeof argv[key] !== 'undefined') {
-      g.set(key, argv[key]);
+      config[key] = argv[key];
     }
   });
   // if --out filename and not --silent, enable the progress reporter
   if (argv['out'] && process.stderr.isTTY && !(logLevel == 'debug' || logLevel == 'info')) {
-    g.set('progress', true);
+    config['progress'] = true;
   }
 }
 
@@ -90,10 +111,10 @@ if (argv['silent']) {
 // --source-url
 // --global-require
 // --parse
-[ 'reset-exclude', 'source-url', 'global-require', 'parse', 'debug', 'verbose' ].forEach(function(key) {
-  if(argv[key]) {
-    g.set(key, true);
-  }
+// --cache
+[ 'reset-exclude', 'source-url', 'global-require', 'parse', 'debug', 'verbose',
+  'cache' ].forEach(function(key) {
+  config[key] = !!argv[key];
 });
 
 // Allow the following params to be specified with a ,
@@ -124,14 +145,14 @@ if (argv['silent']) {
 [ 'include', 'exclude', 'basepath', 'main', 'ignore',
   'amd', 'umd', 'cache-method',
   'command', 'transform', 'jobs',
-  'log'].forEach(function(key) {
+  'log', 'out', 'exclude-regexp'].forEach(function(key) {
   if(argv[key]) {
-    g.set(key, argv[key]);
+    config[key] = argv[key];
   }
 });
 
 // --global
-g.export(argv['global']);
+config['export'] = argv['global'];
 
 // --remap
 ['replace', 'remap'].forEach(function(key) {
@@ -148,14 +169,12 @@ g.export(argv['global']);
     values[name] = value;
   });
   if (Object.keys(values).length > 0) {
-    g.set(key, values);
+    config[key] = values;
   }
 });
 
-g.set('cache', argv['cache']);
-
 if(argv['cache-path']) {
-  g.set('cache-path', path.resolve(process.cwd(), argv['cache-path']));
+  config['cache-path'] = path.resolve(process.cwd(), argv['cache-path']);
 }
 
 if(argv['npm']) {
@@ -163,12 +182,20 @@ if(argv['npm']) {
     'Directly include the file path to module, e.g. --include ./node_modules/foo instead.\n');
 }
 
+
+if(argv['export-config']) {
+  console.log(JSON.stringify(config, null, 2));
+  process.exit();
+}
+
 // set this so that builds are invalidated as the version changes
-g.set('gluejs-version', require('../package.json').version);
+config['gluejs-version'] = require('../package.json').version;
+
+g.set(config);
 
 // -- out
-if(argv['out']) {
-  g.render(fs.createWriteStream(argv['out']));
+if(config['out']) {
+  g.render(fs.createWriteStream(config['out']));
 } else {
   g.render(process.stdout);
 }

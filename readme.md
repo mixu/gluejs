@@ -195,23 +195,29 @@ For changes made prior to v3.0, check out the [changelog](changelog.md).
 
 These are the basic options (CLI option / API option):
 
-- `--include <path|name>` / `.include(path|name)`: include a file or package in the build.
-- `--exclude <path|name>` / `.exclude(path|name)`: exclude a file or package from the build.
-- `--ignore <path|name>` / `set('ignore', path|name)` (v3.0): excludes the given files, folders or packages from the build. Inserts `module.exports = {}` in place of the actual file, which means that `require(path|name)` returns `{}`.
+- `--include <path|name>` / `.include(path|name)` / `.set('include', path|name)`: include a file or package in the build.
+- `--exclude <path|name>` / `.exclude(path|name)` / `.set('exclude', path|name)`: exclude a file or package from the build.
+- `--ignore <path|name>` / `.set('ignore', path|name)` (v3.0): excludes the given files, folders or packages from the build. Inserts `module.exports = {}` in place of the actual file, which means that `require(path|name)` returns `{}`.
+-
+Includes, excludes and ignores are resolved as follows:
+
+- Relative paths are resolved relative to `--basepath`, which defaults to `process.cwd()`.
+- `--include ./path/to/file.js`: include a file and any dependencies.
+- `--include ./path/to/folder`: include all files in the folder and all subfolders.
+- `--include package`: include the package named `name` from `node_modules`
+
+For `--include`, the files are also parsed and their dependencies are automatically bundled. `.json` files are also supported; just like in Node, you can use `require('./foo.json')` within the resulting bundle.
+
+There must be at least one include. Exclusions are applied after inclusions.
+
+When packages or files are excluded, calling `require()` will fall back to any global-scope `require()` implementation if available. For example, given `--exclude jquery`, `require('jquery')` will make a call against `window.require('jquery')`. This is useful if you have exported the `require` implementation using `global-require` or if you are using another require implementation like an AMD loader that accepts require() requests.
+
+Exclusions also support regular expressions; include and ignore only support files, folders and package names. You can use `--exclude-regexp <regexp>` to specify a regular expression to exclude. The string is passed to `new RegExp()`. You should quote it in the shell to avoid issues where the shell expands special characters.
+
 - `--out <path>` / `.render(dest)`: file to write. Default: stdout
 - `--global <name>` / `.export(name)`: Sets the name of the global variable to export. Default: `App` (e.g. causes the package to be exported under `window.App`).
 - `--basepath <path>` / `.basepath(path)`: Base path for relative file paths. All relative paths are appended to this value. Default: directory in which the first --include resides.
 - `--main <path>` / `.main(path)`: Name of the main file/module to export. Default: the first --included file.
-
-`--include`, `--exclude` and `--ignore` patterns are all resolved as follows:
-
-- `--include ./path/to/file.js`: include a file (and any dependencies).
-- `--include ./path/to/folder`: include all files in the folder.
-- `--include name`: include the package named `name` from `node_modules`
-
-Relative paths are resolved relative to `--basepath`.
-
-For `--include`, the files are also parsed and their dependencies are automatically bundled. `.json` files are also supported; just like in Node, you can use `require('./foo.json')` within the resulting bundle.
 
 `--main` and `--basepath` are automatically inferred from the `--include` values, so often you don't need to set them explicitly. It might still be beneficial to set them to be more explicit.
 
@@ -291,9 +297,20 @@ The following example illustrates how you can write an endpoint which uses the s
       });
     }, Glue.middleware(opts));
 
-### API and usage example
+### JSON configuration
 
-`new Glue({ key: value })`: you can now pass in a options hash to the constructor, which makes reusing the same set of options easier.
+You can load configuration from a JSON file using `--config <path>`. This will load the given configuration file, and run the build using the options in the file.
+
+This is useful if you want to reuse the same configuration for a Express middleware build and a command line build.
+
+To create configuration file from an existing build (like a Makefile), add `--export-config` as an option to the build. This will print out a JSON structure representing the current config. Note that you can leave the `basepath` value in the config empty, as it will be automatically resolved to `process.cwd()`.
+
+### API usage
+
+To set configuration options using the API, use the `.set()` method:
+
+- `.set(key, value)`: set a single configuration value
+- `.set(config)`: you can also pass in a key-value hash to the set method, which makes reusing configuration options easier.
 
 *Methods*. The basic options have their own methods, everything else is configured via `.set(key, value)`. This example lists the main methods:
 

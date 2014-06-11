@@ -314,7 +314,7 @@ API.prototype.set = function(key, value) {
   if (key == 'jobs') {
     log.info('Maximum number of parallel tasks:', this.options.jobs);
   }
-  if (key == 'debug') {
+  if (key == 'debug' && value) {
     key = 'log';
     value = 'debug';
   }
@@ -326,6 +326,13 @@ API.prototype.set = function(key, value) {
     log.warn('The "--replace" option has been deprecated, please use "--remap" or "--ignore" instead.');
     key = 'remap';
   }
+  if (key == 'exclude-regexp') {
+    key = 'exclude';
+    if (typeof value === 'string') {
+      value = new RegExp(value);
+    }
+  }
+
 
   if (key == 'log' && value) {
     if (process.stdout.isTTY) {
