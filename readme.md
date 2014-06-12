@@ -35,6 +35,7 @@ gluejs v3.0 adds a number of usability and performance improvements:
   - support for source maps (in place of source urls)
   - support for factoring out common dependencies
   - support for file watchers
+  - file deduplication: only one copy of a file with the exact same content will be included in the build. Duplicate files are resolved during the build using `file-dedupe`.
 
 ## Installation
 
@@ -156,6 +157,8 @@ You can work around the issue w/too many simultaneous processes that occurs in t
 
 `--reset-exclude` is no longer supported due to the new dependency resolution mechanism.
 
+`--source-url` is now called `--source-map`.
+
 ### Changelog
 
 For changes made prior to v3.0, check out the [changelog](changelog.md).
@@ -214,6 +217,8 @@ When packages or files are excluded, calling `require()` will fall back to any g
 
 Exclusions also support regular expressions; include and ignore only support files, folders and package names. You can use `--exclude-regexp <regexp>` to specify a regular expression to exclude. The string is passed to `new RegExp()`. You should quote it in the shell to avoid issues where the shell expands special characters.
 
+You may find the following options useful for understanding what gets included/excluded: `--list` (produces a list of the files that have been processed), `--verbose` (enables additional logging) and `--debug` (enables even more verbose logging).
+
 - `--out <path>` / `.render(dest)`: file to write. Default: stdout
 - `--global <name>` / `.export(name)`: Sets the name of the global variable to export. Default: `App` (e.g. causes the package to be exported under `window.App`).
 - `--basepath <path>` / `.basepath(path)`: Base path for relative file paths. All relative paths are appended to this value. Default: directory in which the first --include resides.
@@ -229,14 +234,16 @@ In `.render(destination)`, the destination can be either a Writable Stream (e.g.
 
 `glue.middleware({ include: ... })`: returns a Express/Connect compatible request handler. For example:
 
-    app.use('/js/app.js', glue.middleware({
+    var Glue = requite('gluejs');
+
+    app.use('/js/app.js', Glue.middleware({
       include: __dirname + '/lib'
     }));
 
 Or at the route level:
 
     app.use(app.router);
-    app.get('/js/app.js', glue.middleware({
+    app.get('/js/app.js', Glue.middleware({
       include: __dirname + '/lib'
     }));
 
@@ -259,6 +266,8 @@ Requires `debug` to be true.
 The middleware supports etags in v3.0 and above. This is enabled by default. Each build is associated with a etag, which is sent by the middleware. On subsequent requests, the state of the file system is checked and if nothing has changed, then the middleware can return a 304 Not modified (without any data or any processing beyond the FS checks).
 
 This works by using `glue.set('etag', etag)` before executing the build. If this option is set, then gluejs will emit an etag and return an empty result if everything checks out. The middleware then returns an empty result with 304 Not modified.
+
+To take a look at the results, use `time curl http://localhost/app.js -vvv --header 'If-None-Match: W/etag' > /dev/null` (replacing `W/etag` with the etag you receive from the initial request).
 
 The middleware also supports gzipping. Just pass `gzip: true` as part of the options hash to gzip the build results.
 
@@ -351,13 +360,17 @@ To render without producing output - for example, to enable eager rebuilding via
 
 ## Build options
 
-## --source-url
+## --source-map
 
-`--source-url` / `.set('source-url', true)`: Source URLs are additional annotations that make it possible to show the directory tree when looking at scripts (instead of just the one compiled file):
+`--source-map` / `.set('source-map', true)`: Source maps are additional annotations that make it possible to show the directory tree when looking at scripts (instead of just the one compiled file):
 
 ![screenshot](https://github.com/mixu/gluejs/raw/master/test/sample/sourceurl.png)
 
-Note that source URLs require that scripts are wrapped in a eval block with a special comment, which is not supported by IE, so don't use source URLs for production builds.
+## External source maps
+
+To export source maps to an external file, use [exorcist](https://github.com/thlorenz/exorcist). For example:
+
+    gluejs --include ... | exorcist bundle.js.map > bundle.js
 
 ## --global-require
 
@@ -429,11 +442,7 @@ Note that Require.js might not pick up modules defined like this unless you do a
 
 ## --remap
 
-To replace a module with a different module in gluejs, use the `remap` option. For example, to bind `require('underscore')` to `window._`:
-
-    remap: { "underscore": "window._" }
-
-In the CLI, this would be written as `--remap underscore="window._"`.
+To replace a module with a different module in gluejs, use the `remap` option. For example, to bind `require('underscore')` to `window._`, use `--remap underscore="window._"`.
 
 Note that `remap` strings are strings of JS code which are evaluated when `require` calls happen. For example, you can do `--remap underscore="require('lodash')"` to remap underscore to lodash.
 

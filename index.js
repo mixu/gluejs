@@ -67,9 +67,9 @@ API.prototype._resolveOptions = function(input) {
     }
     // handle package references
     opts[key] = opts[key].map(function(str) {
-      if (typeof str !== 'string') {
+      if (typeof str !== 'string' || str.charAt(0) == '/') {
         return str;
-      } else if (str.charAt(0) == '.' || str.charAt(0) == '/') {
+      } else if (str.charAt(0) == '.') {
         // resolve non-packages to their full paths
         return path.resolve(opts.basepath, str);
       }
@@ -100,7 +100,7 @@ API.prototype._resolveOptions = function(input) {
       if (name.charAt(0) != '.' && name.charAt(0) != '/') {
         opts.exclude.push(resolveOpts.getPackageRoot(opts.basepath, name));
       } else {
-        opts.exclude.push(name);
+        opts.exclude.push((name.charAt(0) == '.' ? path.resolve(opts.basepath, name) : name));
       }
     });
     opts.exclude = opts.exclude.filter(Boolean);
@@ -146,7 +146,6 @@ API.prototype.render = function(dest) {
       });
 
   log.info('Build options', opts);
-  log.info('Options.exclude', opts.exclude.map(function(re) { return re.toString(); }));
 
   function onErr(err) {
     if (err) {
@@ -236,15 +235,16 @@ API.prototype.render = function(dest) {
       return onErr(err);
     }
 
+    // best ensure that the files are in sorted order
+    files.sort(function(a, b) { return a.filename.localeCompare(b.filename); });
+
     if (opts.list) {
       files
         .map(function(file) { return file.filename; })
-        .sort(function(a, b) { return a.localeCompare(b); })
         .forEach(function(name) { console.log(name); });
     }
 
     // calculate a etag for the result
-    // best ensure that the files are in sorted order
     var etag = 'W/' + Cache.hash(JSON.stringify(files)),
         hadError = false;
 
@@ -287,7 +287,8 @@ API.prototype.render = function(dest) {
       remap: opts.remap,
       ignore: opts.ignore, // to suppress error messages
       exclude: opts.exclude, // to suppress error messages
-      'gluejs-version': opts['gluejs-version']
+      'gluejs-version': opts['gluejs-version'],
+      'source-map': opts['source-map']
     });
   });
 };
@@ -298,9 +299,13 @@ API.prototype.set = function(key, value) {
   // Input can be:
   // 1) key-value pair object
   if (arguments.length == 1 && key === Object(key)) {
+    // set the logging level first
+    if (key['log']) {
+      this.set('log', key['log']);
+    }
     Object.keys(key).forEach(function(k) {
-      this.set(k, key[k]);
-    }, this);
+      self.set(k, key[k]);
+    });
     return this;
   }
   // 2) primitive <= set or append depending on the original value
@@ -318,6 +323,10 @@ API.prototype.set = function(key, value) {
     key = 'log';
     value = 'debug';
   }
+  if (key == 'source-url') {
+    log.warn('The "--source-url" option has been deprecated, please use "--source-map" instead.');
+    key = 'source-map';
+  }
   if (key == 'amd') {
     log.warn('The "--amd" option has been deprecated, please use "--umd" instead.');
     key = 'umd';
@@ -332,7 +341,6 @@ API.prototype.set = function(key, value) {
       value = new RegExp(value);
     }
   }
-
 
   if (key == 'log' && value) {
     if (process.stdout.isTTY) {

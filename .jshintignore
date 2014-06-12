@@ -1,7 +1,7 @@
 node_modules/
 test/node_modules
-lib/util/amd-vendor-wrap.js
-lib/util/amd-vendor-wrap-global.js
+lib/require/amd-vendor-wrap.js
+lib/require/amd-vendor-wrap-global.js
 lib/require/*.min.js
 test/integration/command-integration/*
 bin/

@@ -78,7 +78,7 @@ if (argv['verbose']) {
 if (argv['debug']) {
   logLevel = 'debug';
 }
-if (argv['silent']) {
+if (argv['silent'] || !process.stdout.isTTY) {
   logLevel = 'error';
 }
 config['log'] = logLevel;

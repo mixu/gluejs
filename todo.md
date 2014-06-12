@@ -8,14 +8,22 @@
 
 Major issues:
 
+- the file-dedupe module needs to be enhanced to deal with two edge cases:
+  - when caching is enabled, duplicates are not detected correctly (files that were detected as duplicates and hence never parsed are now queued for parsing)
+  - the file-dedupe module does not take into account pending operations when resolving modules of the same size, resulting in some fluctiation in what files are detected as duplicates.
+    - at the root of the problem is that resolution / traversal order is not consistent across builds
 - module ids are not canonicalized, so they cannot be looked up against in a flexible manner, requiring several variant entries to be placed in the output (e.g. full path, full path without .js and so on).
   - This could be resolved by canonicalizing and including the slightly larger but more robust alternative require() implementation
-- docs:
-  - includes are paths only (no regexps)
-  - excludes support both paths/modules via --exclude and regexps via --exclude-re
-  - ignores, remaps are paths only (no regexps)
-  - excluded files fall back to any higher-level require() implementation, to allow for chaining
+  - This is needed for --global-require to be useful
 - document how to target --transform and --command
+- transforms should only run on main files
+- better transform targeting
+  - to run a transform on all the main package files: --transform
+  - to run a transform on main package files matching a particular extension: --transform ext=str
+  - to run a transform on dependency files: package.json browserify field
+  - to run a transform on the full build result
+    - in the shell: pipe the build result to the next command
+    - in the API: `.pipe()` method
 
 ----
 
@@ -39,14 +47,6 @@ Code:
         .pipe(packager)
         .pipe(dest);
 
-### Better externals
-
-For more granular control over what external modules are included in your build, you can use the following features:
-
-`--include <name>` and `--exclude <name>` allow you to include or exclude a specific module in your build. Excluded modules are looked up from the global context (e.g. if there is a global require() function, it will be called for those modules). Module names are resolved relative to the base path of the build.
-
-`--remap <name>=<expression>` allows you to bind external modules to any expression which will be evaluated client-side. For example you might want to load jQuery externally from `window.$` using `--remap jquery=window.$`.
-
 ----
 
 ### Targeting transforms
@@ -67,21 +67,6 @@ Also full build result transform?
 
 ----
 
-### Inline source maps
-
-- inline per-file source maps (=> adding to master source map with offsets)
-
-For external source maps, one can extract from the output.
-
-Related:
-
-- https://github.com/substack/node-browserify/issues/322
-- [fix sourceurl in IE](https://github.com/substack/node-browserify/issues/271)
-- [sourcemap w/# vs w/@](https://github.com/substack/node-browserify/issues/529)
-- [source maps should be exportable to file](https://github.com/substack/node-browserify/issues/339)
-
-----
-
 ## Node core shims
 
 - add core module shimming support
@@ -91,7 +76,7 @@ Related:
 
 ----
 
-### Missing depencency handling
+### Missing dependency handling
 
 --ignore-missing: causes missing modules to be ignored, require() on them returns {}
 --exclude-missing: causes missing modules to be excluded, require() on them will be looked up from the higher-level scope, if not found, an error is thrown.
@@ -123,8 +108,6 @@ Strip BOMs
 
 https://github.com/substack/node-browserify/issues/313
 
-Optional deduplication (based on contents). Optional because there are some edge cases e.g. 507.
-
 Tests
 - Strip # (probably already OK, just add test)
 - gluejs --include . => return equivalent package
@@ -141,10 +124,6 @@ Tests
 - maybe: allow bundles to just have a delegating require() impl
 
 [via](https://github.com/substack/node-browserify/issues/577):
-
-## More features
-
-- implement `--compare`: compares the trees from using the detective strategy vs the default strategy
 
 ### Shimming non-commonJS libraries that export globals
 
@@ -168,12 +147,6 @@ This wraps the file in a way that the global variable is available as `require(n
     // example
 
 Might be nice to make this even easier to use from tests... via REST API?
-
-## Inclusion optimization
-
-- Allow coercion of dependencies (e.g. backbone with underscore + plain underscore => one of each):
-  - `--dedupe-force modulename` should force only a single instance of a module, in spite of conflicting package.json data
-
 
 ### Core variable and core module shimming
 
