@@ -399,7 +399,7 @@ API.prototype.set = function(key, value) {
 API.prototype.main = function(path) {
   log.warn('The "--main" option has been deprecated, the first --include file is set as the main.');
   return this.set('include', path);
-});
+};
 
 API.prototype.replace = function(module, code) {
   log.warn('The "--replace" option has been deprecated, please use "--remap" instead.');

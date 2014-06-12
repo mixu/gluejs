@@ -58,7 +58,7 @@ module.exports = {
 
     new Glue()
       .basepath(inDir)
-      .include('./index.coffee')
+      .include('./index.coffee.js')
       .set('cache', false)
       .set('command', [
         __dirname + '/../node_modules/coffee-script/bin/coffee --compile --stdio',

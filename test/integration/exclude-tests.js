@@ -50,8 +50,10 @@ module.exports = {
       // console.log(fs.readFileSync(outFile).toString());
       var result = require(outFile);
       // console.log(result);
-      assert.deepEqual(result('./foo'), "Foo2");
-      assert.deepEqual(result('./bar'), "Bar2");
+
+      // Note: this is actually dependent on the require() impl handling of paths..
+      assert.deepEqual(result('./foo/index.js'), "Foo2");
+      assert.deepEqual(result('./bar/index.js'), "Bar2");
       done();
     });
 
@@ -153,12 +155,8 @@ module.exports = {
     });
 
     file.once('close', function() {
-      fs.writeFileSync(outFile,
-        'function require(str) { return "extern-" + str; }\n' +
-        fs.readFileSync(outFile));
       var result = require(outFile);
-      console.log(fs.readFileSync(outFile).toString());
-      assert.deepEqual(result, 'extern-foo');
+      assert.deepEqual(result, {});
       done();
     });
 
