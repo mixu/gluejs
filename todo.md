@@ -3,8 +3,9 @@
 
 # Todo
 
-- gzip support
-- time reporter
+- deprecate `--main` as it can be completely replaced with `--include`: the rule is that the first include is considered the main file.
+- refactor the options handling into a single file
+- clean up the runner folder
 
 Major issues:
 
@@ -24,8 +25,17 @@ Major issues:
   - to run a transform on the full build result
     - in the shell: pipe the build result to the next command
     - in the API: `.pipe()` method
+- factor-bundle
 
 ----
+
+# 3.1 tasks
+
+- gzip support
+- time reporter
+- in memory cache / file-granular rebuild
+- core shims? might not be too hard
+- variable shims
 
 ### API refactor
 
@@ -334,10 +344,6 @@ Test cases:
 TODO
 
 `--cache-clean`: Clears the global cache folder by deleting it. This is always done before processing anything else.
-
-# Known issues
-
-- setting basepath to ./node_modules/foo causes the root to be empty rather than being based inside the package directory. E.g. you need to do require('foo') to get the result rather than require('./index.js');
 
 # How do I ...?
 

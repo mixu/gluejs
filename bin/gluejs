@@ -6,36 +6,38 @@ var fs = require('fs'),
 var opts = require('yargs')
     .usage('Usage: $0 --include <file/dir ...> --out filename.js')
     .options({
-      'amd': { },
       'basepath': { 'default': process.cwd() },
       'cache': { default: true },
+      'cache-method': { },
       'cache-path': { },
-      'config': { },
       'command': { },
+      'config': { },
       'exclude': { },
       'exclude-regexp': { },
       'global': { },
       'global-require': { },
-      'include': { },
       'ignore': { },
+      'include': { },
       'jobs': { },
-      'main': { 'default': 'index.js' },
+      'main': { 'default': 'index.js' }, // TODO deprecate
       'out': { },
-      'parse': { },
       'remap': { },
       'replace': { },
       'reset-exclude': { },
       'silent': { },
+      'source-map': { },
       'source-url': { },
       'verbose': { },
       'version': { }
     })
+    .boolean('amd')
     .boolean('cache')
-    .boolean('report')
+    .boolean('debug')
+    .boolean('export-config')
     .boolean('progress')
-    .boolean('verbose')
-    .boolean('parse')
-    .boolean('export-config'),
+    .boolean('report')
+    .boolean('umd')
+    .boolean('verbose'),
     argv = opts.parse(process.argv);
 
 if(argv['version'] || argv['v'] ) {
@@ -107,13 +109,16 @@ if (argv['silent']) {
 }
 
 // Boolean params:
-// --reset-exclude
-// --source-url
-// --global-require
-// --parse
-// --cache
-[ 'reset-exclude', 'source-url', 'global-require', 'parse', 'debug', 'verbose',
-  'cache' ].forEach(function(key) {
+[
+  'amd',
+  'cache',
+  'debug',
+  'global-require',
+  'source-map',
+  'source-url',
+  'umd',
+  'verbose'
+  ].forEach(function(key) {
   config[key] = !!argv[key];
 });
 
@@ -129,23 +134,20 @@ if (argv['silent']) {
 });
 
 // String params:
-// --include
-// --exclude
-// --basepath
-// --main
-// --ignore
-// --amd
-// --umd
-// --cache-method
-// --command
-// --transform
-// --jobs
-// --log
-
-[ 'include', 'exclude', 'basepath', 'main', 'ignore',
-  'amd', 'umd', 'cache-method',
-  'command', 'transform', 'jobs',
-  'log', 'out', 'exclude-regexp'].forEach(function(key) {
+[
+  'basepath',
+  'cache-method',
+  'command',
+  'exclude',
+  'exclude-regexp',
+  'ignore',
+  'include',
+  'jobs',
+  'log',
+  'main', // TODO deprecate
+  'out',
+  'transform'
+  ].forEach(function(key) {
   if(argv[key]) {
     config[key] = argv[key];
   }
@@ -176,12 +178,6 @@ config['export'] = argv['global'];
 if(argv['cache-path']) {
   config['cache-path'] = path.resolve(process.cwd(), argv['cache-path']);
 }
-
-if(argv['npm']) {
-  process.stderr.write('Warning: the --npm flag is deprecated. ' +
-    'Directly include the file path to module, e.g. --include ./node_modules/foo instead.\n');
-}
-
 
 if(argv['export-config']) {
   console.log(JSON.stringify(config, null, 2));

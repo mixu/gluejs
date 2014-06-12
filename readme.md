@@ -177,43 +177,121 @@ You can work around the issue w/too many simultaneous processes that occurs in t
 
 For changes made prior to v3.0, check out the [changelog](changelog.md).
 
-## Basic options
+## Basic options (CLI, API & middleware)
 
-These are the basic options (CLI option / API option):
+The `gluejs` CLI tool, the API and the Express middleware accept the same options, so you can easily translate a CLI job into a Node program and vice versa.
+
+You can also easily share configuration by storing the build options in a JSON file, and then using using `--config <path>` in the CLI.
+
+To use the CLI tool, pass options to `gluejs` after installing with `npm install -g gluejs`. To use the API, take a look at the example below:
+
+```javascript
+var Glue = require('gluejs');
+new Glue()
+  .basepath('./lib') // output paths are relative to this
+  .include('./lib/index.js')
+  .exclude('./lib/foo')
+  .remap({
+    'jquery': 'window.$ ', // binds require('jquery') to window.$
+    'Chat': 'window.Chat'
+  })
+  .export('App') // the package is output as window.App
+  .render(fs.createWriteStream('./out.js'));
+```
+
+You can also render e.g. to a http response:
+
+```javascript
+res.setHeader('content-type', 'application/javascript');
+glue.render(res);
+```
+
+Generally, options can be set using call `g.set(key, value)`. You can also pass in a key-value hash, e.g. `.set({ key: value })`, which makes reusing configuration options easier.
+
+A basic `gluejs` run has at least one included file, an output location and a global name.
 
 - `--include <path|name>` / `.include(path|name)` / `.set('include', path|name)`: include a file or package in the build.
-- `--exclude <path|name>` / `.exclude(path|name)` / `.set('exclude', path|name)`: exclude a file or package from the build.
-- `--ignore <path|name>` / `.set('ignore', path|name)` (v3.0): excludes the given files, folders or packages from the build. Inserts `module.exports = {}` in place of the actual file, which means that `require(path|name)` returns `{}`.
-
-Includes, excludes and ignores are resolved as follows:
-
-- Relative paths are resolved relative to `--basepath`, which defaults to `process.cwd()`.
-- `--include ./path/to/file.js`: include a file and any dependencies.
-- `--include ./path/to/folder`: include all files in the folder and all subfolders.
-- `--include package`: include the package named `name` from `node_modules`
-
-For `--include`, the files are also parsed and their dependencies are automatically bundled. `.json` files are also supported; just like in Node, you can use `require('./foo.json')` within the resulting bundle.
-
-There must be at least one include. Exclusions are applied after inclusions.
-
-When packages or files are excluded, calling `require()` will fall back to any global-scope `require()` implementation if available. For example, given `--exclude jquery`, `require('jquery')` will make a call against `window.require('jquery')`. This is useful if you have exported the `require` implementation using `global-require` or if you are using another require implementation like an AMD loader that accepts require() requests.
-
-Exclusions also support regular expressions; include and ignore only support files, folders and package names. You can use `--exclude-regexp <regexp>` to specify a regular expression to exclude. The string is passed to `new RegExp()`. You should quote it in the shell to avoid issues where the shell expands special characters.
-
-You may find the following options useful for understanding what gets included/excluded: `--list` (produces a list of the files that have been processed), `--verbose` (enables additional logging) and `--debug` (enables even more verbose logging).
-
 - `--out <path>` / `.render(dest)`: file to write. Default: stdout
 - `--global <name>` / `.export(name)`: Sets the name of the global variable to export. Default: `App` (e.g. causes the package to be exported under `window.App`).
-- `--basepath <path>` / `.basepath(path)`: Base path for relative file paths. All relative paths are appended to this value. Default: directory in which the first --include resides.
-- `--main <path>` / `.main(path)`: Name of the main file/module to export. Default: the first --included file.
-
-`--main` and `--basepath` are automatically inferred from the `--include` values, so often you don't need to set them explicitly. It might still be beneficial to set them to be more explicit.
 
 In `.render(destination)`, the destination can be either a Writable Stream (e.g. a file or a HTTP response) or a callback which accepts `function(err, output){}`.
 
+You can specify paths in three different ways:
+
+- `--include ./path/to/file.js`: include a file and any dependencies.
+- `--include ./path/to/dir`: include all files in the directory and all subdirectories.
+- `--include package`: include the package named `name` from `node_modules`
+
+The base path for relative paths is controlled via `--basepath <path>` / `.basepath(path)`. All relative paths are appended to this value. This is automatically set to `process.cwd()`, so often you don't need to set it explicitly.
+
+`.json` files are also supported with `--include`; just like in Node, you can use `require('./foo.json')` within the resulting bundle.
+
+### Excluding and ignoring files
+
+Excluding a file removes it completely from the build, which means that `require(file|package)` throws an error if the name cannot be resolved.
+
+To exclude a file, use `--exclude <path|name>` / `.exclude(path|name)` / `.set('exclude', path|name)`. Targets can be paths to files, paths to directories (ignores the directory and all subdirectories) or module names (ignores the whole module). There must be at least one include. Exclusions are applied after inclusions.
+
+When packages or files are excluded, calling `require()` will fall back to any global-scope `require()` implementation if available. For example, given `--exclude jquery`, `require('jquery')` will make a call against `window.require('jquery')`. This lets you split dependencies into multiple bundles - for example, a single bundle with all the shared modules and another bundle with app specific code. It can also be used to integrate with an external loader's require function, like AMD. See the `global-require` and `umd` sections for more information.
+
+Exclusions also support regular expressions. Use `--exclude-regexp <regexp-str>` / `.set('exclude-regexp', str)` to specify a regular expression to exclude. The string is passed to `new RegExp()`. You should quote it in the shell to avoid issues where the shell expands special characters.
+
+Ignoring a file replaces it with an empty object, which means that `require(file|package)` returns `{}`. If a file/package is not needed on the client side and should not be resolved any further, then this is a good option.
+
+To ignore a file, use `--ignore <path|name>` / `.set('ignore', path|name)`.
+
+You may find the following options useful for understanding what gets included/excluded: `--list` (produces a list of the files that have been processed), `--verbose` (enables additional logging) and `--debug` (enables even more verbose logging).
+
+
+### The cache
+
+If you rerun a previous command, you'll probably notice that the result is returned much faster, usually in under a second.
+
+This is because by default `gluejs` enables a disk-persistent cache; it always checks the cache for a result and handles cache invalidation if the underlying files change. You don't have to do anything to set up or manage the cache, but sometimes you might want to reset it. The default cache location is `~/.gluejs-cache`, and you can safely remove the whole directory to empty the cache.
+
+### API usage
+
+*Methods*. The basic options have their own methods, everything else is configured via `.set(key, value)`. This example lists the main methods:
+
+
+To render without producing output - for example, to enable eager rebuilding via a watcher - run `.render()` without passing in any parameters.
+
+*Events*. `.render()` returns a Readable Stream which emits the normal readable stream events. It also emits the following additional events:
+
+- Bundle compilation events:
+  - `.on('file', function(file) {})`: emitted when a file is added to the bundle with full path to the file
+  - `.on('file-hit', function(file) {})`: emitted for each cache hit
+  - `.on('file-miss', function(file) {})`: emitted for each cache miss
+  - `.on('file-done', function(file, result)) {}`: emitted when a file has been fully processed (e.g. all transforms have run). `result` is a hash containing the information gathered during the parse
+  - `error`
+  - `done`
+  - `etag`
+
+# Reporting
+
+## --log
+
+`--log <level>` enables logging for any messages at `>=` the level, where level is one of (`debug`, `info`, `warn` and `error`).
+
+## --progress
+
+Displays a progress bar.
+
+## --report
+
+Display the summary report. Particularly useful if you are minifying files, since the report will show the file size after transformation.
+
+## --verbose
+
+`--verbose` / `.set('verbose', true)`: More verbose output, such as files being filtered out and processed.
+
+## --silent
+
+`--silent` / `.set('silent', true)`: disable verbose logging
+
 ## Middleware features (v3.x)
 
-### Basic usage
+### Basic middleware usage
 
 `glue.middleware({ include: ... })`: returns a Express/Connect compatible request handler. For example:
 
@@ -289,7 +367,7 @@ The following example illustrates how you can write an endpoint which uses the s
       });
     }, Glue.middleware(opts));
 
-### JSON configuration
+### JSON configuration (--config and --export-config)
 
 You can load configuration from a JSON file using `--config <path>`. This will load the given configuration file, and run the build using the options in the file.
 
@@ -297,49 +375,6 @@ This is useful if you want to reuse the same configuration for a Express middlew
 
 To create configuration file from an existing build (like a Makefile), add `--export-config` as an option to the build. This will print out a JSON structure representing the current config. Note that you can leave the `basepath` value in the config empty, as it will be automatically resolved to `process.cwd()`.
 
-### API usage
-
-To set configuration options using the API, use the `.set()` method:
-
-- `.set(key, value)`: set a single configuration value
-- `.set(config)`: you can also pass in a key-value hash to the set method, which makes reusing configuration options easier.
-
-*Methods*. The basic options have their own methods, everything else is configured via `.set(key, value)`. This example lists the main methods:
-
-```javascript
-var Glue = require('gluejs');
-new Glue()
-  .basepath('./lib') // output paths are relative to this
-  .main('index.js')  // the file that's exported as the root of the package
-  .include('./lib')  // includes all files in the dir
-  .exclude(new RegExp('.+\\.test\\.js')) // excludes .test.js
-  .remap({
-    'jquery': 'window.$ ', // binds require('jquery') to window.$
-    'Chat': 'window.Chat'
-  })
-  .export('App') // the package is output as window.App
-  .render(fs.createWriteStream('./out.js'));
-```
-
-You can also render e.g. to a http response:
-
-```javascript
-res.setHeader('content-type', 'application/javascript');
-glue.render(res);
-```
-
-To render without producing output - for example, to enable eager rebuilding via a watcher - run `.render()` without passing in any parameters.
-
-*Events*. `.render()` returns a Readable Stream which emits the normal readable stream events. It also emits the following additional events:
-
-- Bundle compilation events:
-  - `.on('file', function(file) {})`: emitted when a file is added to the bundle with full path to the file
-  - `.on('file-hit', function(file) {})`: emitted for each cache hit
-  - `.on('file-miss', function(file) {})`: emitted for each cache miss
-  - `.on('file-done', function(file, result)) {}`: emitted when a file has been fully processed (e.g. all transforms have run). `result` is a hash containing the information gathered during the parse
-  - `error`
-  - `done`
-  - `etag`
 
 ## Build options
 
@@ -349,7 +384,7 @@ To render without producing output - for example, to enable eager rebuilding via
 
 ![screenshot](https://github.com/mixu/gluejs/raw/master/test/sample/sourceurl.png)
 
-## External source maps
+#### External source maps
 
 To export source maps to an external file, use [exorcist](https://github.com/thlorenz/exorcist). For example:
 
@@ -546,20 +581,6 @@ Use a directory with a dot in front to hide the cached files (remember to also g
 ## --no-cache
 
 `--no-cache` / `.set('cache', false)`: Disables the cache; sets the cache directory to a temporary directory.
-
-# Reporting
-
-## --report
-
-Display the summary report. Particularly useful if you are minifying files, since the report will show the file size after transformation.
-
-## --verbose
-
-`--verbose` / `.set('verbose', true)`: More verbose output, such as files being filtered out and processed.
-
-## --silent
-
-`--silent` / `.set('silent', true)`: disable verbose logging
 
 ## A few notes about npm dependencies
 

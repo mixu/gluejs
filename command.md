@@ -72,11 +72,3 @@ Bower:
 UMD support documentation
 
 ## Generating obfuscated server side code
-
-## --no-json
-
-By default `.json` files are included - this is how Node's native `require` implementation works.
-
-This means that something like `var config = require('./config.json')` works.
-
-Specify `--no-json` to exclude json files.
