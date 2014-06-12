@@ -118,26 +118,40 @@ The build result is a standalone file, which is exported as a global (`app/index
   <tr>
     <td></td>
     <td>gluejs v3.0</td>
-    <td>gluejs v3.0 (w/cache)</td>
     <td>gluejs v2.3.7</td>
-    <td>gluejs v2.3.7 (w/cache)</td>
     <td>browserify v3.44.2</td>
   </tr>
   <tr>
     <td>Plain build (no transforms)</td>
     <td>5.40s</td>
-    <td>0.45s</td>
     <td>3.72s</td>
-    <td>2.28s</td>
     <td>10.37s</td>
   </tr>
   <tr>
     <td>Build w/uglifyjs</td>
     <td>20.70s</td>
-    <td>0.44s</td>
     <td>24.16s</td>
-    <td>2.21s</td>
     <td>Build fails (too many simultaneous processes).</td>
+  </tr>
+</table>
+
+Incremental builds:
+
+<table>
+  <tr>
+    <td></td>
+    <td>gluejs v3.0 (w/cache)</td>
+    <td>gluejs v2.3.7 (w/cache)</td>
+  </tr>
+  <tr>
+    <td>Plain build (no transforms)</td>
+    <td>0.45s</td>
+    <td>2.28s</td>
+  </tr>
+  <tr>
+    <td>Build w/uglifyjs</td>
+    <td>0.44s</td>
+    <td>2.21s</td>
   </tr>
 </table>
 
@@ -163,37 +177,6 @@ You can work around the issue w/too many simultaneous processes that occurs in t
 
 For changes made prior to v3.0, check out the [changelog](changelog.md).
 
-## Table of contents
-
-- Basic options
-- Middleware
-  - Basic usage
-  - Useful additional options
-  - Error messages
-  - Etags support
-  - Gzip support
-  - Using a file watcher
-- Build options
-  - [`--source-url`](#__source_url): Add source URL annotations to the files. Useful for development, but note that this is not compatible with IE.
-  - [`--global-require`](#__global_require): Export the require() implementation into the global space.
-  - [`--umd`](#__umd): Export the module using the UMD wrapper.
-- Replacing modules or individual files
-  - [`--remap <name>=<expr>`](#__remap): Bind require("name") to an expression, e.g. jQuery to window.$.
-  - [browser in package.json]()
-- Minification / source transforms
-  - [`--command <str>`](#__command): Pipe each file through a shell command and capture the output (e.g. --command "uglifyjs --no-copyright").
-  - [`--transform <str>`](#__transform): Activates a source transformation module.
-- Performance
-  - [`--jobs <int>`](#__jobs): Sets the maximum level of parallelism for the task execution pipeline. Default: `os.cpus().length * 2`
-  - [`--cache-path <path>`](#__cache_path): Use a cache directory to store file builds. The cache speeds up large builds (and minified builds) significantly since only source files that have changed are updated.
-  - [`--cache-method <str>`](#__cache_method): Sets the cache method: stat | hash algorighm name.
-- Reporting
-  - [`--progress`](#__progress): Display a progress bar with estimated time remaining.
-  - [`--report`](#__report): Display the file size report.
-  - [`--verbose`](#__verbose): Verbose output.
-  - [`--version`](#__version): Show version info.
-  - [`--silent`](#__silent): Disable all output, including the reporter.
-
 ## Basic options
 
 These are the basic options (CLI option / API option):
@@ -201,7 +184,7 @@ These are the basic options (CLI option / API option):
 - `--include <path|name>` / `.include(path|name)` / `.set('include', path|name)`: include a file or package in the build.
 - `--exclude <path|name>` / `.exclude(path|name)` / `.set('exclude', path|name)`: exclude a file or package from the build.
 - `--ignore <path|name>` / `.set('ignore', path|name)` (v3.0): excludes the given files, folders or packages from the build. Inserts `module.exports = {}` in place of the actual file, which means that `require(path|name)` returns `{}`.
--
+
 Includes, excludes and ignores are resolved as follows:
 
 - Relative paths are resolved relative to `--basepath`, which defaults to `process.cwd()`.
