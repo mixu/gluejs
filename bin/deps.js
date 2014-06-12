@@ -3,7 +3,7 @@ var path = require('path'),
     Minilog = require('minilog'),
     runTasks = require('../lib/runner/transforms/index.js'),
     loadAMDConfig = require('../lib/runner/amd/load-config.js'),
-    toDeps = require('../lib/runner/commonjs3/to-deps.js'),
+    toDeps = require('../lib/commonjs/to-deps.js'),
     uniq = require('../lib/util/uniq.js'),
     Capture = require('../lib/file-tasks/capture.js');
 

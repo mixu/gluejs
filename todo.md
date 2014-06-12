@@ -4,7 +4,6 @@
 # Todo
 
 - refactor the options handling into a single file
-- clean up the runner folder
 
 Major issues:
 

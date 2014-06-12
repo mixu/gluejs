@@ -2,7 +2,7 @@ var os = require('os'),
     fs = require('fs'),
     path = require('path'),
     runTasks = require('transform-runner'),
-    packageCommonJs = require('./lib/runner/commonjs2/index.js'),
+    packageCommonJs = require('./lib/commonjs'),
     Capture = require('./lib/file-tasks/capture.js'),
     Minilog = require('minilog'),
     Cache = require('minitask').Cache,
@@ -187,13 +187,13 @@ API.prototype.render = function(dest) {
   // run any tasks and parse dependencies (mapper)
   var runner = runTasks({
     // new API
-    tasks: require('./lib/runner/transforms/get-tasks.js')({
+    tasks: require('./lib/transform-runner/get-tasks.js')({
       cache: cache,
       command: opts.command,
       transform: opts.transform
     }),
 
-    cache: require('./lib/runner/transforms/wrap-cache.js')(cache, cache.hash(JSON.stringify(invalidationOpts))),
+    cache: require('./lib/transform-runner/wrap-cache.js')(cache, cache.hash(JSON.stringify(invalidationOpts))),
 
     log: Minilog('runner'),
 
@@ -264,9 +264,7 @@ API.prototype.render = function(dest) {
 
     expectedEndEvents++;
 
-    var packageCommonJs3 = require('./lib/runner/commonjs3');
-
-    packageCommonJs3({
+    packageCommonJs({
       files: files,
       out: cacheSplitter(cache.filepath(), dest, function(err, cacheFile) {
         // finalize the cached result if there were no errors

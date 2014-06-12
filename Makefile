@@ -1,7 +1,5 @@
 TESTS += ./require.test.js
-# TESTS += ./unit/list-tasks/*.test.js
 TESTS += ./unit/transforms/*.test.js
-TESTS += ./unit/commonjs2/*.test.js
 TESTS += ./integration/*.test.js
 
 test:
@@ -35,3 +33,4 @@ test-lint:
 
 docs:
 	generate-md --input ./readme.md --output temp/
+
