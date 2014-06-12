@@ -15,7 +15,6 @@ var yargs = require('yargs')
       'amd': { },
       'cache': { default: true },
       'include': { },
-      'main': { },
       'basepath': { }
     }),
     argv = yargs.parse(process.argv);
@@ -44,7 +43,7 @@ opts.basepath = resolveOpts.inferBasepath(argv.basepath, argv.include);
   }
 });
 // main file
-opts.main = resolveOpts.inferMain(argv.main, opts.basepath, opts.include);
+opts.main = resolveOpts.inferMain(opts.basepath, opts.include);
 
 // Create the shared cache instance
 var cache = Cache.instance({

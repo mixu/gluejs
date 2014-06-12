@@ -58,13 +58,12 @@ module.exports = {
 
     new Glue()
       .basepath(inDir)
-      .include('./')
+      .include('./index.coffee')
       .set('cache', false)
       .set('command', [
         __dirname + '/../node_modules/coffee-script/bin/coffee --compile --stdio',
         __dirname + '/../node_modules/.bin/uglifyjs',
       ])
-      .main('index.coffee')
       .export('module.exports')
       .render(file);
 
@@ -140,7 +139,6 @@ module.exports = {
           };
         }
       ])
-      .main('foo.jade')
       .export('module.exports')
       .render(file);
   },
@@ -181,7 +179,6 @@ module.exports = {
           };
         }
       ])
-      .main('foo.bar')
       .set('umd', true)
       .render(file);
   },
@@ -219,7 +216,6 @@ module.exports = {
       .set('cache', false)
       .set('require', false)
       .set('transform', 'brfs')
-      .main('test.brfs.js')
       .export('module.exports')
       .render(file);
   },
@@ -254,7 +250,6 @@ module.exports = {
       .include('./test.coffee')
       .set('cache', false)
       .set('transform', [ 'coffeeify', 'brfs' ])
-      .main('test.coffee')
       .export('module.exports')
       .render(file);
   },

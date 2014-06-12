@@ -19,11 +19,9 @@ var opts = require('yargs')
       'ignore': { },
       'include': { },
       'jobs': { },
-      'main': { 'default': 'index.js' }, // TODO deprecate
       'out': { },
       'remap': { },
       'replace': { },
-      'reset-exclude': { },
       'silent': { },
       'source-map': { },
       'source-url': { },
@@ -144,7 +142,6 @@ if (argv['silent']) {
   'include',
   'jobs',
   'log',
-  'main', // TODO deprecate
   'out',
   'transform'
   ].forEach(function(key) {

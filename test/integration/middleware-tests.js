@@ -85,8 +85,7 @@ module.exports = {
     this.app.use('/js/third.js', Glue.middleware({
       umd: true,
       basepath: this.outDir + '/third',
-      include: [ './lib/index.js', './foo/bar.js' ],
-      main: 'lib/index.js'
+      include: [ './lib/index.js', './foo/bar.js' ]
     }));
 
     var outFile = this.fixture.filename({ ext: '.js' });
@@ -129,8 +128,6 @@ module.exports = {
       umd: true,
       basepath: outDir + '/third',
       include: [ './lib/index.js', './foo/bar.js' ],
-      main: 'lib/index.js'
-
       staticFolder: (DEBUG_MODE ? false : __dirname + '/precompiled/' )
     }));
 */

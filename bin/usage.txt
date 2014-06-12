@@ -15,13 +15,6 @@ BASIC
 
   --basepath <path> Base path for the list of files. Default: process.cwd()
 
-  --main <name>     Name of the main file/module to export. Default: index.js
-
-REPLACE / REMAP
-
-  --replace <expr>  Bind require("name") to an expression.
-                    e.g. --replace jQuery=window.$
-
   --remap <expr>    Remap require("name") to another (internal) module
                     e.g. --replace "assert=require('chai').assert"
 
@@ -68,5 +61,3 @@ REPORTING
 
 ADVANCED
 
-  --reset-exclude   Advanced: do not apply the default exclusions
-                    (/dist/, /example/, /benchmark/, .min.js).

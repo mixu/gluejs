@@ -167,6 +167,8 @@ You can work around the issue w/too many simultaneous processes that occurs in t
 
 `--include` and `--exclude` are now resolved slightly differently: they are no longer automatically converted into regular expressions. See the relevant section below.
 
+`--main` has been deprecated. The first `--include` target is always set as the main file, so there is no need to separately set `--main` anymore.
+
 `--replace` has been deprecated in favor of `--remap`. The distinction between the two (eager vs. late lookup) turned out not to really matter.
 
 `--reset-exclude` is no longer supported due to the new dependency resolution mechanism.
@@ -434,10 +436,9 @@ Creating the bundle:
 
     gluejs \
       --umd \
-      --include ./lib/ \
+      --include ./lib/index.js \
       --include ./node_modules/microee/ \
       --global App \
-      --main lib/index.js \
       --out app.js \
 
 In node:

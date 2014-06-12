@@ -3,14 +3,16 @@
 
 # Todo
 
-- deprecate `--main` as it can be completely replaced with `--include`: the rule is that the first include is considered the main file.
 - refactor the options handling into a single file
 - clean up the runner folder
 
 Major issues:
 
+- fix up AMD bundler
+- tests
+  + symlinks
+  + dedupe
 - the file-dedupe module needs to be enhanced to deal with two edge cases:
-  - when caching is enabled, duplicates are not detected correctly (files that were detected as duplicates and hence never parsed are now queued for parsing)
   - the file-dedupe module does not take into account pending operations when resolving modules of the same size, resulting in some fluctiation in what files are detected as duplicates.
     - at the root of the problem is that resolution / traversal order is not consistent across builds
 - module ids are not canonicalized, so they cannot be looked up against in a flexible manner, requiring several variant entries to be placed in the output (e.g. full path, full path without .js and so on).
@@ -26,6 +28,8 @@ Major issues:
     - in the shell: pipe the build result to the next command
     - in the API: `.pipe()` method
 - factor-bundle
+- streaming api
+- intreq
 
 ----
 
@@ -124,7 +128,6 @@ Tests
 - parse invalid json file
 - transforms installed globally should also work
 - require() a core module should look in your node_modules/ directory before using one of its browser builtins
-- infer-packages should work when main is `.` or main is empty
 - allow core modules to be ignored
 - allow core modules to be ignored in package.json browser field
 - [--standalone A.B.C should construct nested objects](https://github.com/substack/node-browserify/issues/534)

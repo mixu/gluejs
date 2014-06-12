@@ -89,7 +89,7 @@ API.prototype._resolveOptions = function(input) {
   });
 
   // next, figure out the main file
-  opts.main = resolveOpts.inferMain(input.main, opts.basepath, opts.include);
+  opts.main = resolveOpts.inferMain(opts.basepath, opts.include);
 
   // process remap
   if (input.remap) {
@@ -388,7 +388,7 @@ API.prototype.set = function(key, value) {
   return this;
 };
 
-['export', 'main', 'exclude', 'basepath', 'remap', 'include'].forEach(function(key) {
+['export', 'exclude', 'basepath', 'remap', 'include'].forEach(function(key) {
   API.prototype[key] = function() {
     this.set.apply(this, [key].concat(Array.prototype.slice.call(arguments)));
     return this;
@@ -396,9 +396,14 @@ API.prototype.set = function(key, value) {
 });
 
 // other
+API.prototype.main = function(path) {
+  log.warn('The "--main" option has been deprecated, the first --include file is set as the main.');
+  return this.set('include', path);
+});
+
 API.prototype.replace = function(module, code) {
   log.warn('The "--replace" option has been deprecated, please use "--remap" instead.');
-  return this.remap(module, code);
+  return this.set('remap', module, code);
 };
 
 // Express Middleware
