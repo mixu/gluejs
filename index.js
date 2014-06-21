@@ -28,7 +28,9 @@ function API() {
     ignore: [],
     log: 'warn',
     // set options here so that the cache hash does not change
-    jobs: require('os').cpus().length * 2
+    jobs: os.cpus().length * 2,
+    // set this so that builds are invalidated as the version changes
+    'gluejs-version': require('./package.json').version
   };
 }
 
@@ -201,8 +203,7 @@ API.prototype.render = function(dest) {
     include: opts.include,
     exclude: opts.exclude,
     ignore: opts.ignore,
-    jobs: opts.jobs,
-    'gluejs-version': opts['gluejs-version']
+    jobs: opts.jobs
   });
   runner.on('parse-error', function(err) {
     self.emit('error', err);

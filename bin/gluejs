@@ -181,9 +181,6 @@ if(argv['export-config']) {
   process.exit();
 }
 
-// set this so that builds are invalidated as the version changes
-config['gluejs-version'] = require('../package.json').version;
-
 g.set(config);
 
 // -- out
