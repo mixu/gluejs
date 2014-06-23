@@ -37,6 +37,9 @@ Major issues:
 - variable shims
 - AMD
   - the sorter does not normalize dependency names before resolving them (e.g. for relative refs to remapped paths from remapped paths)
+  - better exclusions
+    - nomin should work on folders
+    - ability to treat app paths as vendor paths (e.g. to exclude them when running a minifier). This occurs when files found during the application file static resolution actually finds vendor files and then tries to minify them
 
 ### API refactor
 

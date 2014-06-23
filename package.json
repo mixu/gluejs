@@ -27,24 +27,22 @@
   "main": "index.js",
   "dependencies": {
     "amd-resolve": "~0.1.1",
-    "amdetective": "0.0.1",
+    "amdetective": "0.0.2",
     "browser-pack": "~2.0.1",
-    "browser-resolve": "~1.2.4",
+    "browser-resolve": "~1.3.0",
     "bytes": "~1.0.0",
     "detective": "~3.1.0",
     "microee": "0.0.5",
     "minilog": "~2.0.5",
-    "minimatch": "0.2.12",
-    "miniq": "0.1.1",
+    "miniq": "~0.1.2",
     "minitask": "~0.2.2",
-    "progress": "~1.1.2",
     "readable-stream": "1.0.27-1",
-    "resolve": "~0.7.0",
+    "resolve": "~0.7.1",
     "umd": "~2.1.0",
-    "yargs": "~1.2.2"
+    "yargs": "~1.2.6"
   },
   "devDependencies": {
     "mocha": "1.x",
-    "uglify-js": "~2.4.8"
+    "uglify-js": "~2.4.14"
   }
 }
