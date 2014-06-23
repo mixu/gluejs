@@ -7,30 +7,9 @@
 
 Major issues:
 
-- fix up AMD bundler
-  + --list-included should work
-  + ignored / excluded module names should not be attempted
-  +
 - tests
   + symlinks
   + dedupe
-- variable results
-  - at the root of the problem is that resolution / traversal order is not consistent across builds
-  - solutions
-    - serialization
-      - [ resolve task ] + [ dedupe barrier ] + [ resolve task ] + [ barrier ]
-    - batching
-      - [ tasks ] + [ barrier ]
-    - stratified
-      - resolve files at depth 1
-      - sort results from depth 1 and deduplicate
-      - resolve files at depth 2
-      - sort results from depth 2 and deduplicate
-    - only show percentage and final files processed rather than a running count
-    - undo any duplicate work at the end
-      - exclude any duplicates
-      - use the canonical metadata instead
-      - reference count all related files, and if the refcount goes to zero after deduplicating, then eliminate those files from the input
 - module ids are not canonicalized, so they cannot be looked up against in a flexible manner, requiring several variant entries to be placed in the output (e.g. full path, full path without .js and so on).
   - This could be resolved by canonicalizing and including the slightly larger but more robust alternative require() implementation
   - This is needed for --global-require to be useful
@@ -56,6 +35,8 @@ Major issues:
 - in memory cache / file-granular rebuild
 - core shims? might not be too hard
 - variable shims
+- AMD
+  - the sorter does not normalize dependency names before resolving them (e.g. for relative refs to remapped paths from remapped paths)
 
 ### API refactor
 
