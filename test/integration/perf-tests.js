@@ -28,15 +28,17 @@ module.exports = {
     file.once('close', function() {
       assert.equal(total, 1);
       assert.equal(cacheHits.length, 0);
-      var outFile = fixture.filename({ ext: '.js' }),
-            file = fs.createWriteStream(outFile);
-      file.once('close', function() {
-        // console.log(total, cacheHits);
-        assert.equal(total, 2);
-        assert.equal(cacheHits.length, 1);
-        done();
-      });
-      build(outDir, file);
+      setTimeout(function() {
+        var outFile = fixture.filename({ ext: '.js' }),
+              file = fs.createWriteStream(outFile);
+        file.once('close', function() {
+          // console.log(total, cacheHits);
+          assert.equal(total, 2);
+          assert.equal(cacheHits.length, 1);
+          done();
+        });
+        build(outDir, file);
+      }, 500);
     });
 
     build(outDir, file);
@@ -44,8 +46,15 @@ module.exports = {
     function build(outDir, file) {
       new Glue()
         .include(outDir)
-        .on('file', function() {
+        .on('file', function(filename) {
+          console.log('file', filename);
           total++;
+        })
+        .on('miss', function(filename){
+          console.log('miss', filename);
+        })
+        .on('dedupe', function(filename){
+          console.log('dedupe', filename);
         })
         .on('hit', function(filename){
           cacheHits.push(filename);

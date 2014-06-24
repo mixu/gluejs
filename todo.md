@@ -25,6 +25,13 @@ Major issues:
 - factor-bundle
 - streaming api
 - intreq
+- update CLI docs
+- user-friendly handling of parse errors in the http version?
+- source map sourceRoot is not configurable (core issue is in browser-pack which doesn't configure this option)
+- reporting
+  - handle spurious --exclude package --ignore package targets a bit better: rigth now, they are resolved twice, once during setup and once during transform-runner. Might want to say that you should remove any unnecessary exclusions.
+  - handle empty remap targets better. Sometimes --remap package=foo may be intentional, though it is odd to include one if there are no references to it.
+  - when the cache is triggered, file adds log lines are not shown, and exclusions are simply by "regexp true" rather than the correct regexp.
 
 ----
 

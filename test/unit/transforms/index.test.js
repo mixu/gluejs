@@ -23,12 +23,14 @@ exports['runQueue tests'] = {
       'index.js': 'module.exports = true;'
     });
 
-    runner({
+    var r = runner({
       include: [ outDir + '/index.js' ],
       // cache: this.cache,
       log: require('minilog')('runner'),
       jobs: 1
-    }, function(err, results) {
+    });
+
+    r.exec(function(err, results) {
       assert.ok(!err);
       assert.equal(results.length, 1);
       assert.deepEqual(results[0], {
@@ -47,12 +49,13 @@ exports['runQueue tests'] = {
       'second.js': 'module.exports = true;'
     });
 
-    runner({
+    var r = runner({
       include: [ outDir + '/index.js' ],
       // cache: this.cache,
       log: require('minilog')('runner'),
       jobs: 1
-    }, function(err, results) {
+    });
+    r.exec(function(err, results) {
       assert.ok(!err);
       // console.log(results);
       assert.equal(results.length, 2);
@@ -79,12 +82,13 @@ exports['runQueue tests'] = {
       'sub/dep.js': 'module.exports = "foo";'
     });
 
-    runner({
+    var r = runner({
       include: [ outDir ],
       // cache: this.cache,
       log: require('minilog')('runner'),
       jobs: 1
-    }, function(err, results) {
+    });
+    r.exec(function(err, results) {
       assert.ok(!err);
       assert.equal(results.length, 3);
       // console.log(results);
@@ -116,12 +120,13 @@ exports['runQueue tests'] = {
       'foo/bar/baz/abc/dep.js': 'module.exports = "foo";'
     });
 
-    runner({
+    var r = runner({
       include: outDir,
       // cache: this.cache,
       log: require('minilog')('runner'),
       jobs: 1
-    }, function(err, results) {
+    });
+    r.exec(function(err, results) {
       assert.ok(!err);
       // console.log(results);
       assert.equal(results.length, 2);
@@ -149,7 +154,7 @@ exports['runQueue tests'] = {
       'node_modules/underscore.js': 'module.exports = "underscore";',
     });
 
-    runner({
+    var r = runner({
       include: [
         outDir + '/one.js',
         outDir + '/two.js'
@@ -157,7 +162,8 @@ exports['runQueue tests'] = {
       // cache: this.cache,
       log: require('minilog')('runner'),
       jobs: 1
-    }, function(err, results) {
+    });
+    r.exec(function(err, results) {
       assert.ok(!err);
       assert.equal(results.length, 4);
       // console.log(results);
@@ -197,12 +203,13 @@ exports['runQueue tests'] = {
       'node_modules/underscore.js': 'module.exports = "underscore";',
     });
 
-    runner({
+    var r = runner({
       include: outDir + '/foo/bar/one.js',
       // cache: this.cache,
       log: require('minilog')('runner'),
       jobs: 1
-    }, function(err, results) {
+    });
+    r.exec(function(err, results) {
       assert.ok(!err);
       assert.equal(results.length, 3);
       // console.log(results);
@@ -235,12 +242,13 @@ exports['runQueue tests'] = {
       'node_modules/foo/main.js': 'module.exports = require("./lib/sub");',
       'node_modules/foo/lib/sub.js': 'module.exports = true;'
     });
-    runner({
+    var r = runner({
         include: [ outDir + '/index.js' ],
         // cache: this.cache,
         log: require('minilog')('runner'),
         jobs: 1
-      }, function(err, results) {
+      });
+    r.exec(function(err, results) {
         assert.ok(!err);
         // console.log(results);
         assert.equal(results.length, 3);
@@ -276,11 +284,13 @@ exports['runQueue tests'] = {
       'node_modules/aa/node_modules/cc/differentfile.js': 'module.exports = "Hello from C";',
       'node_modules/aa/node_modules/cc/package.json': '{ "main": "differentfile.js" }'
     });
-    runner({
+    var r = runner({
         include: [ outDir + '/index.js' ],
         // cache: this.cache,
         jobs: 1
-      }, function(err, results) {
+      });
+
+    r.exec(function(err, results) {
         assert.ok(!err);
         // console.log(results);
         assert.equal(results.length, 4);

@@ -26,7 +26,7 @@ Dependencies are now statically resolved to provide a better user experience (e.
 
 gluejs v3.0 adds a number of usability and performance improvements:
 
-- The biggest change is that dependency parsing is now enabled by default. This means that you can specify a single file to `--include` and the full dependency graph is traced out and bundled automatically, like browserify does.
+- The biggest change is that dependency parsing is now enabled by default. This means that you can specify a single file to `--include` and the full dependency graph is traced out and bundled automatically, like browserify does. For roughtly equivalent behavior as gluejs v2.0, you can do `--include ./lib/index.js --exclude ./node_modules` (e.g. include all files resolved from index.js, excluding references to node modules).
 - The middleware has been enhanced significantly with etags support, gzipping, minification and browser-compatible error messages when builds fail.
 - Performance for cached builds and builds that use transforms has increased. Enabling dependency parsing by default has cost some performance compared to the v2 branch (see benchmarks), but this is offset by the caching as well as usability improvements such as automatically excluding files that are not `require()`d and automatically including any newly required node_modules.
 - Other new features include:

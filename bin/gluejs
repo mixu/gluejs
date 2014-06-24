@@ -32,8 +32,11 @@ var opts = require('yargs')
     .boolean('cache')
     .boolean('debug')
     .boolean('export-config')
+    .boolean('ls-config')
     .boolean('progress')
     .boolean('report')
+    .boolean('source-map')
+    .boolean('source-url')
     .boolean('umd')
     .boolean('verbose'),
     argv = opts.parse(process.argv);
@@ -46,24 +49,7 @@ if(argv['version'] || argv['v'] ) {
 var g = new Glue(),
     config = {};
 
-if (argv['config']) {
-  argv.config = path.resolve(process.cwd(), argv['config']);
-  if (fs.existsSync(argv.config)) {
-    config = require(argv.config);
-    g.set(config);
-    if(config['out']) {
-      g.render(fs.createWriteStream(config['out']));
-    } else {
-      g.render(process.stdout);
-    }
-    return;
-  } else {
-    console.log('Failed to load config file:', argv.config);
-    process.exit(1);
-  }
-}
-
-if(!argv['include']) {
+if(!argv['include'] && !argv['config']) {
   return fs.createReadStream(__dirname + '/usage.txt').pipe(process.stdout).on('close', function () { process.exit(1) });
 }
 
@@ -81,16 +67,16 @@ if (argv['debug']) {
 if (argv['silent'] || !process.stdout.isTTY) {
   logLevel = 'error';
 }
-config['log'] = logLevel;
+config['log'] = argv['log'] || logLevel;
 
 // Logging reporters:
 // --silent: no reporter
 // --progress: progress report (enabled by default)
 // --report: size report
 // --list: file list, disables others
-
 if (argv['silent']) {
   // no reporters
+  // do not alter the config reporters if --config is set
 } else if (argv['list']) {
   config['list'] = true;
   config['log'] = 'error';
@@ -101,9 +87,20 @@ if (argv['silent']) {
     }
   });
   // if --out filename and not --silent, enable the progress reporter
-  if (argv['out'] && process.stderr.isTTY && !(logLevel == 'debug' || logLevel == 'info')) {
+  var isWriteToFile = (argv['out'] && process.stderr.isTTY),
+      hasHighVerbosity = (logLevel == 'debug' || logLevel == 'info'),
+      hasConfig = !!argv['config'];
+  if (isWriteToFile && !hasHighVerbosity && !hasConfig) {
     config['progress'] = true;
   }
+}
+
+// for amd and source-url, delete if explicitly set
+if (!argv['amd']) {
+  delete argv['amd'];
+}
+if (!argv['source-url']) {
+  delete argv['source-url'];
 }
 
 // Boolean params:
@@ -117,7 +114,9 @@ if (argv['silent']) {
   'umd',
   'verbose'
   ].forEach(function(key) {
-  config[key] = !!argv[key];
+    if (typeof argv[key] !== 'undefined') {
+      config[key] = !!argv[key];
+    }
 });
 
 // Allow the following params to be specified with a ,
@@ -176,9 +175,39 @@ if(argv['cache-path']) {
   config['cache-path'] = path.resolve(process.cwd(), argv['cache-path']);
 }
 
-if(argv['export-config']) {
-  console.log(JSON.stringify(config, null, 2));
-  process.exit();
+if (argv['config']) {
+  var loaded;
+  argv.config = path.resolve(process.cwd(), argv['config']);
+  if (fs.existsSync(argv.config)) {
+    loaded = require(argv.config);
+    Object.keys(config).forEach(function(key) {
+      if (loaded[key] != config[key] && typeof config[key] !== 'undefined') {
+        loaded[key] = config[key];
+        // console.error('set', key, config[key]);
+      }
+    });
+    config = loaded;
+  } else {
+    console.error('Failed to load config file:', argv.config);
+    process.exit(1);
+  }
+}
+
+if(argv['export-config'] || argv['ls-config']) {
+  var sorted = {};
+  Object.keys(config).sort().forEach(function(key) {
+    sorted[key] = config[key];
+  });
+  if (argv['ls-config']) {
+    console.error('\nOptions:');
+    Object.keys(sorted).forEach(function(key) {
+      console.error('  --' + key + ' ' + require('util').inspect(sorted[key], null, 20, process.stderr.isTTY));
+    });
+  }
+  if (argv['export-config']) {
+    console.error(JSON.stringify(sorted, null, 2));
+    process.exit();
+  }
 }
 
 g.set(config);

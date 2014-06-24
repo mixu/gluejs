@@ -120,14 +120,19 @@ API.prototype._streamEtag = function(etag, dest) {
   var cachedResult = cache.data('etag-' + etag);
   if (cachedResult) {
     this.emit('etag', etag);
-    if (opts.etag && opts.etag == etag) {
+    if (opts.etag && opts.etag == etag && fs.existsSync(cachedResult)) {
       // if a etag is given, we don't even need to stream things off the disk
+      // However, check that the cached file exists. Otherwise we may get into a standoff
+      // where the browser has a cached version which we never invalidate, even if the
+      // cache is emptied.
       if (dest !== process.stdout) {
         dest.end();
       }
+      log.info('Etag match for (' + etag + '): sending 0 byte response.');
       return true;
     } else if (fs.existsSync(cachedResult)) {
       fs.createReadStream(cachedResult).pipe(dest);
+      log.info('Cached build match for (' + etag + '): sending cached file.');
       return true; // dest.once('finish') handles the rest
     }
   }
@@ -246,7 +251,25 @@ API.prototype.render = function(dest) {
     }
 
     // calculate a etag for the result
-    var etag = 'W/' + Cache.hash(JSON.stringify(files)),
+    // this should be invalidated if:
+    // - the set of files changes
+    // - the size of any of the files changes
+    // - the date modified of any of the files changes
+    // - any of the build options change
+    var config = [
+          'basepath', 'exclude', 'export',
+          'gluejs-version', 'ignore', 'main',
+          'remap', 'source-map', 'umd'
+        ].reduce(function(prev, key) {
+          prev[key] = opts[key];
+          return prev;
+        }, {}),
+        cacheStr = JSON.stringify(config);
+
+    files.forEach(function(file, index) {
+      cacheStr += file.filename + '-' + cache.file(file.filename).sig() + '\n';
+    });
+    var etag = 'W/' + Cache.hash(cacheStr),
         hadError = false;
 
     // is `dest` not set? => used to skip the latter half of the build, for heating up the
@@ -265,31 +288,24 @@ API.prototype.render = function(dest) {
 
     expectedEndEvents++;
 
-    packageCommonJs({
-      files: files,
-      out: cacheSplitter(cache.filepath(), dest, function(err, cacheFile) {
-        // finalize the cached result if there were no errors
-        if (!hadError) {
-          cache.data('etag-' + etag, cacheFile);
-          log.debug('Cached etag:', etag, cacheFile);
-        } else {
-          log.debug('Skipped etag:', etag, 'due to error.');
-        }
-        if (++seenEndEvents == expectedEndEvents) {
-          self.emit('done');
-        }
-      }),
-      basepath: opts.basepath,
-      main: opts.main,
-      export: opts['export'],
-      umd: opts.umd,
-      remap: opts.remap,
-      ignore: opts.ignore, // to suppress error messages
-      exclude: opts.exclude, // to suppress error messages
-      'gluejs-version': opts['gluejs-version'],
-      'source-map': opts['source-map']
+    config.files = files;
+    config.out = cacheSplitter(cache.filepath(), dest, function(err, cacheFile) {
+      // finalize the cached result if there were no errors
+      if (!hadError) {
+        cache.data('etag-' + etag, cacheFile);
+        log.debug('Cached etag:', etag, cacheFile);
+      } else {
+        log.debug('Skipped etag:', etag, 'due to error.');
+      }
+      if (++seenEndEvents == expectedEndEvents) {
+        self.emit('done');
+      }
     });
+
+    packageCommonJs(config);
   });
+  // start the queue
+  runner.exec();
 };
 
 // setters
