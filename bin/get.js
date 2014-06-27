@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 var fs = require('fs'),
     Minilog = require('minilog'),
-    Packer = require('../lib/runner/amd2/api.js');
+    Packer = require('../lib/amd/api.js');
 
 var yargs = require('yargs')
     .usage('Usage: $0 --include <file/dir ...>')

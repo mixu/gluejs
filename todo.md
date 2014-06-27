@@ -7,7 +7,6 @@
 
 Major issues:
 
-- clean up runner folder
 - make the deps format native rather than a conversion from files format
 - exclude non-js files by default (related: figure out how to take care of default includes)
 - tests
@@ -93,7 +92,6 @@ Also full build result transform?
 ## Node core shims
 
 - add core module shimming support
-- add implicit global support (__dirname etc.)
 - obscura related to module vars:
   - [require.main](https://github.com/substack/node-browserify/issues/234)
 
