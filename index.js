@@ -26,6 +26,7 @@ function API() {
     include: [],
     exclude: [],
     ignore: [],
+    transform: [],
     log: 'warn',
     // set options here so that the cache hash does not change
     jobs: os.cpus().length * 2,
@@ -132,7 +133,7 @@ API.prototype._streamEtag = function(etag, dest) {
       return true;
     } else if (fs.existsSync(cachedResult)) {
       fs.createReadStream(cachedResult).pipe(dest);
-      log.info('Cached build match for (' + etag + '): sending cached file.');
+      log.info('Cached build match for (' + etag + '): using cached file.');
       return true; // dest.once('finish') handles the rest
     }
   }
@@ -247,7 +248,7 @@ API.prototype.render = function(dest) {
     if (opts.list) {
       files
         .map(function(file) { return file.filename; })
-        .forEach(function(name) { console.log(name); });
+        .forEach(function(name) { console.error(name); }); // log to stderr
     }
 
     // calculate a etag for the result
@@ -257,9 +258,9 @@ API.prototype.render = function(dest) {
     // - the date modified of any of the files changes
     // - any of the build options change
     var config = [
-          'basepath', 'exclude', 'export',
-          'gluejs-version', 'ignore', 'main',
-          'remap', 'source-map', 'umd'
+          'basepath', 'command', 'exclude', 'export',
+          'gluejs-version', 'ignore', 'include', 'main',
+          'remap', 'source-map', 'transform', 'umd'
         ].reduce(function(prev, key) {
           prev[key] = opts[key];
           return prev;
@@ -355,6 +356,9 @@ API.prototype.set = function(key, value) {
     if (typeof value === 'string') {
       value = new RegExp(value);
     }
+  }
+  if (key == 'insert-globals' && value) {
+    return this.set('transform', 'insert-module-globals');
   }
 
   if (key == 'log' && value) {

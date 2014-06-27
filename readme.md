@@ -426,6 +426,10 @@ HTML page (assuming "foo" is a node module):
 
 With `--global-require`, `require()` statements are resolved as if they were inside index.js.
 
+## --insert-globals
+
+`--insert-globals` / `.set('insert-globals', true)`: Inserts values for `__filename`, `__dirname`, `process` and `global` into the build result. Default: `false`
+
 ## --umd
 
 `--umd` / `.set('umd', true)`: UMD compatible export.

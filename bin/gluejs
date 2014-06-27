@@ -32,6 +32,7 @@ var opts = require('yargs')
     .boolean('cache')
     .boolean('debug')
     .boolean('export-config')
+    .boolean('insert-globals')
     .boolean('ls-config')
     .boolean('progress')
     .boolean('report')
@@ -109,6 +110,7 @@ if (!argv['source-url']) {
   'cache',
   'debug',
   'global-require',
+  'insert-globals',
   'source-map',
   'source-url',
   'umd',

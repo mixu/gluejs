@@ -7,6 +7,9 @@
 
 Major issues:
 
+- clean up runner folder
+- make the deps format native rather than a conversion from files format
+- exclude non-js files by default (related: figure out how to take care of default includes)
 - tests
   + symlinks
   + dedupe
@@ -41,7 +44,6 @@ Major issues:
 - time reporter
 - in memory cache / file-granular rebuild
 - core shims? might not be too hard
-- variable shims
 - AMD
   - the sorter does not normalize dependency names before resolving them (e.g. for relative refs to remapped paths from remapped paths)
   - better exclusions
