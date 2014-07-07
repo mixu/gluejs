@@ -173,10 +173,6 @@ config['export'] = argv['global'];
   }
 });
 
-if(argv['cache-path']) {
-  config['cache-path'] = path.resolve(process.cwd(), argv['cache-path']);
-}
-
 if (argv['config']) {
   var loaded;
   argv.config = path.resolve(process.cwd(), argv['config']);
@@ -193,6 +189,11 @@ if (argv['config']) {
     console.error('Failed to load config file:', argv.config);
     process.exit(1);
   }
+}
+
+// resolve relative paths after loading --config
+if (argv['cache-path'] || config['cache-path']) {
+  config['cache-path'] = path.resolve(process.cwd(), (argv['cache-path'] ? argv['cache-path'] : config['cache-path']));
 }
 
 if(argv['export-config'] || argv['ls-config']) {
