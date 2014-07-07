@@ -42,7 +42,7 @@ var opts = require('yargs')
     .boolean('verbose'),
     argv = opts.parse(process.argv);
 
-if(argv['version'] || argv['v'] ) {
+if (argv['version'] || argv['v']) {
   console.log(require('../package.json').version);
   process.exit();
 }
@@ -50,8 +50,8 @@ if(argv['version'] || argv['v'] ) {
 var g = new Glue(),
     config = {};
 
-if(!argv['include'] && !argv['config']) {
-  return fs.createReadStream(__dirname + '/usage.txt').pipe(process.stdout).on('close', function () { process.exit(1) });
+if (!argv['include'] && !argv['config']) {
+  return fs.createReadStream(__dirname + '/usage.txt').pipe(process.stdout).on('close', function() { process.exit(1) });
 }
 
 // set logging levels early, so that all messages are shown
