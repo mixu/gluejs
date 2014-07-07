@@ -32,7 +32,7 @@ var p = new Packer();
 p.set(argv);
 
 // -- out
-if(argv['out']) {
+if (argv['out']) {
   p.render(fs.createWriteStream(argv['out']));
 } else {
   p.render(process.stdout);
