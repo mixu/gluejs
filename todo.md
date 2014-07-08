@@ -12,6 +12,18 @@ Major issues:
 - tests
   + symlinks
   + dedupe
+- dedupe edge case:
+  - two result entries get added for a file that is a duplicate, which means that the .canonicalize logic does not catch the duplication
+  - the two duplicates correctly share the same cache content (e.g. the file is not processed twice)
+  - in order for this to happen, the cache has to return a dedupe filename result for the second duplicate; this means that the entry in the .canonicalize table does not get added and then the .canonicalize logic does not catch the duplication which allows the second entry to persist
+  - this is probably the result of caching dedupe results, which can be incorrect until the very end
+  - the root of the problem is the persistence of early dedupe results, a correct approach is to:
+    - never cache the preliminary dedupe results, to enable the canonicalization to always take place
+    - for cached entries, add an entry for canonicalization without doing a check
+    - if the file itself does not have a cache entry, then run dedupe to see if the current file is a duplicate of a file seen earlier in the run
+    - at the time the deduplication result returns, check whether a full cache result exists
+    - if not, then process the file even if it is a duplicate (do extra work)
+    - if duplicate work was done, rely on the canonicalization to remove references to the duplicated file with the longer path from the set of entries
 - module ids are not canonicalized, so they cannot be looked up against in a flexible manner, requiring several variant entries to be placed in the output (e.g. full path, full path without .js and so on).
   - This could be resolved by canonicalizing and including the slightly larger but more robust alternative require() implementation
   - This is needed for --global-require to be useful

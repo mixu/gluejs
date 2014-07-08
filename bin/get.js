@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 var fs = require('fs'),
+    path = require('path'),
     Minilog = require('minilog'),
     Packer = require('../lib/amd/api.js');
 
@@ -8,11 +9,21 @@ var yargs = require('yargs')
     .options({
       'amd': { },
       'cache': { default: true },
+      'cache-method': { },
+      'cache-path': { },
+      'command': { },
+      'config': { },
       'include': { },
+      'list-files': { },
+      'log': { default: 'warn' },
       'main': { },
-      'log': { default: 'warn' }
+      'out': { },
+      'vendor': { },
+      'vendor-base': { }
     })
-    .boolean('amd'),
+    .boolean('amd')
+    .boolean('cache')
+    .boolean('ls-config'),
     argv = yargs.parse(process.argv);
 
 if (!argv['include']) {
@@ -26,6 +37,23 @@ if (!argv['include']) {
 }
 
 Minilog.enable();
+
+if (argv['cache-path']) {
+  argv['cache-path'] = path.resolve(process.cwd(), argv['cache-path']);
+}
+
+if (argv['ls-config']) {
+  var sorted = {};
+  Object.keys(argv).sort().forEach(function(key) {
+    sorted[key] = argv[key];
+  });
+  if (argv['ls-config']) {
+    console.error('\nOptions:');
+    Object.keys(sorted).forEach(function(key) {
+      console.error('  --' + key + ' ' + require('util').inspect(sorted[key], null, 20, process.stderr.isTTY));
+    });
+  }
+}
 
 var p = new Packer();
 
