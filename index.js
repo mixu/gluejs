@@ -26,7 +26,10 @@ function API() {
     include: [],
     exclude: [],
     ignore: [],
+    command: [],
     transform: [],
+    'global-command': [],
+    'global-transform': [],
     log: 'warn',
     // set options here so that the cache hash does not change
     jobs: os.cpus().length * 2,
@@ -198,7 +201,8 @@ API.prototype.render = function(dest) {
     tasks: require('./lib/transform-runner/get-tasks.js')({
       cache: cache,
       command: opts.command,
-      transform: opts.transform
+      transform: opts.transform,
+      basepath: opts.basepath
     }),
 
     cache: require('./lib/transform-runner/wrap-cache.js')(cache, cache.hash(JSON.stringify(invalidationOpts))),

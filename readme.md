@@ -498,6 +498,19 @@ This has the same effect as `--ignore`: an empty object will be returned when th
 
 ## Minification and source transforms
 
+There are two ways to apply transformations to the JS source code before creating a bundle. You can either 1) use `--command` to run an external command and pipe the content through an external program such as `uglifyjs` or 2) you can use `--transform` to load a browserify transform / gluejs transform and pipe the content through that transform.
+
+By default, `--transform` and `--command` only run on the files in the main package; that is, they are not run on files that are in `./node_modules` folders or other dependencies that are outside the tree starting at the first `--include` file. This is different from `v2.0`, where transforms were run on all files.
+
+To target transforms:
+
+- to run a transform on all the main package files: --transform
+- to run a transform on main package files matching a particular extension: --transform ext=str
+- to run a transform on dependency files: package.json browserify field
+- to run a transform on the full build result
+  - in the shell: pipe the build result to the next command
+  - in the API: `.pipe()` method
+
 ## --command
 
 `--command <cmd>` / `.set('command', <cmd>)`: Pipe each file through a shell command and capture the output. For example:

@@ -7,6 +7,8 @@
 
 Major issues:
 
+- switch to globs
+- the code referenced in `--remap` expressions should be parsed and it's dependencies should be correctly bundled
 - make the deps format native rather than a conversion from files format
 - exclude non-js files by default (related: figure out how to take care of default includes)
 - tests
@@ -27,15 +29,6 @@ Major issues:
 - module ids are not canonicalized, so they cannot be looked up against in a flexible manner, requiring several variant entries to be placed in the output (e.g. full path, full path without .js and so on).
   - This could be resolved by canonicalizing and including the slightly larger but more robust alternative require() implementation
   - This is needed for --global-require to be useful
-- document how to target --transform and --command
-- transforms should only run on main files
-- better transform targeting
-  - to run a transform on all the main package files: --transform
-  - to run a transform on main package files matching a particular extension: --transform ext=str
-  - to run a transform on dependency files: package.json browserify field
-  - to run a transform on the full build result
-    - in the shell: pipe the build result to the next command
-    - in the API: `.pipe()` method
 - factor-bundle
 - streaming api
 - intreq
