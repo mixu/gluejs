@@ -7,8 +7,10 @@
 
 Major issues:
 
-- switch to globs
+- switch to globs for --include etc. targets
+- interpret a path like "--include foo/bar" as referring to "./foo/bar" if the module does not exist
 - the code referenced in `--remap` expressions should be parsed and it's dependencies should be correctly bundled
+- should support shimming native modules such as stream and buffer
 - make the deps format native rather than a conversion from files format
 - exclude non-js files by default (related: figure out how to take care of default includes)
 - tests
