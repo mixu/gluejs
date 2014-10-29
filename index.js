@@ -215,8 +215,10 @@ API.prototype.render = function(dest) {
     ignore: opts.ignore,
     jobs: opts.jobs
   });
+  // parse errors should not be considered errors - they will stop the
+  // middleware from producing output
   runner.on('parse-error', function(err) {
-    self.emit('error', err);
+    self.emit('warn', err);
   });
   runner.on('file', function(filename) {
     self.emit('file', filename);

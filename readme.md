@@ -61,7 +61,8 @@ Let's create a basic module (`app/index.js`):
 
 Next, set up a basic Express server and use the gluejs middleware:
 
-    var express = require('express'),
+    var glue = require('gluejs'),
+        express = require('express'),
         app = express();
 
     app.use('/app.js', glue.middleware('app/index.js'));
