@@ -201,7 +201,9 @@ API.prototype.render = function(dest) {
     tasks: require('./lib/transform-runner/get-tasks.js')({
       cache: cache,
       command: opts.command,
+      'global-command': opts['global-command'],
       transform: opts.transform,
+      'global-transform': opts['global-transform'],
       basepath: opts.basepath
     }),
 

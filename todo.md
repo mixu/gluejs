@@ -1,5 +1,24 @@
+### API refactor
 
------
+Convert into a pipeline consisting of:
+
+- `transform-runner`: takes an initial set of files + tasks, emits JSON objects with the necessary dependencies
+- `etagger`: handle etags
+- `gluejs-pack`: takes a set of JSON objects and generates a JS package file from them
+
+Code:
+
+    runner.exclude(exclude)
+          .ignore(ignore)
+          .on('...');
+
+    list.include(include)
+        .pipe(runner)
+        .pipe(etagger)
+        .pipe(packager)
+        .pipe(dest);
+
+----
 
 # Todo
 
@@ -10,7 +29,12 @@ Major issues:
 - switch to globs for --include etc. targets
 - interpret a path like "--include foo/bar" as referring to "./foo/bar" if the module does not exist
 - the code referenced in `--remap` expressions should be parsed and it's dependencies should be correctly bundled
+- remapping a modules should not cause resolve errors during compilation
 - ensure that less severe errors do not kill the middleware
+- Firefox Compatibility: FF requires that the source map is on the very last line, which is not happening in the current CommonJS packer
+
+Minor issues:
+
 - test the middleware with both 3.x and 4.x branches of express
 - should support shimming native modules such as stream and buffer
 - make the deps format native rather than a conversion from files format
@@ -40,8 +64,8 @@ Major issues:
 - user-friendly handling of parse errors in the http version?
 - source map sourceRoot is not configurable (core issue is in browser-pack which doesn't configure this option)
 - reporting
-  - handle spurious --exclude package --ignore package targets a bit better: rigth now, they are resolved twice, once during setup and once during transform-runner. Might want to say that you should remove any unnecessary exclusions.
   - handle empty remap targets better. Sometimes --remap package=foo may be intentional, though it is odd to include one if there are no references to it.
+  - handle spurious --exclude package --ignore package targets a bit better: rigth now, they are resolved twice, once during setup and once during transform-runner. Might want to say that you should remove any unnecessary exclusions.
   - when the cache is triggered, file adds log lines are not shown, and exclusions are simply by "regexp true" rather than the correct regexp.
 
 ----
@@ -57,26 +81,6 @@ Major issues:
   - better exclusions
     - nomin should work on folders
     - ability to treat app paths as vendor paths (e.g. to exclude them when running a minifier). This occurs when files found during the application file static resolution actually finds vendor files and then tries to minify them
-
-### API refactor
-
-Convert into a pipeline consisting of:
-
-- `transform-runner`: takes an initial set of files + tasks, emits JSON objects with the necessary dependencies
-- `etagger`: handle etags
-- `gluejs-pack`: takes a set of JSON objects and generates a JS package file from them
-
-Code:
-
-    runner.exclude(exclude)
-          .ignore(ignore)
-          .on('...');
-
-    list.include(include)
-        .pipe(runner)
-        .pipe(etagger)
-        .pipe(packager)
-        .pipe(dest);
 
 ----
 
