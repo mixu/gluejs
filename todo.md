@@ -29,8 +29,14 @@ Major issues:
 - switch to globs for --include etc. targets
 - interpret a path like "--include foo/bar" as referring to "./foo/bar" if the module does not exist
 - the code referenced in `--remap` expressions should be parsed and it's dependencies should be correctly bundled
-- remapping a modules should not cause resolve errors during compilation
+- handle `--remap` and `--ignore` as special cases of the "browser" field
+- remapping modules should not cause resolve errors during compilation
 - ensure that less severe errors do not kill the middleware
+  - make the following emit "warn"
+    - parse errors
+    - cache errors
+    - test that parse errors produce a 200 + nice error
+    - test that jade parse errors also produce something sensible (currently hang)
 - Firefox Compatibility: FF requires that the source map is on the very last line, which is not happening in the current CommonJS packer
 
 Minor issues:
