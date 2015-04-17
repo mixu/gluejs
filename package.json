@@ -41,6 +41,7 @@
     "resolve": "~0.7.1",
     "transform-runner": "~0.1.5",
     "umd": "~2.1.0",
+    "xtend": "^4.0.0",
     "yargs": "~1.2.6"
   },
   "devDependencies": {
