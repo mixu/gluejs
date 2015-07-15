@@ -34,7 +34,8 @@ function API() {
     // set options here so that the cache hash does not change
     jobs: os.cpus().length * 2,
     // set this so that builds are invalidated as the version changes
-    'gluejs-version': require('./package.json').version
+    'gluejs-version': require('./package.json').version,
+    global: 'App',
   };
 }
 
@@ -268,7 +269,8 @@ API.prototype.render = function(dest) {
     var config = [
           'basepath', 'command', 'exclude', 'export',
           'gluejs-version', 'ignore', 'include', 'main',
-          'remap', 'source-map', 'transform', 'umd'
+          'remap', 'source-map', 'transform', 'umd',
+          'global'
         ].reduce(function(prev, key) {
           prev[key] = opts[key];
           return prev;
