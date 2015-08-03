@@ -20,6 +20,22 @@ Code:
 
 ----
 
+# Docs
+
+glue.middleware({ include: '/app/index.js' }) produces an obscure error - be friendlier (it requires __dirname as the prefix).
+
+- include  `verbose: false` by default for example
+- include  `source-map: true` by default for example
+- changing config should also invalidate etags
+- global passing
+
+# UX
+
+- when a transform fails, this produces a really long and pretty annoying stack trace (e.g. syntax error with babelify); it should produce a pretty trace with a specific line identifier if possible
+- how can I remap every instance of a 3rd party dep, or ignore them all? right now remap works only for top level modules since the depname becomes a path; if the depname is not installed (for another dep) then there is no resolved path and no ignore behavior
+- allow users to disable the auto-500 behavior on the middleware, as sometimes you are ok with ignoring errors (e.g. when the remaps will work things out correctly in browser)
+- when an ignored dep is not locatable, we still show an error even though the user asked to for that dep to be ignored specifically
+
 # Todo
 
 - refactor the options handling into a single file
