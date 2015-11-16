@@ -27,7 +27,12 @@ var cases = {
       '/fixtures/index.js',
       '/fixtures/node_modules/foo/index.js',
       '/fixtures/node_modules/foo/lib/sub.js'
-    ]
+    ],
+    fakeFS: {
+      existsSync: function(name) {
+        return !!cases['has-node-module-folder'].files[name];
+      },
+    }
   },
 
   'has-node-module-folder-mainfile-via-package-json': {
@@ -198,6 +203,8 @@ exports['infer-packages'] = {
 
   'can infer two packages from module-folder': function() {
     var list = cases['has-node-module-folder'];
+    // set up fakeFS
+    this.fakeFS = list.fakeFS;
     infer(list);
     // console.log(util.inspect(list, null, 10, true));
     assert.equal(list.packages.length, 2);
